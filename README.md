@@ -10,7 +10,9 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ## Frontiers 2.1 — exploration update
 
-### Candidate 2.1.4
+### Candidate 2.1.5
+
+- Fly over planets, stars, and stations. Only asteroids and NPC ships physically block flight; contact stops inward motion without adding damage or crime. Stellar heat still applies.
 
 - Bounty rewards and kill progress now require at least one successful player hit. A target destroyed entirely by system security gives no credits or combat credit.
 - Security response is local to a recent attack against the player or civilian traffic. Patrols outside the incident area continue their normal route instead of acquiring wanted ships across the system.
@@ -25,7 +27,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 - **Engine animation fix:** each ship supplies its own thrust to the renderer. Player boost no longer lights up civilian engines; coasting does not count as thrust.
 - **Circular galaxy:** 64 charted systems form a roughly circular human core centered on Solace. Another 128 uncharted systems surround it in every direction. System IDs, names, local planets, stations, and saved progress are retained; galaxy coordinates, jump costs, and routes change. Saved routes are recalculated when loaded. Overview fits the new map automatically.
 - **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the primary star and two worlds, revealing worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Unknown-system discovery credit and Explorers Guild progress now require completing the pulse. Then approach a world and use **Scan / R** for its separate detailed survey. Slow below 100 m/s and hold fire during world surveys. Repeated taps do not restart an active scan. Dock and sell data manually at Cartographics; each catalog and world pays once.
-- **Stellar arrival and scooping:** jumps arrive near the primary star, outside its scoop zone. All current ships have a built-in scoop, and all current primary stars are eligible. Approach the star, slow below 100 m/s, then deploy the scoop. Collection rate rises closer to the star, alongside heat. Heat warns at 80%, the scoop retracts at 95%, and temperatures above 100% damage the hull. Move away to cool; tanks stop filling at capacity. A stellar exclusion zone prevents flying through the star. Heat persists across reloads.
+- **Stellar arrival and scooping:** jumps arrive near the primary star, outside its scoop zone. All current ships have a built-in scoop, and all current primary stars are eligible. Approach the star, slow below 100 m/s, then deploy the scoop. Collection rate rises closer to the star, alongside heat. Heat warns at 80%, the scoop retracts at 95%, and temperatures above 100% damage the hull. Move away to cool; tanks stop filling at capacity. Heat persists across reloads.
 - **Save compatibility:** old v1/v2 saves remain supported. Previously visited systems retain their catalogs and discovery rewards. Before an older v2 pilot is overwritten, its exact original JSON is retained under `farbound-save-pre-2.1`, separately from rolling checkpoints. If that backup cannot be stored, saving fails without overwriting the original pilot.
 
 This update is prepared for review; publishing is a separate step. The preserved GitHub branch `baseline/frontiers-2.0` points to the known-good 2.0 baseline (`da5a4c5a0154b07f1855509c0dde20d4b0a982d2`). To roll back the served game, publish that baseline; to restore the exact pre-update pilot, use the preserved JSON backup. New discovery-catalog and heat state are specific to 2.1.

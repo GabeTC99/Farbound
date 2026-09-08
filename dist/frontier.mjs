@@ -128,6 +128,27 @@ export class Game extends FlightGame{
   if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s to scoop fuel.');return false;}
   this.auto=null;this.scooping=true;this.notify('Fuel scoop deployed. Watch heat and hold position.');return true;
  }
+ // Only rocks and ships occupy the player's flight plane. Sweep the movement
+ // segment so a boosted ship cannot skip through a small obstacle in one tick.
+ resolveFlightCollisions(from){
+  const p=this.player;
+  const bodies=[...this.asteroids,...this.enemies,...this.traffic,...this.patrols].filter(b=>b.hp>0);
+  for(const b of bodies){
+   const radius=p.r+b.r,dx=p.x-from.x,dy=p.y-from.y,ox=from.x-b.x,oy=from.y-b.y;
+   const a=dx*dx+dy*dy,c=ox*ox+oy*oy-radius*radius;
+   let hit=null;
+   if(c>=0&&a>0){const dot=ox*dx+oy*dy,disc=dot*dot-a*c;if(disc>=0){const t=(-dot-Math.sqrt(disc))/a;if(t>=0&&t<=1)hit={x:from.x+dx*t,y:from.y+dy*t};}}
+   if(!hit&&dist(p,b)<radius)hit={x:p.x,y:p.y};
+   if(!hit)continue;
+   let nx=hit.x-b.x,ny=hit.y-b.y,length=Math.hypot(nx,ny);
+   if(length<1e-8){nx=-Math.cos(p.angle);ny=-Math.sin(p.angle);length=1;}
+   nx/=length;ny/=length;
+   p.x=b.x+nx*(radius+.01);p.y=b.y+ny*(radius+.01);
+   const inward=p.vx*nx+p.vy*ny;
+   if(inward<0){p.vx-=inward*nx;p.vy-=inward*ny;}
+  }
+ }
+
  updateStellar(dt){
   const p=this.player,d=dist(p,this.star),altitude=d-this.star.r;
   if(this.scooping&&(altitude>650||Math.hypot(p.vx,p.vy)>100)){this.scooping=false;this.notify('Scoop retracted. Stay in range and below 100 m/s.');}
@@ -136,8 +157,6 @@ export class Game extends FlightGame{
   if(before<80&&this.s.heat>=80)this.notify('Heat warning. Move away from the star to cool.','bad');
   if(this.scooping&&this.s.heat>=95){this.scooping=false;this.notify('Scoop emergency retraction: critical heat. Move away!','bad');}
   if(this.s.heat>100){this.s.hull-=dt*(this.s.heat-100)*.35;this.lastDamage=this.time;}
-  // Exclusion zone prevents flying through the stellar surface.
-  if(d<this.star.r+60){const a=Math.atan2(p.y-this.star.y,p.x-this.star.x);p.x=this.star.x+Math.cos(a)*(this.star.r+60);p.y=this.star.y+Math.sin(a)*(this.star.r+60);p.vx=p.vy=0;}
   this.scoopRate=this.scooping?4+12*clamp((650-altitude)/500,0,1):0;
   if(this.scooping){this.s.fuel=Math.min(getStats(this.s).fuel,this.s.fuel+this.scoopRate*dt);if(this.s.fuel>=getStats(this.s).fuel){this.scooping=false;this.scoopRate=0;this.notify('Fuel tank full. Scoop retracted.','good');}}
  }
@@ -162,6 +181,7 @@ export class Game extends FlightGame{
  update(dt,input={}){
   dt=clamp(dt,0,.05);
   if(this.surface){this.time+=dt;this.s.playtime+=dt;const wasScan=!!this.surface.scan,result=updateSurface(this.surface,dt,input,getStats(this.s));if(result.completed){const a=result.completed;if(!this.s.surfaceScanned.includes(a.id)){this.s.surfaceScanned.push(a.id);const value=Math.round(a.value*getStats(this.s).signalMultiplier);this.s.records.push({id:a.id,kind:a.kind,value,system:this.s.system});this.logExploration({id:a.id,type:'surface',system:this.s.system,name:this.surface.planetName+' · '+a.name,value});this.s.metrics.anomalies++;if(a.kind==='geology')this.s.metrics.geology++;this.notify(a.name+' recorded. Sell the signal at a station.','good');}}else if(wasScan&&!this.surface.scan)this.notify('Scan interrupted. Hover within range.');if(result.crashed){const lost=new Set(this.s.records.slice(this.surfaceRecordsStart).map(r=>r.id));this.s.records.splice(this.surfaceRecordsStart);this.s.explorationLog=this.s.explorationLog.filter(e=>!lost.has(e.id));this.s.hull=Math.max(1,this.s.hull-20);this.takeoff();this.notify('Emergency ascent. This expedition’s signals were lost; hull damaged.','bad');}return;}
+  const flightFrom={x:this.player.x,y:this.player.y};
   const previous=this.s.system,wasDocked=this.s.docked,wasJumping=!!this.jump,beforeScanned=new Set(this.s.scanned),beforeData=this.s.data;for(const b of this.shots)if(b.trafficShot||b.playerShot){b.previousX=b.x;b.previousY=b.y;}super.update(dt,input);this.resolveTrafficShots();if(!wasDocked&&this.s.docked){this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);}const added=this.s.scanned.find(id=>!beforeScanned.has(id));if(added){const planet=this.planets.find(p=>p.id===added),value=this.s.data-beforeData;this.logExploration({id:added,type:'world',system:this.s.system,name:planet?.name||added,value});}
   if(previous!==this.s.system){
    this.refreshRoute();
@@ -172,6 +192,7 @@ export class Game extends FlightGame{
   this.updateStellar(dt);
   this.updateTraffic(dt);
   this.updateSecurity(dt);
+  if(!wasJumping)this.resolveFlightCollisions(flightFrom);
   if(this.s.hull<=0){super.update(0,{});this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;return;}
   if(this.discoveryScan){
    this.discoveryScan.progress+=dt*(1+getStats(this.s).scanSpeed);

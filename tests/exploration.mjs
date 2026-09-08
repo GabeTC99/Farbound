@@ -16,7 +16,7 @@ test('Radial chart surrounds the human core in every direction and every route i
  for(const s of SYSTEMS){let from=0;const route=findRoute(0,s.id,14);assert(route);for(const to of route){assert(jumpDistance(from,to)<=14);from=to;}assert.equal(from,s.id);}
 });
 test('Arrival is outside the scoop zone near the primary; reload preserves actual flight position',()=>{
- const g=new Game();g.launch();assert(g.jumpTo(1));ticks(g,3.1);assert.equal(g.target,g.star);assert.equal(dist(g.player,g.star),g.star.r+950);assert.equal(g.s.heat,25);ticks(g,1,{thrust:1});const h=roundtrip(g);assert.equal(h.player.x,g.player.x);assert.equal(h.player.y,g.player.y);
+ const g=new Game();g.launch();assert(g.jumpTo(1));ticks(g,3.1);assert.equal(g.target,g.star);assert(Math.abs(dist(g.player,g.star)-(g.star.r+950))<50);assert.equal(g.s.heat,25);ticks(g,1,{thrust:1});const h=roundtrip(g);assert.equal(h.player.x,g.player.x);assert.equal(h.player.y,g.player.y);
 });
 test('Pulse locates unknown worlds, resumes as unscanned after interruption, pays once and persists',()=>{
  let g=frontier();assert.equal(g.visiblePlanets.length,0);assert(!g.land());assert(g.discover());ticks(g,1);const progress=g.discoveryScan.progress;assert(!g.discover());assert.equal(g.discoveryScan.progress,progress);assert(!g.scanTarget());
@@ -87,5 +87,28 @@ test('Player thrust and boost never control another ship’s exhaust',()=>{
  let flames=0;const ctx=new Proxy({}, {get:(_,key)=>key==='lineTo'?((x,y)=>{if(x<-24&&y===0)flames++;}):()=>{},set:()=>true});
  const sandbox={ctx,Math};vm.createContext(sandbox);vm.runInContext(fn+';this.drawShip=drawShip',sandbox);
  sandbox.drawShip(0,0,0,'white',19,false,0);assert.equal(flames,0);sandbox.drawShip(0,0,0,'white',19,false,1,true);assert.equal(flames,1);sandbox.drawShip(0,0,0,'white',19,false,0);assert.equal(flames,1);
+});
+test('Planets, stars and stations allow uninterrupted overflight',()=>{
+ for(const kind of ['planet','star','station']){
+  const g=new Game();g.launch();g.enemies=[];g.traffic=[];g.patrols=[];g.asteroids=[];
+  const body=kind==='planet'?g.planets[0]:g[kind];
+  g.player.x=body.x-5;g.player.y=body.y;g.player.vx=200;g.player.vy=0;
+  g.update(.05);assert(g.player.x>body.x);assert(g.player.x<body.x+10);assert.equal(g.player.y,body.y);assert(g.player.vx>180);
+  if(kind==='station')assert(g.dock());
+  if(kind==='planet'){g.player.vx=0;g.target=body;assert(g.scanTarget());}
+ }
+});
+test('Asteroids and every NPC class block contact, including boosted passes',()=>{
+ for(const group of ['asteroids','enemies','traffic','patrols']){
+  const g=new Game();g.launch();const body={...g[group][0],x:5000,y:5000};
+  g.enemies=[];g.traffic=[];g.patrols=[];g.asteroids=[];g[group]=[body];
+  const radius=g.player.r+body.r;g.player.x=body.x-radius+2;g.player.y=body.y;g.player.vx=100;g.player.vy=20;
+  g.resolveFlightCollisions({x:body.x-radius-5,y:body.y});
+  assert(dist(g.player,body)>=radius);assert(g.player.vx<=0);assert.equal(g.player.vy,20);
+  g.player.x=body.x+radius+100;g.player.y=body.y;g.player.vx=1000;
+  g.resolveFlightCollisions({x:body.x-radius-100,y:body.y});assert(g.player.x<body.x-radius);assert.equal(g.player.vx,0);
+  g.player.x=body.x;g.player.y=body.y;g.resolveFlightCollisions({...g.player});assert(Number.isFinite(g.player.x));assert(dist(g.player,body)>=radius);
+ }
+ const g=new Game();g.launch();g.enemies=[];g.traffic=[];g.patrols=[];const rock=g.asteroids[0];g.asteroids=[rock];g.player.x=rock.x-rock.r-g.player.r-1;g.player.y=rock.y;g.player.vx=200;g.update(.05);assert(dist(g.player,rock)>=rock.r+g.player.r);
 });
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name,e);}}console.log(`\n${tests.length-failed} / ${tests.length} exploration checks passed.`);if(failed)process.exitCode=1;
