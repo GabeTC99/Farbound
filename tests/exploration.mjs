@@ -21,7 +21,7 @@ test('Arrival is outside the scoop zone near the primary; reload preserves actua
 test('Pulse locates unknown worlds, resumes as unscanned after interruption, pays once and persists',()=>{
  let g=frontier();assert.equal(g.visiblePlanets.length,0);assert(!g.land());assert(g.discover());ticks(g,1);const progress=g.discoveryScan.progress;assert(!g.discover());assert.equal(g.discoveryScan.progress,progress);assert(!g.scanTarget());
  g=roundtrip(g);assert.equal(g.discoveryScan,null);assert.equal(g.visiblePlanets.length,0);assert(g.scanTarget());ticks(g,4.1);assert.equal(g.visiblePlanets.length,2);assert.equal(g.s.data,500);assert.equal(g.s.metrics.discoveries,1);assert(!g.discover());
- g=roundtrip(g);assert.equal(g.visiblePlanets.length,2);assert(!g.discover());assert.equal(g.s.data,500);g.s.system=0;g.makeSystem();g.player.x=0;g.player.y=180;const credits=g.s.credits;assert(g.dock());assert.equal(g.s.credits,credits+500);assert.equal(g.s.data,0);g.dock();assert.equal(g.s.credits,credits+500);
+ g=roundtrip(g);assert.equal(g.visiblePlanets.length,2);assert(!g.discover());assert.equal(g.s.data,500);g.s.system=0;g.makeSystem();g.player.x=0;g.player.y=180;const credits=g.s.credits;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,500);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,1);assert(g.sellExplorationData());assert.equal(g.s.credits,credits+500);assert.equal(g.s.data,0);assert(g.s.explorationLog.every(e=>e.sold));g.dock();assert(!g.sellExplorationData());assert.equal(g.s.credits,credits+500);
 });
 test('Discovery and world surveys cancel or reject during travel and require separate completion',()=>{
  const g=frontier();assert(g.discover());const next=SYSTEMS.find(s=>s.id!==g.s.system&&jumpDistance(g.s.system,s.id)<14).id;assert(g.jumpTo(next));assert.equal(g.discoveryScan,null);assert(!g.discover());assert(!g.scanTarget());assert(!g.scoop());assert(!g.dock());ticks(g,3.1);assert.equal(g.s.data,0);
@@ -47,6 +47,24 @@ test('Pre-update pilots keep progress and an immutable original backup; malforme
  const blocked={getItem:k=>k===SAVE_KEY?raw:null,setItem:()=>{throw Error('Storage full');}};const restored=readPilot(blocked);assert(restored.existing);assert(restored.error);assert.equal(restored.pilot.data,650);assert.throws(()=>writePilot(blocked,restored.pilot));
  assert.deepEqual(boot.pilot.route.path,findRoute(0,191,14));writePilot(storage,boot.pilot);readPilot(storage);assert.equal(map.get(PRE_EXPLORATION_KEY),raw);
  for(const fields of [{heat:-1},{heat:151},{heat:NaN},{systemScans:[999]},{systemScans:[1]}])assert.equal(validateSave({...boot.pilot,...fields}),null);
+});
+test('Cartographics preserves a mixed discovery manifest until an explicit one-time sale',()=>{
+ const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);const world=g.planets[0];g.target=world;g.player.x=world.x;g.player.y=world.y+world.r+300;assert(g.scanTarget());ticks(g,3.1);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,2);const expected=g.s.data,credits=g.s.credits;g.player.x=0;g.player.y=185;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,expected);let h=roundtrip(g);assert.equal(h.s.explorationLog.filter(e=>!e.sold).length,2);assert(h.sellExplorationData());assert.equal(h.s.credits,credits+expected);assert.equal(h.s.data,0);assert(h.s.explorationLog.every(e=>e.sold));assert(!h.sellExplorationData());assert.equal(h.s.credits,credits+expected);
+});
+test('Recovery and destruction discard unsold discovery entries while retaining sold history',()=>{
+ const g=new Game();g.s.explorationLog=[{id:'sold',type:'legacy',system:0,name:'Sold cache',value:50,sold:true},{id:'pending',type:'legacy',system:0,name:'Pending cache',value:80,sold:false}];g.s.data=80;g.rescue();assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
+ g.launch();g.s.explorationLog.push({id:'pending-2',type:'legacy',system:0,name:'Pending cache 2',value:90,sold:false});g.s.data=90;g.s.hull=0;ticks(g,.1);assert(g.s.docked);assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
+ const invalid={...g.serialize(),explorationLog:[{id:'bad',type:'rumor',system:0,name:'Bad',value:1,sold:false}]};assert.equal(validateSave(invalid),null);
+});
+test('Living traffic performs distinct jobs and pauses at real destinations',()=>{
+ const g=new Game();assert.deepEqual(g.traffic.map(t=>t.job),['ARRIVING FROM JUMP POINT','DEPARTING FOR JUMP POINT','MINING RUN','FUEL SCOOPING','PLANETARY SURVEY']);
+ const start=g.traffic.map(t=>[t.x,t.y]);g.launch();ticks(g,4);assert(g.traffic.some((t,i)=>t.x!==start[i][0]||t.y!==start[i][1]));assert(g.traffic.some(t=>t.thrust>0));
+ const miner=g.traffic.find(t=>t.job==='MINING RUN');ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
+ const scoop=g.traffic.find(t=>t.job==='FUEL SCOOPING');let worked=false;for(let i=0;i<1800;i++){g.update(1/30);if(scoop.status==='FUEL SCOOPING'&&scoop.thrust===0){worked=true;break;}}assert(worked);assert(Math.hypot(scoop.x-g.star.x,scoop.y-g.star.y)<g.star.r+650);
+ const remote=frontier();remote.sys.hasStation=false;remote.makeSystem();assert.equal(remote.traffic.length,0);
+});
+test('Engine volume uses the full slider and stays silent at zero',()=>{
+ const source=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),'utf8');assert(source.includes('*.24'));assert(source.includes('Math.pow'));assert(!source.includes('*.065'));
 });
 test('Player thrust and boost never control another ship’s exhaust',()=>{
  const g=new Game();g.launch();g.update(1/30,{thrust:1,boost:true});assert.equal(g.player.thrust,1);assert(g.player.boost);const patrol=g.patrols[0].thrust;g.update(1/30,{});assert.equal(g.player.thrust,0);assert(!g.player.boost);assert.equal(g.patrols[0].thrust,patrol);

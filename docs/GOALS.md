@@ -27,3 +27,5 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 8, 2026: Created the initial log from Gabe’s requested goals. No game changes requested or performed as part of logging these plans.
 
 - September 8, 2026: Implemented the authorized exploration update on `feature/exploration-2.1`. See README for implemented mechanics and remaining scope. Full planet generation, multiple-star systems, ship expansion, and space anomalies/backgrounds remain planned.
+
+- September 8, 2026: Candidate 2.1.1 raises usable engine volume, adds job-based civilian traffic, and adds manual Cartographics sales with a persistent discovery history.

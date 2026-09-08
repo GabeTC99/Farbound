@@ -10,9 +10,16 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ## Frontiers 2.1 — exploration update
 
+### Candidate 2.1.1
+
+- Engine volume now uses the full slider range with a louder perceptual curve.
+- Civilian traffic performs visible arrival, departure, mining, fuel-scooping, and planetary-survey routes instead of orbiting the station. Ships coast or stop their exhaust while working.
+- Docking leaves exploration data aboard. The new **Cartographics** service lists unsold and sold system catalogs, detailed world surveys, and surface anomalies with individual values. **Sell all** completes the transaction when the pilot chooses. Destruction, emergency recovery, and failed surface expeditions remove the applicable unsold entries.
+
+
 - **Engine animation fix:** each ship supplies its own thrust to the renderer. Player boost no longer lights up civilian engines; coasting does not count as thrust.
 - **Circular galaxy:** 64 charted systems form a roughly circular human core centered on Solace. Another 128 uncharted systems surround it in every direction. System IDs, names, local planets, stations, and saved progress are retained; galaxy coordinates, jump costs, and routes change. Saved routes are recalculated when loaded. Overview fits the new map automatically.
-- **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the primary star and two worlds, revealing worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Unknown-system discovery credit and Explorers Guild progress now require completing the pulse. Then approach a world and use **Scan / R** for its separate detailed survey. Slow below 100 m/s and hold fire during world surveys. Repeated taps do not restart an active scan. Dock to sell data; each catalog and world pays once.
+- **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the primary star and two worlds, revealing worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Unknown-system discovery credit and Explorers Guild progress now require completing the pulse. Then approach a world and use **Scan / R** for its separate detailed survey. Slow below 100 m/s and hold fire during world surveys. Repeated taps do not restart an active scan. Dock and sell data manually at Cartographics; each catalog and world pays once.
 - **Stellar arrival and scooping:** jumps arrive near the primary star, outside its scoop zone. All current ships have a built-in scoop, and all current primary stars are eligible. Approach the star, slow below 100 m/s, then deploy the scoop. Collection rate rises closer to the star, alongside heat. Heat warns at 80%, the scoop retracts at 95%, and temperatures above 100% damage the hull. Move away to cool; tanks stop filling at capacity. A stellar exclusion zone prevents flying through the star. Heat persists across reloads.
 - **Save compatibility:** old v1/v2 saves remain supported. Previously visited systems retain their catalogs and discovery rewards. Before an older v2 pilot is overwritten, its exact original JSON is retained under `farbound-save-pre-2.1`, separately from rolling checkpoints. If that backup cannot be stored, saving fails without overwriting the original pilot.
 
