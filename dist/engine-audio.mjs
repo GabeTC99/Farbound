@@ -1,6 +1,0 @@
-export class EngineAudio{
- constructor(){this.context=null;}
- unlock(){if(!this.context){const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;const c=new Audio();this.context=c;this.low=c.createOscillator();this.mid=c.createOscillator();this.gain=c.createGain();this.filter=c.createBiquadFilter();this.low.type='sine';this.mid.type='triangle';this.gain.gain.value=0;this.filter.type='lowpass';this.filter.frequency.value=160;this.low.connect(this.filter);this.mid.connect(this.filter);this.filter.connect(this.gain);this.gain.connect(c.destination);this.low.start();this.mid.start();}if(this.context.state==='suspended')this.context.resume().catch(()=>{});}
- update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false}={}){if(!this.context)return;const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));this.gain.gain.setTargetAtTime(enabled&&!paused?volume*n*.065:0,t,.18);this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);this.mid.frequency.setTargetAtTime(77+n*45+(boost?19:0),t,.18);this.filter.frequency.setTargetAtTime(100+n*150+(boost?75:0),t,.2);}
- mute(){if(this.context)this.gain.gain.setTargetAtTime(0,this.context.currentTime,.05);}
-}
