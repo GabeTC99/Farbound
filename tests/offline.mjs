@@ -9,9 +9,9 @@ stores.set('farbound-v1.0.0',new Map());stores.set('unrelated-cache',new Map());
 const self={location:{origin:new URL(origin).origin},registration:{scope:origin},addEventListener:(name,fn)=>handlers[name]=fn,skipWaiting:async()=>{skip=true;},clients:{claim:async()=>{claimed=true;}}};
 vm.runInNewContext(await readFile(path.join(root,'sw.js'),'utf8'),{self,caches,Request,URL,fetch:request=>{calls.push(request);throw Error('Offline network unavailable');}});
 async function event(name,extra={}){let pending;handlers[name]({...extra,waitUntil:p=>pending=p,respondWith:p=>pending=p});return await pending;}
-await event('install');assert(skip);await event('activate');assert(claimed);assert(!stores.has('farbound-v1.0.0'));assert(stores.has('unrelated-cache'));const cache=stores.get('farbound-v2.1.1');assert.equal(cache.size,27);
+await event('install');assert(skip);await event('activate');assert(claimed);assert(!stores.has('farbound-v1.0.0'));assert(stores.has('unrelated-cache'));const cache=stores.get('farbound-v2.1.4');assert.equal(cache.size,27);
 for(const url of cache.keys()){const response=await event('fetch',{request:new Request(url+'?reload=2')});assert.equal(response.url,url);}
-assert.equal(calls.length,0);let status;await event('message',{data:{type:'CACHE_STATUS'},ports:[{postMessage:message=>status=message}]});assert(status.ready);assert.equal(status.release,'2.1.1');
+assert.equal(calls.length,0);let status;await event('message',{data:{type:'CACHE_STATUS'},ports:[{postMessage:message=>status=message}]});assert(status.ready);assert.equal(status.release,'2.1.4');
 console.log('PASS Offline cache serves all 27 release and classic assets without network');
 console.log('PASS Service worker activates only after caching the release and reports offline readiness');
 let checked=0;async function inspect(dir){for(const file of await readdir(dir,{withFileTypes:true})){const abs=path.join(dir,file.name);if(file.isDirectory()){await inspect(abs);continue;}if(/\.(mjs|js)$/.test(file.name)){execFileSync(process.execPath,['--check',abs]);const src=await readFile(abs,'utf8');for(const [,relative]of src.matchAll(/(?:from\s*|import\s*)['"](\.\.?\/[^'"]+)['"]/g))assert((await stat(path.resolve(dir,relative))).isFile(),relative);checked++;}if(file.name.endsWith('.webmanifest'))JSON.parse(await readFile(abs,'utf8'));}}

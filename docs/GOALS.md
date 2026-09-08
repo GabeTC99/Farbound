@@ -29,3 +29,9 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 8, 2026: Implemented the authorized exploration update on `feature/exploration-2.1`. See README for implemented mechanics and remaining scope. Full planet generation, multiple-star systems, ship expansion, and space anomalies/backgrounds remain planned.
 
 - September 8, 2026: Candidate 2.1.1 raises usable engine volume, adds job-based civilian traffic, and adds manual Cartographics sales with a persistent discovery history.
+
+- September 8, 2026: Candidate 2.1.2 raises maximum engine output again and adds security dispatch for wanted attacks and player assaults on innocent civilian vessels.
+
+- September 8, 2026: Candidate 2.1.3 fixes civilian weapon collisions and adds persistent crime bounties, station bounty payment, and a chance of recovered cargo after civilian destruction.
+
+- September 8, 2026: Candidate 2.1.4 requires player participation for bounty rewards and limits security response to patrols near an active attack against the player or civilian traffic.

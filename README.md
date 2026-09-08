@@ -10,8 +10,13 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ## Frontiers 2.1 — exploration update
 
-### Candidate 2.1.1
+### Candidate 2.1.4
 
+- Bounty rewards and kill progress now require at least one successful player hit. A target destroyed entirely by system security gives no credits or combat credit.
+- Security response is local to a recent attack against the player or civilian traffic. Patrols outside the incident area continue their normal route instead of acquiring wanted ships across the system.
+- Civilian ships now take hits from both selected aim-assist shots and manually aimed fire. The first damaging hit applies a 400 cr bounty; destroying the vessel adds another 600 cr. Destroyed civilians have a 45% chance to yield one to three tons of recoverable cargo when hold space is available. Bounties persist in the pilot save and can be cleared at a station market.
+- Maximum engine output is increased again while preserving the slider's full silent-to-maximum range.
+- Security patrols now respond to active attacks. They pursue and engage wanted ships attacking the player or civilian traffic, and they turn on the player after an unprovoked attack on an innocent civilian vessel.
 - Engine volume now uses the full slider range with a louder perceptual curve.
 - Civilian traffic performs visible arrival, departure, mining, fuel-scooping, and planetary-survey routes instead of orbiting the station. Ships coast or stop their exhaust while working.
 - Docking leaves exploration data aboard. The new **Cartographics** service lists unsold and sold system catalogs, detailed world surveys, and surface anomalies with individual values. **Sell all** completes the transaction when the pilot chooses. Destruction, emergency recovery, and failed surface expeditions remove the applicable unsold entries.
