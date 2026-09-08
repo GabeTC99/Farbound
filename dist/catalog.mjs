@@ -1,4 +1,4 @@
-export const RELEASE='2.1.5';
+export const RELEASE='2.1.6';
 export const GALAXY_CORE={x:0,y:0,radius:34};
 export const FACTIONS=[
  {id:'concord',name:'Orion Concord',color:'#8fdbc9',desc:'A coalition protecting trade and scientific access.',rival:'directorate'},

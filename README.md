@@ -10,7 +10,9 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ## Frontiers 2.1 — exploration update
 
-### Candidate 2.1.5
+### Candidate 2.1.6
+
+- Active faction operations show the next objective in flight, Contracts, and the faction desk, with navigation to combat targets and reporting stations. NPC activity labels now come from the actual stop reached, including the inbound courier’s jump-point and station stops.
 
 - Fly over planets, stars, and stations. Only asteroids and NPC ships physically block flight; contact stops inward motion without adding damage or crime. Stellar heat still applies.
 

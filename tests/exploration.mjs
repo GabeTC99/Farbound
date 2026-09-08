@@ -1,7 +1,8 @@
+import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {Game,newSave,validateSave,SYSTEMS,getStats,dist,jumpDistance,findRoute} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
 const ticks=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/30)g.update(1/30,input);};
@@ -110,5 +111,27 @@ test('Asteroids and every NPC class block contact, including boosted passes',()=
   g.player.x=body.x;g.player.y=body.y;g.resolveFlightCollisions({...g.player});assert(Number.isFinite(g.player.x));assert(dist(g.player,body)>=radius);
  }
  const g=new Game();g.launch();g.enemies=[];g.traffic=[];g.patrols=[];const rock=g.asteroids[0];g.asteroids=[rock];g.player.x=rock.x-rock.r-g.player.r-1;g.player.y=rock.y;g.player.vx=200;g.update(.05);assert(dist(g.player,rock)>=rock.r+g.player.r);
+});
+test('Every NPC stop label matches its physical location over complete round trips',()=>{
+ const g=new Game(),seen=new Map(g.traffic.map(t=>[t.id,new Set()]));
+ for(let frame=0;frame<7200;frame++){
+  g.updateTraffic(1/30);
+  for(const ship of g.traffic){
+   if(ship.status==='IN TRANSIT')continue;
+   seen.get(ship.id).add(ship.status);
+   const stop=ship.points.find(p=>p.status===ship.status);assert(stop,ship.status);assert(dist(ship,stop)<18);
+   if(ship.status==='DOCKED')assert(dist(ship,g.station)<18);
+   if(ship.status==='FUEL SCOOPING')assert(dist(ship,g.star)<g.star.r+650);
+  }
+ }
+ for(const ship of g.traffic)for(const stop of ship.points)assert(seen.get(ship.id).has(stop.status),ship.name+' reaches '+stop.status);
+});
+test('Operation guidance survives reload and navigates combat, delivery and reporting stages',()=>{
+ let g=new Game();const faction=FACTIONS[0].id;assert(g.acceptOperation(faction,'combat'));g=roundtrip(g);let op=g.s.operations[0],d=operationDetails(g.s,op);
+ assert(d.next.includes(SYSTEMS[op.target].name));assert(g.routeOperation(op.uid));assert.equal(g.s.route.destination,op.target);
+ g.s.system=op.target;g.s.docked=false;g.makeSystem();assert(g.routeOperation(op.uid));assert(g.target.id.startsWith(op.uid+'-'));assert.equal(operationDetails(g.s,op).navLabel,'Find target');
+ op.kills=2;d=operationDetails(g.s,op);assert(d.next.includes('Report success'));assert.equal(SYSTEMS[d.destination].faction,faction);assert(g.routeOperation(op.uid));assert.equal(g.s.route.destination,d.destination);
+ g.s.system=d.destination;g.makeSystem();g.s.docked=true;assert(g.claimOperation(op.uid));assert(g.acceptOperation(faction,'relief'));op=g.s.operations[0];d=operationDetails(g.s,op);assert(d.next.includes('Acquire'));g.s.cargo[d.good]=d.total;d=operationDetails(g.s,op);assert(d.next.includes('Report success'));assert(g.routeOperation(op.uid));assert.equal(g.target,g.station);
+ const html=operationCards(g);assert(html.includes(d.next));assert(html.includes('Select station'));assert(factionView(g).indexOf('Active operations')<factionView(g).indexOf('faction-grid'));assert(g.claimOperation(op.uid));assert.equal(g.s.operations.length,0);
 });
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name,e);}}console.log(`\n${tests.length-failed} / ${tests.length} exploration checks passed.`);if(failed)process.exitCode=1;
