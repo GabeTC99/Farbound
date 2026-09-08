@@ -8,9 +8,19 @@ Open the hosted game in Chrome, then use **Menu → Add to Home screen → Insta
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
-## Frontiers 2.0
+## Frontiers 2.1 — exploration update
 
-- **192 deterministic systems:** the original 24 retain their identities and coordinates. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. First discoveries award exploration data.
+- **Engine animation fix:** each ship supplies its own thrust to the renderer. Player boost no longer lights up civilian engines; coasting does not count as thrust.
+- **Circular galaxy:** 64 charted systems form a roughly circular human core centered on Solace. Another 128 uncharted systems surround it in every direction. System IDs, names, local planets, stations, and saved progress are retained; galaxy coordinates, jump costs, and routes change. Saved routes are recalculated when loaded. Overview fits the new map automatically.
+- **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the primary star and two worlds, revealing worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Unknown-system discovery credit and Explorers Guild progress now require completing the pulse. Then approach a world and use **Scan / R** for its separate detailed survey. Slow below 100 m/s and hold fire during world surveys. Repeated taps do not restart an active scan. Dock to sell data; each catalog and world pays once.
+- **Stellar arrival and scooping:** jumps arrive near the primary star, outside its scoop zone. All current ships have a built-in scoop, and all current primary stars are eligible. Approach the star, slow below 100 m/s, then deploy the scoop. Collection rate rises closer to the star, alongside heat. Heat warns at 80%, the scoop retracts at 95%, and temperatures above 100% damage the hull. Move away to cool; tanks stop filling at capacity. A stellar exclusion zone prevents flying through the star. Heat persists across reloads.
+- **Save compatibility:** old v1/v2 saves remain supported. Previously visited systems retain their catalogs and discovery rewards. Before an older v2 pilot is overwritten, its exact original JSON is retained under `farbound-save-pre-2.1`, separately from rolling checkpoints. If that backup cannot be stored, saving fails without overwriting the original pilot.
+
+This update is prepared for review; publishing is a separate step. The preserved GitHub branch `baseline/frontiers-2.0` points to the known-good 2.0 baseline (`da5a4c5a0154b07f1855509c0dde20d4b0a982d2`). To roll back the served game, publish that baseline; to restore the exact pre-update pilot, use the preserved JSON backup. New discovery-catalog and heat state are specific to 2.1.
+
+## Retained Frontiers features
+
+- **192 deterministic systems:** all systems retain their identities, with coordinates now arranged around the circular core. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. Discovery pulses award exploration data.
 - **Contract navigation:** active contracts have a Plot destination route button. Nearby destinations use a direct jump; farther destinations use a route of legal jumps. Survey routes return to the issuing station after both worlds are recorded. The chart supports search, filters, pan, pinch/wheel zoom, locate-me, overview, and route fuel estimates. Jump next executes one leg at a time.
 - **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
 - **Four guilds:** Trading, Miners, Freelancer, and Explorers. Join any or all at station desks. Each guild offers three sequential commissions with unique module rewards. Accept commissions before doing the work; return to a desk to claim rewards. Supply commissions consume the requested cargo.
@@ -27,7 +37,7 @@ Touch: drag the left stick toward a direction; hold BOOST to accelerate and FIRE
 
 In surface flight, the stick moves horizontally and vertically; release it to hover. Tap SCAN SIGNAL within range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition.
 
-Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock; R scan; P autopilot; L land/return to orbit; Escape menu. On a surface, A/D move sideways, W/S move vertically, and Space scans.
+Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu. On a surface, A/D move sideways, W/S move vertically, and Space scans.
 
 ## Saves and rollback
 
@@ -49,10 +59,11 @@ When updating an installed game, open it online, wait for its offline files to u
 node --check dist/app.js
 node tests/gameplay.mjs
 node tests/frontiers.mjs
+node tests/exploration.mjs
 node tests/offline.mjs
 ```
 
-Validation includes 9 retained classic gameplay checks, 19 Frontiers progression and migration checks, and 3 offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
+Validation includes 9 retained classic gameplay checks, 19 Frontiers progression and migration checks, 9 exploration regression checks, and 3 offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
 
 ## Build the native Android app
 
