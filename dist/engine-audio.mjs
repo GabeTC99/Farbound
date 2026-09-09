@@ -1,5 +1,5 @@
 export class EngineAudio{
- constructor(){this.context=null;this.humReady=false;}
+ constructor(){this.context=null;this.humReady=false;this.ambReady=false;}
  unlock(){
   if(!this.context){
    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;
@@ -10,6 +10,7 @@ export class EngineAudio{
    this.low.start();this.mid.start();
   }
   this.ensureHum();
+  this.ensureAmb();
   if(this.context.state==='suspended')this.context.resume().catch(()=>{});
  }
  ensureHum(){
@@ -41,20 +42,54 @@ export class EngineAudio{
   this.noise.start();
   this.humReady=true;
  }
- update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false}={}){
+ ensureAmb(){
+  if(!this.context||this.ambReady)return;
+  const c=this.context;
+  // Space / surface ambient — gain and filter only; pitch locked.
+  const seconds=5,rate=c.sampleRate,buffer=c.createBuffer(1,rate*seconds,rate),data=buffer.getChannelData(0);
+  let b0=0,b1=0,b2=0;
+  for(let i=0;i<data.length;i++){
+   const w=Math.random()*2-1;
+   b0=.997*b0+w*.05;b1=.985*b1+w*.07;b2=.96*b2+w*.12;
+   data[i]=(b0+b1+b2)*.11;
+  }
+  this.amb=c.createBufferSource();this.amb.buffer=buffer;this.amb.loop=true;
+  this.ambFilter=c.createBiquadFilter();this.ambFilter.type='lowpass';this.ambFilter.frequency.value=220;this.ambFilter.Q.value=.35;
+  this.ambGain=c.createGain();this.ambGain.gain.value=0;
+  this.amb.connect(this.ambFilter);this.ambFilter.connect(this.ambGain);this.ambGain.connect(c.destination);
+  this.amb.start();
+  this.ambReady=true;
+ }
+ update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false}={}){
   if(!this.context)return;
   this.ensureHum();
+  this.ensureAmb();
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving)),vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
   const live=enabled&&!paused;
-  this.gain.gain.setTargetAtTime(live&&!station?vol*n*.32:0,t,.12);
+  this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*.32:0,t,.12);
   this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
   this.mid.frequency.setTargetAtTime(77+n*45+(boost?19:0),t,.18);
   this.filter.frequency.setTargetAtTime(100+n*150+(boost?75:0),t,.2);
-  const humOn=live&&station;
+  const stationHum=live&&station&&!planetFeet;
   const bed=Math.max(vol,.25);
-  // Gain only — pitch stays locked.
-  if(this.humGain)this.humGain.gain.setTargetAtTime(humOn?bed*.26:0,t,.4);
-  if(this.noiseGain)this.noiseGain.gain.setTargetAtTime(humOn?bed*.055:0,t,.45);
+  if(this.humGain)this.humGain.gain.setTargetAtTime(stationHum?bed*.26:0,t,.4);
+  if(this.noiseGain)this.noiseGain.gain.setTargetAtTime(stationHum?bed*.055:0,t,.45);
+
+  // Ambient: space sky bed, or surface/planet wind. Filter cutoff locked per mode (no drift).
+  let ambGain=0,ambCut=180;
+  if(live&&!stationHum){
+   if(surface||planetFeet){
+    const wind={ocean:.045,arid:.055,ice:.038,mineral:.048,gas:.05}[surfaceKind]||.048;
+    ambGain=bed*(planetFeet?wind*.7:wind);
+    ambCut={ocean:160,arid:240,ice:140,mineral:190,gas:210}[surfaceKind]||190;
+   }else{
+    const skyBed={clear:.028,nebula:.034,storm:.05,ion:.036,dust:.032,deep:.014}[sky]||.028;
+    ambGain=bed*skyBed;
+    ambCut={clear:200,nebula:160,storm:320,ion:240,dust:180,deep:110}[sky]||200;
+   }
+  }
+  if(this.ambFilter)this.ambFilter.frequency.setTargetAtTime(ambCut,t,.5);
+  if(this.ambGain)this.ambGain.gain.setTargetAtTime(ambGain,t,.45);
  }
  mute(){
   if(!this.context)return;
@@ -66,5 +101,6 @@ export class EngineAudio{
   this.gain.gain.setTargetAtTime(0,t,.05);
   if(this.humGain)this.humGain.gain.setTargetAtTime(0,t,.05);
   if(this.noiseGain)this.noiseGain.gain.setTargetAtTime(0,t,.05);
+  if(this.ambGain)this.ambGain.gain.setTargetAtTime(0,t,.05);
  }
 }

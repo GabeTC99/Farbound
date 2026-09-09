@@ -6,7 +6,7 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 
 | ID | Goal | Planned scope | Status |
 | --- | --- | --- | --- |
-| FB-001 | Space anomalies | Add discoverable anomalies in space. Specific anomaly types and interactions remain to be designed. | Planned |
+| FB-001 | Space anomalies | Add discoverable anomalies in space. Specific anomaly types and interactions remain to be designed. | Ready for review |
 | FB-002 | Discovery scanning | Create exploration and discovery scanning mechanics inspired by Elite Dangerous. Initial implementation: four-second system pulse, followed by separate close-range world surveys. Touch controls and H/R shortcuts; data sells at stations. | Ready for review |
 | FB-003 | Procedural planet variety | Create varied planet types with randomized variations constrained by physically plausible rules. Planet classification, composition, and appearance must remain consistent; no Earth-like gas giants. Generation rules and planet categories remain to be designed. | Ready for review |
 | FB-004 | Fuel scooping | Allow ships to collect fuel from stars through a fuel-scooping mechanic. Initial implementation: built-in scoops on all current ships, distance-dependent collection at all current primary stars, speed limits, and automatic retraction. | Ready for review |
@@ -15,7 +15,7 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-007 | Multiple-star systems | Include occasional binary and trinary systems alongside single-star systems. Frequency and arrangement rules remain to be decided. | Ready for review |
 | FB-008 | Initial ship roster | Create at least 20 distinct ships, each with its own textures and features. Include dedicated warships and exploration vessels with meaningful role differences. Full roster, stats, and additional roles remain to be decided. | Planned |
 | FB-009 | Independent engine animations | Fix the reported bug where player thrust causes all ships on screen to display their engine-firing animation. Each ship’s animation should reflect that ship’s own thrust state. | Ready for review |
-| FB-010 | System background variety | Give different systems different backgrounds: standard black space with stars, nebula environments, and unusual anomaly systems with effects such as space lightning. Exact distribution and whether lightning is visual or interactive remain to be decided. | Planned |
+| FB-010 | System background variety | Give different systems different backgrounds: standard black space with stars, nebula environments, and unusual anomaly systems with effects such as space lightning. Exact distribution and whether lightning is visual or interactive remain to be decided. | Ready for review |
 | FB-011 | Circular exploration frontier | Place the 64 charted systems in a roughly circular human core with 128 uncharted systems surrounding it; preserve identities and update routes for the new coordinates. | Ready for review |
 | FB-012 | Station space legs | Replace utilitarian station tab dump with a top-down walkable deck. Dock enters on-foot mode; walk to service desks to open existing panels; launch only from the hangar bay. Prison barges use a detention layout. | Ready for review |
 | FB-013 | Planetary space legs | After landing the skiff, disembark into shared on-foot mode to inspect surface POIs. Reuses the FB-012 hub layer. Full surface settlements and activities remain later scope. | Ready for review |
@@ -43,3 +43,5 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 9, 2026: Candidate 2.3.0 adds station space legs (FB-012): walkable top-down decks, desk hotspots for existing services, hangar-only launch. Light planetary polish: kind-driven surface visuals and beacon ping. Planetary on-foot (FB-013) remains planned.
 
 - September 9, 2026: Candidate 2.4.0 ships planetary space legs (FB-013): skiff landing flare and readouts, disembark into a local on-foot site, inspect nearby signals on foot, board skiff to fly elsewhere, takeoff gated until boarded.
+
+- September 9, 2026: Candidate 2.5.0 polishes system skies and ambient beds (FB-010), ships distinct space anomalies (gravity lens, radio storm, silent relic — FB-001), and richer surface sites (salvage cache + survey dwell).

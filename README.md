@@ -8,6 +8,14 @@ Open the hosted game in Chrome, then use **Menu → Add to Home screen → Insta
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
+## Frontiers 2.5 — atmosphere + exploration
+
+### Candidate 2.5.0
+
+- **System skies (FB-010):** clearer per-kind local-space backdrops (nebula, storm, ion, dust, deep) plus quiet sky-kind ambient beds and surface wind beds.
+- **Space anomalies (FB-001):** gravity lens, radio storm, and silent relic contacts with distinct visuals, scan holds, and Cartographics `anomaly` data packages. Uncharted discovery pulses can reveal a nearby contact.
+- **Richer surface sites:** on-foot inspect pads require a short survey dwell; some sites include a one-shot salvage cache.
+
 ## Frontiers 2.4 — planetary landing + space legs
 
 ### Candidate 2.4.0
@@ -61,7 +69,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.4.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.5.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

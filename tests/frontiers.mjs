@@ -190,10 +190,13 @@ test('Planetary space legs: disembark, inspect, board, then takeoff',()=>{
  assert(pad,'nearby inspect pad for landed anomaly');
  g.onfoot.x=pad.x;g.onfoot.y=pad.y;
  const before=g.s.records.length;
- assert(g.interactPlanet()?.recorded);
+ assert(g.interactPlanet()?.scanning);
+ ticks(g,1.6);
  assert.equal(g.s.records.length,before+1);
  assert(a.scanned);
  assert(g.s.surfaceScanned.includes(a.id));
+ const cache=g.onfoot.zones.find(z=>z.service==='cache'||z.id==='cache');
+ if(cache){g.onfoot.x=cache.x;g.onfoot.y=cache.y;assert(g.interactPlanet()?.cache);assert(cache.looted||cache.service==='done');}
  g.onfoot.x=g.onfoot.zones.find(z=>z.board).x;g.onfoot.y=g.onfoot.zones.find(z=>z.board).y;
  assert(g.interactPlanet()?.board);
  assert(!g.onfoot);assert(g.surface.landed);

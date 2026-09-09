@@ -95,7 +95,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.4\.0'/);
+ assert.match(release,/export const RELEASE='2\.5\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -108,8 +108,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPRINT/);
  assert.match(app,/scan-button/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.4\.0/);
- assert.match(sw,/release:'2\.4\.0'/);
+ assert.match(sw,/farbound-v2\.5\.0/);
+ assert.match(sw,/release:'2\.5\.0'/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
  assert.match(sw,/station-robot\.mjs/);
@@ -308,6 +308,27 @@ test('Dynamic events start, resolve, and reuse living NPCs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/case 'dev-event'/);assert.match(app,/triggerDynamicEvent/);
  assert.match(app,/function drawEdgeArrow/);assert.match(app,/eventArrowTargets\(game\)/);
+ assert.match(app,/gravityLens|radioStorm|silentRelic/);
+});
+test('Space anomalies catalog with anomaly log type and dwell scan',()=>{
+ const g=new Game();g.launch();
+ assert(g.triggerDynamicEvent('anomalyActivity'));
+ const ev=g.dyn.active.find(e=>e.type==='anomalyActivity');assert(ev);
+ assert(['gravityLens','radioStorm','silentRelic'].includes(ev.anomalyKind));
+ if(ev.anomalyKind==='silentRelic'){
+  const d=g.derelicts.find(x=>x.id===ev.derelictId);assert(d);assert.equal(d.anomalyKind,'silentRelic');
+  g.target=d;g.player.x=d.x;g.player.y=d.y;g.player.vx=g.player.vy=0;
+  assert(g.scanDynamic());assert(d.scanned);
+  assert(g.s.explorationLog.some(e=>e.id===d.id&&e.type==='anomaly'));
+ }else{
+  const sig=g.signals.find(s=>s.id===ev.signalId);assert(sig);assert(sig.anomalyKind);
+  g.target=sig;g.player.x=sig.x;g.player.y=sig.y;g.player.vx=g.player.vy=0;
+  assert(g.scanDynamic());assert(g.dynScan);
+  ticks(g,4);assert(sig.scanned);assert(!g.dynScan);
+  assert(g.s.explorationLog.some(e=>e.id===sig.id&&e.type==='anomaly'));
+ }
+ const save=validateSave(JSON.parse(JSON.stringify(g.serialize())));
+ assert(save);assert(save.explorationLog.some(e=>e.type==='anomaly'));
 });
 test('Event direction arrows require discovery or combat alert',()=>{
  const g=new Game();g.launch();

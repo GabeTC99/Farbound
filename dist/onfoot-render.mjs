@@ -255,8 +255,13 @@ export function renderOnFoot(ctx,width,height,s,clock){
  if(zone){
   ctx.fillStyle=s.accent;ctx.font='13px system-ui';ctx.textAlign='center';
   const board=!!(zone.board||zone.launch);
-  const label=board?(planet?'INTERACT · BOARD SKIFF':'INTERACT · LAUNCH'):zone.service==='inspect'?'INTERACT · INSPECT':'INTERACT · '+zone.label.toUpperCase();
+  let label=board?(planet?'INTERACT · BOARD SKIFF':'INTERACT · LAUNCH'):zone.service==='inspect'?'INTERACT · INSPECT · HOLD':zone.service==='cache'?'INTERACT · SALVAGE CACHE':'INTERACT · '+zone.label.toUpperCase();
   ctx.fillText(label,width/2,Math.max(140,height*.24));
+  if(s.footScan&&s.footScan.id===zone.id){
+   const pct=Math.min(1,s.footScan.progress/s.footScan.need);
+   ctx.fillStyle='#0a1820cc';ctx.fillRect(width/2-60,Math.max(155,height*.24+12),120,8);
+   ctx.fillStyle=s.accent;ctx.fillRect(width/2-60,Math.max(155,height*.24+12),120*pct,8);
+  }
  }
 }
 

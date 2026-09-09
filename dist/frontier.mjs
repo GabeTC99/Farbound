@@ -5,7 +5,7 @@ import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
-import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets} from './dynamic-events.mjs';
+import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState} from './station-robot.mjs';
 import {surveyWorldIds,systemLayoutMeta,isLandablePlanet} from './system-layout.mjs';
 export * from './core.mjs';
@@ -37,7 +37,7 @@ export function validateSave(x){
    s.transit=x.transit.map(t=>({uid:t.uid,name:t.name,hull:t.hull,color:t.color||'#7ec8d8',size:t.size||12,speed:t.speed||120,turn:t.turn||2.8,wait:t.wait||2.5,from:t.from,to:t.to,eta:t.eta}));
   }
   if(x.explorationLog!==undefined){
-   if(!Array.isArray(x.explorationLog)||x.explorationLog.length>4096||x.explorationLog.some(e=>!e||typeof e.id!=='string'||e.id.length>80||!['system','world','surface','legacy'].includes(e.type)||!Number.isInteger(e.system)||!SYSTEMS[e.system]||typeof e.name!=='string'||!e.name.length||e.name.length>100||!numeric(e.value)||e.value>100000||typeof e.sold!=='boolean'))return null;
+   if(!Array.isArray(x.explorationLog)||x.explorationLog.length>4096||x.explorationLog.some(e=>!e||typeof e.id!=='string'||e.id.length>80||!['system','world','surface','legacy','anomaly'].includes(e.type)||!Number.isInteger(e.system)||!SYSTEMS[e.system]||typeof e.name!=='string'||!e.name.length||e.name.length>100||!numeric(e.value)||e.value>100000||typeof e.sold!=='boolean'))return null;
    if(new Set(x.explorationLog.map(e=>e.id)).size!==x.explorationLog.length)return null;
    s.explorationLog=x.explorationLog.map(e=>({id:e.id,type:e.type,system:e.system,name:e.name,value:e.value,sold:e.sold}));
   }
@@ -75,7 +75,7 @@ export function operationDetails(s,o){
  return {...d,destination,next,ready:d.ready&&SYSTEMS[s.system].hasStation,navLabel:destination!==s.system?'Plot route':combat?'Find target':'Select station'};
 }
 export class Game extends FlightGame{
- constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.onfoot=null;this.scooping=false;this.discoveryScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.stationPos??=null;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];if(!Number.isFinite(this.s.engineVolume))this.s.engineVolume=.35;ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;const ground=terrainAt(this.surface.x,this.surface.seed)-19;if(this.surface.y>=ground-2){this.surface.y=ground;this.surface.landed=true;}if(this.s.surface.foot&&this.surface.landed)this.onfoot=createOnFoot(createPlanetLayout(this.surface),this.s.surface.foot);}}else if(this.s.docked)this.enterStationDeck();}
+ constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.onfoot=null;this.scooping=false;this.discoveryScan=null;this.dynScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.stationPos??=null;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];if(!Number.isFinite(this.s.engineVolume))this.s.engineVolume=.35;ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;const ground=terrainAt(this.surface.x,this.surface.seed)-19;if(this.surface.y>=ground-2){this.surface.y=ground;this.surface.landed=true;}if(this.s.surface.foot&&this.surface.landed)this.onfoot=createOnFoot(createPlanetLayout(this.surface),this.s.surface.foot);}}else if(this.s.docked)this.enterStationDeck();}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
  nearestPrison(){const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);return (barges.sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0]||SYSTEMS.find(s=>s.hasStation)).id;}
  makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];this.dyn?.reset();this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}else if(this.s.dockId){const dock=this.stations.find(s=>s.id===this.s.dockId&&s.type==='station');if(dock)this.station=dock;}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction),anchor=this.station;for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:anchor.x+850+i*180,y:anchor.y+400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
@@ -370,14 +370,42 @@ export class Game extends FlightGame{
   if(!this.surface||!this.onfoot||this.onfoot.kind!=='planet')return null;
   const z=nearestZone(this.onfoot);if(!z)return null;
   if(z.board||z.service==='board'){this.boardSkiff();return{board:true};}
+  if(z.service==='cache'){
+   if(z.looted){this.notify('Cache already emptied.');return{done:true};}
+   const good=z.cacheGood||'ore';
+   const st=getStats(this.s);
+   if(cargoUsed(this.s)>=st.cargo){
+    const cr=80+Math.floor(Math.random()*61);this.s.credits+=cr;z.looted=true;z.label='Emptied';z.service='done';
+    this.notify(`Hold full · salvage sold · +${cr} cr`,'good');return{cache:true,credits:cr};
+   }
+   if(!(good in this.s.cargo)){const cr=100;this.s.credits+=cr;z.looted=true;z.label='Emptied';z.service='done';this.notify(`Salvage converted · +${cr} cr`,'good');return{cache:true,credits:cr};}
+   this.s.cargo[good]+=1;z.looted=true;z.label='Emptied';z.service='done';
+   this.notify(`Salvage recovered · +1 t ${good}`,'good');return{cache:true,good};
+  }
   if(z.service==='inspect'&&z.anomalyId){
    const a=this.surface.anomalies.find(a=>a.id===z.anomalyId);
    if(!a){this.notify('Signal not found.');return null;}
    if(a.scanned){this.notify('Already recorded.');return{done:true};}
-   this.completeSurfaceRecord(a);z.label='Recorded';z.service='done';
-   return{recorded:a};
+   if(!this.onfoot.footScan||this.onfoot.footScan.id!==z.id){
+    this.onfoot.footScan={id:z.id,progress:0,need:1.4};
+    this.notify('Surveying '+a.name.toLowerCase()+'. Hold position.');
+    return{scanning:true};
+   }
+   return{scanning:true};
   }
   return null;
+ }
+ updatePlanetFootScan(dt){
+  const scan=this.onfoot?.footScan;if(!scan||!this.onfoot)return;
+  const z=this.onfoot.zones.find(z=>z.id===scan.id);
+  if(!z||Math.hypot(z.x-this.onfoot.x,z.y-this.onfoot.y)>(z.r||40)+8){this.onfoot.footScan=null;this.notify('Survey interrupted.');return;}
+  scan.progress+=dt;
+  if(scan.progress<scan.need)return;
+  this.onfoot.footScan=null;
+  if(z.service!=='inspect'||!z.anomalyId)return;
+  const a=this.surface.anomalies.find(a=>a.id===z.anomalyId);
+  if(!a||a.scanned)return;
+  this.completeSurfaceRecord(a);z.label='Recorded';z.service='done';
  }
  scanSurface(){const s=this.surface;if(!s||this.onfoot)return false;const a=nearestAnomaly(s);if(!a){this.notify('All anomalies here are recorded. Return to orbit.');return false;}if(Math.hypot(a.x-s.x,a.y-s.y)>230+getStats(this.s).surfaceRange){this.notify('Approach a signal to scan it.');return false;}if(Math.hypot(s.vx,s.vy)>85){this.notify('Release the stick and hover to scan.');return false;}if(s.scan)return false;s.scan={id:a.id,progress:0};this.notify('Scanning '+a.name.toLowerCase()+'.');return true;}
  pingSurface(){
@@ -470,6 +498,7 @@ export class Game extends FlightGame{
    this.time+=dt;this.s.playtime+=dt;
    if(this.onfoot&&this.onfoot.kind==='planet'){
     updateOnFoot(this.onfoot,dt,input);
+    this.updatePlanetFootScan(dt);
     if(this.s.surface)this.s.surface.foot=onFootSave(this.onfoot);
     return;
    }
@@ -506,6 +535,12 @@ export class Game extends FlightGame{
   this.updateTraffic(dt);
   this.updateSecurity(dt);
   this.dyn?.update(dt);
+  tickDynScan(this,dt);
+  // Gravity lens: slight velocity wobble while inside the contact radius.
+  for(const s of this.signals){
+   if((s.anomalyKind||s.payload?.anomalyKind)!=='gravityLens'||s.scanned)continue;
+   if(dist(this.player,s)<420){this.player.vx+=(Math.random()-.5)*28*dt;this.player.vy+=(Math.random()-.5)*28*dt;}
+  }
   if(!wasJumping)this.resolveFlightCollisions(flightFrom);
   if(this.s.hull<=0){super.update(0,{});this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;return;}
   if(this.discoveryScan){
@@ -513,6 +548,12 @@ export class Game extends FlightGame{
    if(this.discoveryScan.progress>=4){
     this.discoveryScan=null;
     if(!this.s.systemScans.includes(this.s.system)){this.s.systemScans.push(this.s.system);const value=Math.round((this.sys.uncharted?500:150)*getStats(this.s).dataMultiplier);this.s.data+=value;this.logExploration({id:'system-'+this.s.system,type:'system',system:this.s.system,name:this.sys.name+' system catalog',value});if(this.sys.uncharted)this.s.metrics.discoveries++;const stars=this.stars?.length||1;this.notify(`System cataloged · ${stars} star${stars>1?'s':''} · ${this.planets.length} world${this.planets.length===1?'':'s'} · +${value} cr data. Select Worlds to survey.`,'good');}
+    if(this.sys.uncharted&&Math.random()<.25){
+     const contacts=[...this.signals.filter(s=>s.kind==='anomaly'&&!s.scanned),...this.derelicts.filter(d=>d.anomalyKind&&!d.scanned)]
+      .sort((a,b)=>dist(this.player,a)-dist(this.player,b));
+     const hit=contacts[0];
+     if(hit&&!hit.discovered){hit.discovered=true;this.target=hit;this.notify('Anomalous contact cataloged.','good');}
+    }
    }
   }
  }
