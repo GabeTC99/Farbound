@@ -2,7 +2,7 @@ import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier,EVENT_IDS,EVENT_CONFIG,eventArrowTargets} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier,EVENT_IDS,EVENT_CONFIG,eventArrowTargets,surveyWorldIds,systemLayoutMeta,buildSystemLayout,isLandablePlanet} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
 const ticks=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/30)g.update(1/30,input);};
@@ -21,8 +21,8 @@ test('Arrival is outside the scoop zone near the primary; reload preserves actua
 });
 test('Pulse locates unknown worlds, resumes as unscanned after interruption, pays once and persists',()=>{
  let g=frontier();assert.equal(g.visiblePlanets.length,0);assert(!g.land());assert(g.discover());ticks(g,1);const progress=g.discoveryScan.progress;assert(!g.discover());assert.equal(g.discoveryScan.progress,progress);assert(!g.scanTarget());
- g=roundtrip(g);assert.equal(g.discoveryScan,null);assert.equal(g.visiblePlanets.length,0);assert(g.scanTarget());ticks(g,4.1);assert.equal(g.visiblePlanets.length,2);assert.equal(g.s.data,500);assert.equal(g.s.metrics.discoveries,1);assert(!g.discover());
- g=roundtrip(g);assert.equal(g.visiblePlanets.length,2);assert(!g.discover());assert.equal(g.s.data,500);g.s.system=0;g.makeSystem();g.player.x=0;g.player.y=180;const credits=g.s.credits;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,500);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,1);assert(g.sellExplorationData());assert.equal(g.s.credits,credits+500);assert.equal(g.s.data,0);assert(g.s.explorationLog.every(e=>e.sold));g.dock();assert(!g.sellExplorationData());assert.equal(g.s.credits,credits+500);
+ g=roundtrip(g);assert.equal(g.discoveryScan,null);assert.equal(g.visiblePlanets.length,0);assert(g.scanTarget());ticks(g,4.1);assert.equal(g.visiblePlanets.length,g.planets.length);assert(g.planets.length>=1&&g.planets.length<=5);assert.equal(g.s.data,500);assert.equal(g.s.metrics.discoveries,1);assert(!g.discover());
+ g=roundtrip(g);assert.equal(g.visiblePlanets.length,g.planets.length);assert(!g.discover());assert.equal(g.s.data,500);g.s.system=0;g.makeSystem();g.player.x=g.station.x;g.player.y=g.station.y+50;const credits=g.s.credits;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,500);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,1);assert(g.sellExplorationData());assert.equal(g.s.credits,credits+500);assert.equal(g.s.data,0);assert(g.s.explorationLog.every(e=>e.sold));g.dock();assert(!g.sellExplorationData());assert.equal(g.s.credits,credits+500);
 });
 test('Discovery and world surveys cancel or reject during travel and require separate completion',()=>{
  const g=frontier();assert(g.discover());const next=SYSTEMS.find(s=>s.id!==g.s.system&&jumpDistance(g.s.system,s.id)<14).id;assert(g.jumpTo(next));assert.equal(g.discoveryScan,null);assert(!g.discover());assert(!g.scanTarget());assert(!g.scoop());assert(!g.dock());ticks(g,3.1);assert.equal(g.s.data,0);
@@ -39,7 +39,7 @@ test('Stellar heat warns, retracts scoop, damages hull, cools with distance and 
 });
 test('Destroyed pilots recover from heat; docked and landed ships do not scoop',()=>{
  const g=frontier();nearStar(g,60);g.s.hull=.01;g.s.heat=145;g.s.cargo.ore=3;ticks(g,.1);assert(g.s.docked);assert(g.sys.hasStation);assert.equal(g.s.cargo.ore,0);assert.equal(g.s.heat,25);assert(!g.scoop());assert(!g.discover());
- g.launch();const p=g.planets[0];g.target=p;g.player.x=p.x;g.player.y=p.y+p.r+300;assert(g.land());assert(!g.scoop());assert(!g.discover());
+ g.launch();const p=g.planets.find(isLandablePlanet)||g.planets[0];g.target=p;g.player.x=p.x;g.player.y=p.y+p.r+300;assert(g.land());assert(!g.scoop());assert(!g.discover());
 });
 test('Pre-update pilots keep progress and an immutable original backup; malformed new fields reject',()=>{
  const legacy=newSave();delete legacy.heat;delete legacy.systemScans;legacy.visited.push(65);legacy.metrics.discoveries=1;legacy.scanned.push('planet-65-0');legacy.data=650;legacy.route={destination:191,path:[1,191]};
@@ -50,7 +50,28 @@ test('Pre-update pilots keep progress and an immutable original backup; malforme
  for(const fields of [{heat:-1},{heat:151},{heat:NaN},{systemScans:[999]},{systemScans:[1]}])assert.equal(validateSave({...boot.pilot,...fields}),null);
 });
 test('Cartographics preserves a mixed discovery manifest until an explicit one-time sale',()=>{
- const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);const world=g.planets[0];g.target=world;g.player.x=world.x;g.player.y=world.y+world.r+300;assert(g.scanTarget());ticks(g,3.1);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,2);const expected=g.s.data,credits=g.s.credits;g.player.x=0;g.player.y=185;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,expected);let h=roundtrip(g);assert.equal(h.s.explorationLog.filter(e=>!e.sold).length,2);assert(h.sellExplorationData());assert.equal(h.s.credits,credits+expected);assert.equal(h.s.data,0);assert(h.s.explorationLog.every(e=>e.sold));assert(!h.sellExplorationData());assert.equal(h.s.credits,credits+expected);
+ const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);const world=g.planets[0];g.target=world;g.player.x=world.x;g.player.y=world.y+world.r+300;assert(g.scanTarget());ticks(g,3.1);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,2);const expected=g.s.data,credits=g.s.credits;g.player.x=g.station.x;g.player.y=g.station.y+50;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,expected);let h=roundtrip(g);assert.equal(h.s.explorationLog.filter(e=>!e.sold).length,2);assert(h.sellExplorationData());assert.equal(h.s.credits,credits+expected);assert.equal(h.s.data,0);assert(h.s.explorationLog.every(e=>e.sold));assert(!h.sellExplorationData());assert.equal(h.s.credits,credits+expected);
+});
+test('System layouts are seeded, cover multi-star and multi-world variety, and gate gas giants',()=>{
+ const a=buildSystemLayout(SYSTEMS[0]),b=buildSystemLayout(SYSTEMS[0]);
+ assert.equal(a.stars.length,b.stars.length);assert.equal(a.planets.length,b.planets.length);
+ assert.deepEqual(a.planets.map(p=>p.id),b.planets.map(p=>p.id));
+ const stars=new Set(),planets=new Set(),docks=new Set();
+ for(const sys of SYSTEMS){
+  const layout=buildSystemLayout(sys),meta=systemLayoutMeta(sys);
+  assert.equal(layout.stars.length,meta.starCount);
+  assert.equal(layout.planets.length,meta.planetCount);
+  assert.equal(surveyWorldIds(sys.id,sys).length,layout.planets.length);
+  stars.add(layout.stars.length);planets.add(layout.planets.length);
+  if(sys.hasStation)docks.add(layout.stations.filter(s=>s.type==='station').length);
+ }
+ assert(stars.has(1)&&stars.has(2)&&stars.has(3));
+ assert(planets.has(1)&&planets.has(5));
+ assert([...docks].some(n=>n>=2));
+ const g=new Game();g.launch();
+ const giant=g.planets.find(p=>!isLandablePlanet(p));
+ if(giant){g.target=giant;g.player.x=giant.x;g.player.y=giant.y+giant.r+300;assert(!g.land());}
+ const solid=g.planets.find(isLandablePlanet);assert(solid);g.target=solid;g.player.x=solid.x;g.player.y=solid.y+solid.r+300;assert(g.land());
 });
 test('Recovery and destruction discard unsold discovery entries while retaining sold history',()=>{
  const g=new Game();g.s.explorationLog=[{id:'sold',type:'legacy',system:0,name:'Sold cache',value:50,sold:true},{id:'pending',type:'legacy',system:0,name:'Pending cache',value:80,sold:false}];g.s.data=80;g.rescue();assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
@@ -65,15 +86,16 @@ test('Station close launches and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.1\.5'/);
+ assert.match(release,/export const RELEASE='2\.2\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/const leaveStation=\(\)=>\{if\(game\.s\.docked\)\{if\(!game\.launch\(\)\)/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)leaveStation\(\)/);
- assert.match(sw,/farbound-v2\.1\.5/);
- assert.match(sw,/release:'2\.1\.5'/);
+ assert.match(sw,/farbound-v2\.2\.0/);
+ assert.match(sw,/release:'2\.2\.0'/);
  assert.match(sw,/dynamic-events\.mjs/);
  assert.match(sw,/station-robot\.mjs/);
+ assert.match(sw,/system-layout\.mjs/);
  assert(sw.includes("'./release.mjs'"));
  const g=new Game();assert(g.s.docked);assert(g.launch());assert(!g.s.docked);
 });
