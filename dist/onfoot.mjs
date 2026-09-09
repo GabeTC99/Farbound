@@ -20,6 +20,7 @@ export function createOnFoot(layout,saved=null){
   hull:layout.hull||null,
   walls:layout.walls||[],
   windows:layout.windows||[],
+  signs:layout.signs||[],
   zones:layout.zones,
   npcs:layout.npcs.map(n=>({...n,phase:n.phase||0,facing:0,walk:0,moving:0,pause:0})),
   spawn:layout.spawn,

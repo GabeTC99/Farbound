@@ -1,22 +1,18 @@
 import {nearestZone} from './onfoot.mjs';
 
 function drawSpaceBackdrop(ctx,width,height,clock,accent){
- const g=ctx.createRadialGradient(width*.55,height*.35,20,width*.5,height*.45,Math.max(width,height)*.85);
- g.addColorStop(0,'#0c1a28');g.addColorStop(.45,'#071018');g.addColorStop(1,'#03060c');
+ // Calm open space — fewer stars, lighter wash so the deck can read clearly.
+ const g=ctx.createRadialGradient(width*.5,height*.42,30,width*.5,height*.5,Math.max(width,height)*.9);
+ g.addColorStop(0,'#152838');g.addColorStop(.55,'#0e1a26');g.addColorStop(1,'#0a131c');
  ctx.fillStyle=g;ctx.fillRect(0,0,width,height);
- // Nebula wash
- const neb=ctx.createRadialGradient(width*.75,height*.25,10,width*.7,height*.35,width*.45);
- neb.addColorStop(0,accent+'33');neb.addColorStop(.5,accent+'12');neb.addColorStop(1,'#0000');
+ const neb=ctx.createRadialGradient(width*.72,height*.28,20,width*.7,height*.35,width*.4);
+ neb.addColorStop(0,accent+'18');neb.addColorStop(1,'#0000');
  ctx.fillStyle=neb;ctx.fillRect(0,0,width,height);
- const neb2=ctx.createRadialGradient(width*.2,height*.7,8,width*.25,height*.65,width*.35);
- neb2.addColorStop(0,'#4a6a9030');neb2.addColorStop(1,'#0000');
- ctx.fillStyle=neb2;ctx.fillRect(0,0,width,height);
- // Stars
  ctx.fillStyle='#d8e8f0';
- for(let i=0;i<90;i++){
-  const x=((i*97.3+clock*3*(.2+(i%5)*.05))%width+width)%width;
-  const y=((i*53.1+Math.sin(clock*.15+i)*.8)%height+height)%height;
-  const a=.25+(i%7)*.1;ctx.globalAlpha=a;ctx.fillRect(x,y,(i%11===0?2:1),(i%11===0?2:1));
+ for(let i=0;i<36;i++){
+  const x=((i*97.3)%width+width)%width;
+  const y=((i*53.1+Math.sin(i)*2)%height+height)%height;
+  ctx.globalAlpha=.18+(i%5)*.06;ctx.fillRect(x,y,1,1);
  }
  ctx.globalAlpha=1;
 }
@@ -55,97 +51,104 @@ function drawIcon(ctx,x,y,s,kind,color){
 }
 
 function drawCharacter(ctx,x,y,scale,facing,walk,color,suit,clock,player=false){
- // Top-down crew: feet stride along facing, light bob — not a side-view swim.
+ // True bird's-eye crew: head + shoulders from above, feet as small pads — no side-view swim pose.
  const stride=Math.sin(walk*Math.PI*2);
- const bob=Math.abs(Math.sin(walk*Math.PI*2))*.22*scale;
- ctx.save();ctx.translate(x,y+bob);ctx.rotate(facing+Math.PI/2);
- // Soft shadow under boots
- ctx.fillStyle='#00000050';ctx.beginPath();ctx.ellipse(0,3.5*scale,7.2*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
- // Boots / feet along facing (local +Y)
- ctx.fillStyle=player?'#152830':suit;
- ctx.beginPath();ctx.ellipse(-2.6*scale,3.2*scale+stride*2.6*scale,2.1*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
- ctx.beginPath();ctx.ellipse(2.6*scale,3.2*scale-stride*2.6*scale,2.1*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
- // Torso — rounded capsule
- ctx.fillStyle=suit;ctx.strokeStyle=color;ctx.lineWidth=Math.max(1.1,1.35*scale);
- ctx.beginPath();ctx.ellipse(0,.6*scale,5.4*scale,6.2*scale,0,0,Math.PI*2);ctx.fill();ctx.stroke();
- // Chest stripe
- ctx.fillStyle=color;ctx.globalAlpha=.9;ctx.fillRect(-2.8*scale,-.2*scale,5.6*scale,1.5*scale);ctx.globalAlpha=1;
- // Shoulders / arms tucked — tiny swing, not flailing
- const arm=stride*.7*scale;
- ctx.strokeStyle=suit;ctx.lineWidth=Math.max(1.5,2.1*scale);ctx.lineCap='round';
- ctx.beginPath();ctx.moveTo(-5.2*scale,.2*scale);ctx.lineTo(-7.2*scale,2.4*scale+arm);ctx.stroke();
- ctx.beginPath();ctx.moveTo(5.2*scale,.2*scale);ctx.lineTo(7.2*scale,2.4*scale-arm);ctx.stroke();
- // Head toward facing
- ctx.fillStyle='#e8d5c4';ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,1.15*scale);
- ctx.beginPath();ctx.arc(0,-5.8*scale,3.8*scale,0,Math.PI*2);ctx.fill();ctx.stroke();
+ const moving=Math.abs(stride)>.02;
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.rotate(facing-Math.PI/2); // local +Y = travel / facing
+ // Ground shadow
+ ctx.fillStyle='#00000048';
+ ctx.beginPath();ctx.ellipse(0,1.2*scale,8.5*scale,6.2*scale,0,0,Math.PI*2);ctx.fill();
+ // Feet peeking at the facing edge (pads, not legs)
+ ctx.fillStyle='#141c24';
+ const foot=moving?2.4*scale:1.1*scale;
+ ctx.beginPath();ctx.ellipse(-3.4*scale,4.2*scale+stride*foot,2.6*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(3.4*scale,4.2*scale-stride*foot,2.6*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
+ // Shoulder / torso disc
+ ctx.fillStyle=suit;ctx.strokeStyle=color;ctx.lineWidth=Math.max(1.1,1.3*scale);
+ ctx.beginPath();ctx.ellipse(0,.6*scale,7.4*scale,6.2*scale,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+ // Arm pads at the sides
+ ctx.fillStyle=suit;
+ ctx.beginPath();ctx.ellipse(-7.6*scale,.4*scale+stride*.35*scale,2.4*scale,3*scale,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(7.6*scale,.4*scale-stride*.35*scale,2.4*scale,3*scale,0,0,Math.PI*2);ctx.fill();
+ // Suit stripe across shoulders
+ ctx.fillStyle=color;ctx.globalAlpha=.88;ctx.fillRect(-4.2*scale,-.4*scale,8.4*scale,1.5*scale);ctx.globalAlpha=1;
+ // Head — centered on body (looking down onto the crown)
+ ctx.fillStyle='#d7b99a';ctx.strokeStyle=color;ctx.lineWidth=Math.max(1,1.15*scale);
+ ctx.beginPath();ctx.arc(0,-.2*scale,4.6*scale,0,Math.PI*2);ctx.fill();ctx.stroke();
  if(player){
-  ctx.fillStyle='#9ff0e0cc';ctx.beginPath();ctx.ellipse(0,-5.6*scale,2.9*scale,2*scale,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=color;ctx.globalAlpha=.5+.2*Math.sin(clock*4);ctx.beginPath();ctx.arc(1.1*scale,-5.6*scale,1*scale,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  // Helmet crown + forward visor wedge
+  ctx.fillStyle='#1a3340';
+  ctx.beginPath();ctx.arc(0,-.2*scale,4.6*scale,Math.PI*.15,Math.PI*.85,true);ctx.fill();
+  ctx.fillStyle='#9ff0e0cc';
+  ctx.beginPath();ctx.ellipse(0,1.6*scale,2.6*scale,1.8*scale,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=color;ctx.globalAlpha=.45+.2*Math.sin(clock*4);
+  ctx.beginPath();ctx.arc(.9*scale,1.5*scale,.9*scale,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
  }else{
-  ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,-7.2*scale,3.1*scale,1.4*scale,0,Math.PI,0);ctx.fill();
+  // Hair on the back half of the crown
+  ctx.fillStyle=color;
+  ctx.beginPath();ctx.ellipse(0,-2.4*scale,4*scale,2.6*scale,0,Math.PI,0);ctx.fill();
  }
+ // Facing tick on the crown (toward +Y)
+ ctx.fillStyle=player?'#b8f0e8':color;ctx.globalAlpha=.9;
+ ctx.beginPath();ctx.moveTo(0,3.4*scale);ctx.lineTo(-1.6*scale,1.4*scale);ctx.lineTo(1.6*scale,1.4*scale);ctx.closePath();ctx.fill();
+ ctx.globalAlpha=1;
  ctx.restore();
 }
 
 function drawWheelDeck(ctx,sx,sy,scale,s){
  const h=s.hull;if(!h||h.kind!=='wheel')return false;
+ // Palette locked to exterior drawStation()
+ const rim='#527d8c',body='#29434f',arm='#18303e',armStroke='#6a94a3',core='#132833',coreLine='#7db9bd',tip='#82d7c2';
  const accent=s.accent||'#7ec8c0';
  const cx=sx(h.cx),cy=sy(h.cy);
- const hubR=h.hubR*scale,ringIn=h.ringInner*scale,ringOut=h.ringOuter*scale;
- // Soft outer silhouette (matches orbital station rim)
- ctx.fillStyle='#0a1218cc';ctx.beginPath();ctx.arc(cx,cy,ringOut+28*scale,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle=accent+'55';ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,cy,ringOut+18*scale,0,Math.PI*2);ctx.stroke();
+ const hubR=h.hubR*scale,rimR=(h.rimR||h.hubR*1.25)*scale,coreR=(h.coreR||h.hubR*.43)*scale;
 
- const floor=ctx.createRadialGradient(cx,cy,hubR*.2,cx,cy,ringOut);
- floor.addColorStop(0,'#1e3340');floor.addColorStop(.45,s.floor||'#172430');floor.addColorStop(1,'#121c26');
- ctx.fillStyle=floor;
- // Hub
- ctx.beginPath();ctx.arc(cx,cy,hubR,0,Math.PI*2);ctx.fill();
- // Ring corridor
- ctx.beginPath();ctx.arc(cx,cy,ringOut,0,Math.PI*2);ctx.arc(cx,cy,ringIn,0,Math.PI*2,true);ctx.fill('evenodd');
- // Six arms — same geometry as the orbital station sprite
+ // Approach rings (same cue as local-space docking circle)
+ ctx.strokeStyle=rim+'55';ctx.lineWidth=1.4;
+ ctx.beginPath();ctx.arc(cx,cy,rimR,0,Math.PI*2);ctx.stroke();
+ ctx.setLineDash([7*scale,9*scale]);ctx.strokeStyle=accent+'35';ctx.lineWidth=1.2;
+ ctx.beginPath();ctx.arc(cx,cy,rimR+18*scale,0,Math.PI*2);ctx.stroke();
+ ctx.setLineDash([]);
+
+ // Solid mid body — the filled disk you see from outside
+ ctx.fillStyle=body;ctx.strokeStyle=rim;ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(cx,cy,hubR,0,Math.PI*2);ctx.fill();ctx.stroke();
+
+ // Six docking arms
  for(let i=0;i<h.spokes;i++){
   const a=h.baseAngle+i*(Math.PI*2/h.spokes);
   const c=Math.cos(a),sn=Math.sin(a),px=-sn,py=c,half=h.spokeHalf*scale;
   const x0=cx+c*h.spokeStart*scale,y0=cy+sn*h.spokeStart*scale;
   const x1=cx+c*h.spokeEnd*scale,y1=cy+sn*h.spokeEnd*scale;
+  ctx.fillStyle=arm;ctx.strokeStyle=armStroke;ctx.lineWidth=1.6;
   ctx.beginPath();
   ctx.moveTo(x0+px*half,y0+py*half);ctx.lineTo(x1+px*half,y1+py*half);ctx.lineTo(x1-px*half,y1-py*half);ctx.lineTo(x0-px*half,y0-py*half);
-  ctx.closePath();ctx.fill();
+  ctx.closePath();ctx.fill();ctx.stroke();
+  // Tip lamp
+  ctx.fillStyle=tip;
+  const tx=cx+c*(h.spokeEnd-12)*scale,ty=cy+sn*(h.spokeEnd-12)*scale;
+  ctx.fillRect(tx-3*scale,ty-2.5*scale,6*scale,5*scale);
  }
- // Deck plating
- ctx.strokeStyle='#ffffff0d';ctx.lineWidth=1;
- for(let r=hubR;r<ringOut;r+=36*scale){ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();}
- ctx.strokeStyle=accent+'28';ctx.lineWidth=5;
- ctx.beginPath();ctx.arc(cx,cy,(ringIn+ringOut)/2,0,Math.PI*2);ctx.stroke();
 
- // Hull edges / bulkheads
- ctx.strokeStyle='#6a94a3';ctx.lineWidth=2.2;
- ctx.beginPath();ctx.arc(cx,cy,hubR,0,Math.PI*2);ctx.stroke();
- ctx.beginPath();ctx.arc(cx,cy,ringIn,0,Math.PI*2);ctx.stroke();
- ctx.beginPath();ctx.arc(cx,cy,ringOut,0,Math.PI*2);ctx.stroke();
- ctx.fillStyle='#132833';ctx.beginPath();ctx.arc(cx,cy,hubR*.42,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle=accent;ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(cx,cy,hubR*.42,0,Math.PI*2);ctx.stroke();
- for(let i=0;i<h.spokes;i++){
-  const a=h.baseAngle+i*(Math.PI*2/h.spokes);
-  const c=Math.cos(a),sn=Math.sin(a),px=-sn,py=c,half=h.spokeHalf*scale;
-  const x0=cx+c*h.spokeStart*scale,y0=cy+sn*h.spokeStart*scale;
-  const x1=cx+c*h.spokeEnd*scale,y1=cy+sn*h.spokeEnd*scale;
-  ctx.strokeStyle='#6a94a3';ctx.lineWidth=1.6;
-  ctx.beginPath();
-  ctx.moveTo(x0+px*half,y0+py*half);ctx.lineTo(x1+px*half,y1+py*half);ctx.lineTo(x1-px*half,y1-py*half);ctx.lineTo(x0-px*half,y0-py*half);
-  ctx.closePath();ctx.stroke();
-  ctx.fillStyle=accent;ctx.globalAlpha=.85;
-  ctx.fillRect(cx+c*(h.spokeEnd-10)*scale-3*scale,cy+sn*(h.spokeEnd-10)*scale-3*scale,6*scale,6*scale);
-  ctx.globalAlpha=1;
- }
- for(const w of (s.windows||[])){
-  const wx=sx(w.x+w.w/2),wy=sy(w.y+w.h/2);
-  ctx.fillStyle='#081420';ctx.strokeStyle=accent+'99';ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(wx,wy,6*scale,0,Math.PI*2);ctx.fill();ctx.stroke();
-  ctx.fillStyle='#e8f4ff';ctx.globalAlpha=.35;ctx.fillRect(wx-1,wy-1,2,2);ctx.globalAlpha=1;
- }
+ // Core
+ ctx.fillStyle=core;ctx.strokeStyle=coreLine;ctx.lineWidth=1.6;
+ ctx.beginPath();ctx.arc(cx,cy,coreR,0,Math.PI*2);ctx.fill();ctx.stroke();
  return true;
+}
+
+function drawSigns(ctx,sx,sy,scale,s){
+ const accent=s.accent||'#7ec8c0';
+ for(const sign of s.signs||[]){
+  if(sign.kind!=='chevron'||!Number.isFinite(sign.angle))continue;
+  const x=sx(sign.x),y=sy(sign.y);
+  ctx.save();ctx.translate(x,y);ctx.rotate(sign.angle);
+  ctx.globalAlpha=sign.accent?0.38:0.18;
+  ctx.fillStyle=sign.accent?accent:'#8eb4b8';
+  ctx.beginPath();ctx.moveTo(9*scale,0);ctx.lineTo(-5*scale,-5.5*scale);ctx.lineTo(-5*scale,5.5*scale);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=1;ctx.restore();
+ }
 }
 
 export function renderOnFoot(ctx,width,height,s,clock){
@@ -169,20 +172,24 @@ export function renderOnFoot(ctx,width,height,s,clock){
   ctx.fillStyle=floor;ctx.fillRect(sx(0),sy(0),s.width*scale,s.height*scale);
  }
 
+ drawSigns(ctx,sx,sy,scale,s);
+
  // Zone pads + icons
  for(const z of s.zones){
   const near=Math.hypot(z.x-s.x,z.y-s.y)<(z.r||40)+24;
   const zx=sx(z.x),zy=sy(z.y),zr=(z.r||40)*scale;
-  const pulse=near?.12*Math.sin(clock*4):0;
-  ctx.fillStyle=z.launch?(near?s.accent+'66':s.accent+'30'):(near?s.accent+'50':'#1e3140cc');
+  const pulse=near?0.12*Math.sin(clock*4):0;
+  ctx.fillStyle=z.launch?(near?s.accent+'70':s.accent+'38'):(near?s.accent+'55':'#2a4455bb');
   ctx.beginPath();ctx.arc(zx,zy,zr,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle=near?s.accent:'#6a8794';ctx.lineWidth=near?2.4:1.3;
+  ctx.strokeStyle=near?s.accent:'#8aa8b4aa';ctx.lineWidth=near?2.2:1.1;
   ctx.beginPath();ctx.arc(zx,zy,zr+pulse*10,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='#0c1822ee';ctx.beginPath();ctx.arc(zx,zy-4*scale,16*scale,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle=near?s.accent:'#8aa8b4';ctx.lineWidth=1.5;ctx.stroke();
-  drawIcon(ctx,zx,zy-4*scale,28*scale,z.icon||z.service,near?s.accent:'#b7d0d8');
-  ctx.fillStyle=near?'#eef8f6':'#a8c0c8';ctx.font=`${Math.max(11,13*Math.min(1.1,scale))}px system-ui`;ctx.textAlign='center';ctx.textBaseline='alphabetic';
-  ctx.fillText(z.label,zx,zy+zr+16);
+  ctx.fillStyle='#1a3040f0';ctx.beginPath();ctx.arc(zx,zy-3*scale,14*scale,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=near?s.accent:'#a8c4cc';ctx.lineWidth=1.3;ctx.stroke();
+  drawIcon(ctx,zx,zy-3*scale,24*scale,z.icon||z.service,near?s.accent:'#c5dce2');
+  if(near){
+   ctx.fillStyle='#eef8f6';ctx.font=`${Math.max(11,12.5*Math.min(1.1,scale))}px system-ui`;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+   ctx.fillText(z.label,zx,zy+zr+14);
+  }
  }
 
  // Legacy AABB bulkheads if present
@@ -205,11 +212,9 @@ export function renderOnFoot(ctx,width,height,s,clock){
  }
  ctx.restore();
 
- ctx.fillStyle='#c5dbe0';ctx.font='12px system-ui';ctx.textAlign='center';
- ctx.fillText((s.title||'STATION DECK').toUpperCase()+'  ·  WALK THE RING TO A SERVICE PAD',width/2,Math.max(132,height*.24));
  if(zone){
-  ctx.fillStyle=s.accent;ctx.font='13px system-ui';
-  ctx.fillText(zone.launch?'INTERACT · LAUNCH':'INTERACT · '+zone.label.toUpperCase(),width/2,Math.max(152,height*.24+20));
+  ctx.fillStyle=s.accent;ctx.font='13px system-ui';ctx.textAlign='center';
+  ctx.fillText(zone.launch?'INTERACT · LAUNCH':'INTERACT · '+zone.label.toUpperCase(),width/2,Math.max(140,height*.24));
  }
 }
 
