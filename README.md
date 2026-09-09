@@ -8,6 +8,14 @@ Open the hosted game in Chrome, then use **Menu → Add to Home screen → Insta
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
+## Frontiers 2.3 — station space legs
+
+### Candidate 2.3.0
+
+- **Station space legs:** docking puts you on a top-down station deck. Walk corridors to Market, Cartographics, Contracts, Modules, Hangar, Guilds, and Factions. Interact at a desk to open the familiar service panel; close returns to the deck. Launch only from the hangar bay (or the Launch button inside a desk). Prison barges use a detention layout. Deck position saves while docked.
+- **Light planetary polish:** surface expeditions tint sky, terrain, and skiff by world kind (ocean, arid, ice, mineral). Anomaly markers are kind-specific. Out of scan range, INTERACT / SCAN pings a beacon toward the nearest unscanned signal (short cooldown).
+- Planetary on-foot exploration (disembark from the skiff) remains planned for a later release.
+
 ## Frontiers 2.1 — exploration update
 
 ### Candidate 2.1.6
@@ -38,22 +46,25 @@ This update is prepared for review; publishing is a separate step. The preserved
 
 - **192 deterministic systems:** all systems retain their identities, with coordinates now arranged around the circular core. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. Discovery pulses award exploration data.
 - **Contract navigation:** active contracts have a Plot destination route button. Nearby destinations use a direct jump; farther destinations use a route of legal jumps. Survey routes return to the issuing station after both worlds are recorded. The chart supports search, filters, pan, pinch/wheel zoom, locate-me, overview, and route fuel estimates. Jump next executes one leg at a time.
-- **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
+- **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain tinted by world kind. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; ping a beacon when you need a bearing. Return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
+- **Station decks:** docking drops you onto a walkable top-down deck. Visit service desks on foot; closing a desk keeps you aboard. Leave through the hangar bay.
 - **Four guilds:** Trading, Miners, Freelancer, and Explorers. Join any or all at station desks. Each guild offers three sequential commissions with unique module rewards. Accept commissions before doing the work; return to a desk to claim rewards. Supply commissions consume the requested cargo.
 - **Three factions:** Orion Concord, Cinder Directorate, and Outer Freeholds. Relief and combat operations improve standing. Pledging lets friendly patrols assist nearby combat; attacking a faction worsens relations and can make its patrols hostile. Standing also affects local prices.
 - **Physical modules and owned ships:** new ships stay in the hangar. Each hull has its own loadout, condition, and fuel. At a station, remove modules to storage, switch ships, and install them; Move here transfers a module directly from another owned ship. Slot limits and category limits make loadouts a choice. Cargo stays with the pilot and capacity checks prevent losses.
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station services leave local space running, and closing them launches you back out. Player-facing version lives in `dist/release.mjs` (2.1.x, with letter suffixes for tiny fixes). This is a solo prototype with local progression, without multiplayer or on-foot play. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.3.x). This is a solo prototype with local progression, without multiplayer. On-foot play is currently limited to station decks; planetary disembark remains planned. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
 Touch: drag the left stick toward a direction; hold BOOST to accelerate and FIRE / MINE to shoot. Select Station, Star, Worlds, or Belt, or tap a visible object; AUTO approaches it. Dock, Scan, Scoop, or Land when within range. Open Galaxy to plot routes and jump.
 
-In surface flight, the stick moves horizontally and vertically; release it to hover. Tap SCAN SIGNAL within range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition.
+In surface flight, the stick moves horizontally and vertically; release it to hover. Tap SCAN SIGNAL within range, or PING BEACON when out of range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition.
 
-Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu. On a surface, A/D move sideways, W/S move vertically, and Space scans.
+On a station deck, the stick walks. Tap INTERACT at a desk to open services, or at the hangar to launch. Escape closes a desk and returns to walking; open the flight menu from the deck when no desk is open.
+
+Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock / interact; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu or close desk. On a surface, A/D move sideways, W/S move vertically, and Space scans or pings. On a station deck, the stick or WASD walks and Space / E interacts.
 
 ## Saves and rollback
 
@@ -79,7 +90,7 @@ node tests/exploration.mjs
 node tests/offline.mjs
 ```
 
-Validation includes 9 retained classic gameplay checks, 19 Frontiers progression and migration checks, 9 exploration regression checks, and 3 offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
+Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
 
 ## Build the native Android app
 

@@ -1,6 +1,8 @@
 import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius} from './core.mjs';
 import {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface} from './surface.mjs';
+import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
+import {createStationLayout} from './station-layout.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState} from './station-robot.mjs';
@@ -8,6 +10,8 @@ import {surveyWorldIds,systemLayoutMeta,isLandablePlanet} from './system-layout.
 export * from './core.mjs';
 export {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 export {nearestAnomaly,terrainAt} from './surface.mjs';
+export {nearestZone,createOnFoot,updateOnFoot,onFootSave} from './onfoot.mjs';
+export {createStationLayout} from './station-layout.mjs';
 export {systemSky,wantedTier} from './atmosphere.mjs';
 export {EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,eventArrowTargets} from './dynamic-events.mjs';
 export {STATION_ROBOT,ROBOT_LINES,buildRobotContext,pickRobotLine,speakRobot,ensureRobotState} from './station-robot.mjs';
@@ -16,7 +20,7 @@ export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};
 export function newSave(){return {...migrate(v1Save()),systemScans:[]};}
- function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],heat:25,bounty:0,detained:false,dockId:null,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
+ function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],heat:25,bounty:0,detained:false,dockId:null,stationPos:null,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
 export function validateSave(x){
  if(!x||![1,2].includes(x.version))return null;const base=v1Validate({...x,version:1});if(!base)return null;if(x.version===1)return migrate(base);
  try{const s=migrate(base);
@@ -47,9 +51,10 @@ export function validateSave(x){
   for(const k of ['discoveries','anomalies','geology','deliveries','operations','pirates']){if(!numeric(x.metrics?.[k]))return null;s.metrics[k]=x.metrics[k];}for(const id of factionIds){if(!numeric(x.metrics?.factionKills?.[id]))return null;s.metrics.factionKills[id]=x.metrics.factionKills[id];}
   if(!Array.isArray(x.operations)||x.operations.length>3||x.operations.some(o=>!o||!/^op-\d+$/.test(o.uid)||!factionIds.includes(o.faction)||!['relief','combat'].includes(o.type)||!Number.isInteger(o.target)||!SYSTEMS[o.target]||!Number.isInteger(o.kills)||o.kills<0||o.kills>2))return null;s.operations=x.operations.map(o=>({uid:o.uid,faction:o.faction,type:o.type,target:o.target,kills:o.kills}));if(new Set(s.operations.map(o=>o.uid)).size!==s.operations.length||new Set(s.operations.map(o=>o.faction+o.type)).size!==s.operations.length)return null;
   for(const [id,list]of Object.entries(x.cleared||{})){if(!/^\d+$/.test(id)||!SYSTEMS[+id]||!Array.isArray(list)||list.length>500||list.some(v=>typeof v!=='string'||!/^(rock|pirate|patrol|op)-[a-z0-9-]+$/.test(v)))return null;s.cleared[id]=[...new Set(list)];}
-  s.allegiance=factionIds.includes(x.allegiance)?x.allegiance:null;s.engineVolume=clamp(Number(x.engineVolume)||0,0,1);s.nextModule=Math.max(1,...s.modules.map(m=>+m.uid.slice(2)+1));s.nextOperation=Math.max(1,Number.isInteger(x.nextOperation)?x.nextOperation:1,...s.operations.map(o=>+o.uid.slice(3)+1));
+  s.allegiance=factionIds.includes(x.allegiance)?x.allegiance:null;s.engineVolume=clamp(Number.isFinite(Number(x.engineVolume))?Number(x.engineVolume):.35,0,1);s.nextModule=Math.max(1,...s.modules.map(m=>+m.uid.slice(2)+1));s.nextOperation=Math.max(1,Number.isInteger(x.nextOperation)?x.nextOperation:1,...s.operations.map(o=>+o.uid.slice(3)+1));
   const st=getStats(s);s.hull=clamp(x.hull,1,st.hull);s.shield=clamp(x.shield,0,st.shield);s.fuel=clamp(x.fuel,0,st.fuel);if(cargoUsed(s)>st.cargo)return null;
   if(x.surface){const a=x.surface;if(!new RegExp('^planet-'+s.system+'-\\d+$').test(a.planetId)||!['x','y','integrity'].every(k=>Number.isFinite(a[k])))return null;s.surface={planetId:a.planetId,x:clamp(a.x,40,5960),y:clamp(a.y,55,850),integrity:clamp(a.integrity,1,100),recordStart:Number.isInteger(a.recordStart)?clamp(a.recordStart,0,s.records.length):s.records.length};s.docked=false;}
+  if(x.stationPos!==undefined){if(x.stationPos==null)s.stationPos=null;else if(!x.stationPos||!Number.isFinite(x.stationPos.x)||!Number.isFinite(x.stationPos.y))return null;else s.stationPos={x:clamp(x.stationPos.x,20,1080),y:clamp(x.stationPos.y,20,1080)};}
   if(x.route&&Number.isInteger(x.route.destination)&&SYSTEMS[x.route.destination])s.route={destination:x.route.destination,path:findRoute(s.system,x.route.destination,st.range)||[]};return s;
  }catch{return null;}
 }
@@ -68,25 +73,46 @@ export function operationDetails(s,o){
  return {...d,destination,next,ready:d.ready&&SYSTEMS[s.system].hasStation,navLabel:destination!==s.system?'Plot route':combat?'Find target':'Select station'};
 }
 export class Game extends FlightGame{
- constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.scooping=false;this.discoveryScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}}
+ constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.onfoot=null;this.scooping=false;this.discoveryScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.stationPos??=null;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];if(!Number.isFinite(this.s.engineVolume))this.s.engineVolume=.35;ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}else if(this.s.docked)this.enterStationDeck();}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
  nearestPrison(){const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);return (barges.sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0]||SYSTEMS.find(s=>s.hasStation)).id;}
  makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];this.dyn?.reset();this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}else if(this.s.dockId){const dock=this.stations.find(s=>s.id===this.s.dockId&&s.type==='station');if(dock)this.station=dock;}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction),anchor=this.station;for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:anchor.x+850+i*180,y:anchor.y+400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
  triggerDynamicEvent(type){if(this.s.docked)this.launch();EVENT_CONFIG.log=true;const ok=this.dyn.trigger(type);this.notify(ok?('DEV · dynamic event · '+type):('DEV · could not start '+type),ok?'good':'bad');return ok;}
  onCombatLoss(loss,{security}= {}){
-  this.surface=null;this.s.surface=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.responseAt=null;
+  this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.responseAt=null;
   if(security){
    const id=this.nearestPrison();
    this.s.system=id;if(!this.s.visited.includes(id))this.s.visited.push(id);this.s.route=null;this.s.detained=true;this.s.bounty=Math.max(this.s.bounty||0,500);
-   this.makeSystem();
+   this.makeSystem();this.enterStationDeck();
    this.notify(`Detained by system security. Transferred to ${this.sys.station} · lost cargo and ${loss.toLocaleString()} cr.`,'bad');
    return true;
   }
-  this.makeSystem();
+  this.makeSystem();this.enterStationDeck();
   this.notify(`Escape pod recovered. Lost cargo and ${loss.toLocaleString()} cr.`,'bad');
   return true;
  }
- launch(){if(this.s.detained){this.notify('Pay your fine at the detention desk before launch.','bad');return false;}return super.launch();}
+ launch(){if(this.s.detained){this.notify('Pay your fine at the detention desk before launch.','bad');return false;}const ok=super.launch();if(ok){this.onfoot=null;this.s.stationPos=null;}return ok;}
+ enterStationDeck(){
+  if(!this.s.docked||!this.sys.hasStation){this.onfoot=null;return null;}
+  const dock=this.station||this.stations?.find(s=>s.type==='station');
+  const layout=createStationLayout({
+   name:dock?.name||this.sys.station,
+   roleLabel:dock?.roleLabel||(this.sys.prison?'PRISON BARGE':'ORBITAL STATION'),
+   prison:!!this.sys.prison,detained:!!this.s.detained,
+   dockId:this.s.dockId||dock?.id||'station',
+   seed:this.s.system*97+(this.s.dockId||'station').length*13
+  });
+  this.onfoot=createOnFoot(layout,this.s.stationPos);
+  return this.onfoot;
+ }
+ interactStation(){
+  if(!this.s.docked)return null;
+  if(!this.onfoot)this.enterStationDeck();
+  const z=nearestZone(this.onfoot);
+  if(!z){this.notify('Walk to a service desk or the hangar bay.');return null;}
+  if(z.launch){if(this.launch())return{launch:true};return{service:'detention',blocked:true};}
+  return{service:z.service,zone:z};
+ }
  markWanted(amount=35,at=null){
   const pos=at||{x:this.player.x,y:this.player.y};
   this.heatWanted=clamp(this.heatWanted+amount,0,100);
@@ -264,12 +290,13 @@ export class Game extends FlightGame{
   return true;
  }
  followWake(){const wake=this.target?.type==='wake'?this.target:null;if(!wake){this.notify('Target a scanned wake first.');return false;}if(!wake.scanned)return this.scanWake();return this.setRoute(wake.to);}
- payBounty(){if(!this.s.docked||!(this.s.bounty||this.s.detained))return false;const fine=Math.max(this.s.bounty||0,this.s.detained?500:0);if(this.s.credits<fine){this.notify(this.s.detained?'Insufficient credits to clear the detention fine.':'Insufficient credits to clear the bounty.','bad');return false;}const paid=fine;this.s.credits-=paid;this.s.bounty=0;this.s.detained=false;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.notify((this.sys.prison?'Detention fine cleared':'Bounty cleared')+' · '+paid.toLocaleString()+' cr · standing CLEAN','good');return true;}
+ payBounty(){if(!this.s.docked||!(this.s.bounty||this.s.detained))return false;const fine=Math.max(this.s.bounty||0,this.s.detained?500:0);if(this.s.credits<fine){this.notify(this.s.detained?'Insufficient credits to clear the detention fine.':'Insufficient credits to clear the bounty.','bad');return false;}const paid=fine;this.s.credits-=paid;this.s.bounty=0;const wasDetained=this.s.detained;this.s.detained=false;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;if(wasDetained){this.s.stationPos=null;this.enterStationDeck();}this.notify((this.sys.prison?'Detention fine cleared':'Bounty cleared')+' · '+paid.toLocaleString()+' cr · standing CLEAN','good');return true;}
  teleportTo(systemId,{docked=false,credits=null,bounty=null,fuel=true,repair=true}={}){
   if(!SYSTEMS[systemId])return false;
-  this.surface=null;this.s.surface=null;this.jump=null;this.s.system=systemId;if(!this.s.visited.includes(systemId))this.s.visited.push(systemId);this.s.docked=!!docked;if(credits!=null)this.s.credits=credits;if(bounty!=null)this.s.bounty=bounty;this.makeSystem();
+  this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.jump=null;this.s.system=systemId;if(!this.s.visited.includes(systemId))this.s.visited.push(systemId);this.s.docked=!!docked;if(credits!=null)this.s.credits=credits;if(bounty!=null)this.s.bounty=bounty;this.makeSystem();
   const st=getStats(this.s);if(fuel)this.s.fuel=st.fuel;if(repair){this.s.hull=st.hull;this.s.shield=st.shield;}
   if(!docked){this.player.x=this.star.x+this.star.r+950;this.player.y=this.star.y;this.player.vx=this.player.vy=0;}
+  else this.enterStationDeck();
   this.notify('Dev teleport · '+systemName(this.sys,this.s)+(docked?' (docked)':''),'good');return true;
  }
  logExploration(entry){if(!this.s.explorationLog.some(e=>e.id===entry.id))this.s.explorationLog.push({...entry,sold:false});}
@@ -280,7 +307,7 @@ export class Game extends FlightGame{
   this.notify('Exploration data sold · +'+total.toLocaleString()+' cr','good');return true;
  }
  spawnOperations(){for(const op of this.s.operations||[]){if(op.type!=='combat'||op.target!==this.s.system||op.kills>=2)continue;const f=FACTIONS.find(f=>f.id===op.faction).rival,c=this.s.cleared[this.s.system]||[];for(let i=0;i<2;i++){const id=op.uid+'-'+i;if(c.includes(id)||this.enemies.some(e=>e.id===id))continue;this.enemies.push({id,type:'enemy',name:FACTIONS.find(fac=>fac.id===f).name+' interceptor',faction:f,x:600+i*300,y:1850+i*140,angle:0,hp:110,max:110,r:21,fire:1,bounty:300});}}}
- serialize(){return{...super.serialize(),surface:this.surface?{planetId:this.surface.planetId,x:this.surface.x,y:this.surface.y,integrity:this.surface.integrity,recordStart:this.surfaceRecordsStart}:null};}
+ serialize(){return{...super.serialize(),stationPos:this.onfoot?onFootSave(this.onfoot):(this.s.docked?this.s.stationPos:null),surface:this.surface?{planetId:this.surface.planetId,x:this.surface.x,y:this.surface.y,integrity:this.surface.integrity,recordStart:this.surfaceRecordsStart}:null};}
  select(id){if(id.startsWith('planet-')&&!this.visiblePlanets.some(p=>p.id===id))return null;if(id==='star'||id.startsWith('star-')){const star=(this.stars||[this.star]).find(s=>s.id===id)||this.star;this.target=star;this.auto=null;return star;}const dock=(this.stations||[]).find(s=>s.id===id);if(dock){this.target=dock;if(dock.type==='station')this.station=dock;this.auto=null;return dock;}const beltBody=(this.belts||[]).find(b=>b.id===id);if(beltBody){this.target=beltBody;this.auto=null;return beltBody;}const wake=this.wakes.find(w=>w.id===id);if(wake){this.target=wake;this.auto=null;return wake;}const sig=this.signals.find(s=>s.id===id);if(sig){this.target=sig;this.auto=null;return sig;}const der=this.derelicts.find(d=>d.id===id);if(der){this.target=der;this.auto=null;return der;}const p=this.patrols.find(p=>p.id===id);if(p){this.target=p;this.auto=null;return p;}return super.select(id);}
  scanDynamic(){return scanDynamicTarget(this);}
  setRoute(destination){const path=findRoute(this.s.system,destination,getStats(this.s).range);if(!path){this.notify('No route within your drive range.');return false;}this.s.route={destination,path};this.notify(path.length?`Route plotted · ${path.length} jumps to ${systemName(SYSTEMS[destination],this.s)}`:'Destination is in this system.','good');return true;}
@@ -294,7 +321,7 @@ export class Game extends FlightGame{
  refreshRoute(){if(this.s.route)this.s.route.path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range)||[];}
  jumpNext(){if(!this.s.route)return false;const path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range);if(!path?.length){this.notify('Route complete.');return false;}this.s.route.path=path;return this.jumpTo(path[0]);}
  jumpTo(id){if(this.surface){this.notify('Return to orbit before jumping.');return false;}const ok=super.jumpTo(id);if(ok){this.scooping=false;this.discoveryScan=null;}return ok;}
- dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.s.heat=25;this.notify(pending||this.s.records.length?'Exploration data ready for review at Cartographics.':'No exploration data aboard.');speakRobot(this,'greeting');}return ok;}
+ dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.s.heat=25;this.s.stationPos=null;this.enterStationDeck();this.notify(pending||this.s.records.length?'Exploration data ready for review at Cartographics. Walk the deck to Cartographics.':'Docking complete. Walk the station deck to visit services.');speakRobot(this,'greeting');}else if(ok&&!this.onfoot)this.enterStationDeck();return ok;}
  talkRobot(mode='talk'){if(!this.s.docked){this.notify('Dock before chatting with station services.');return null;}return speakRobot(this,mode==='tip'?'tip':mode==='greeting'?'greeting':'talk');}
  get visiblePlanets(){return this.planets.filter(p=>!this.sys.uncharted||this.s.systemScans?.includes(this.s.system)||this.s.scanned.includes(p.id));}
  discover(){
@@ -305,9 +332,17 @@ export class Game extends FlightGame{
  }
  scanTarget(){if(this.surface)return this.scanSurface();if(this.discoveryScan||this.jump)return false;if(!this.visiblePlanets.length)return this.discover();if(!this.visiblePlanets.includes(this.target))this.target=this.visiblePlanets.reduce((a,b)=>dist(this.player,a)<dist(this.player,b)?a:b);return super.scanTarget();}
 
- land(){if(this.s.docked||this.jump)return false;if(!this.visiblePlanets.length){this.notify('Run a discovery scan to locate worlds first.');return false;}const candidates=this.visiblePlanets.filter(isLandablePlanet);if(!candidates.length){this.notify('No landable worlds here. Gas giants cannot be entered.');return false;}const p=candidates.includes(this.target)?this.target:candidates[0];this.target=p;if(!isLandablePlanet(p)){this.notify('Gas giants cannot be landed on. Select a solid world.');return false;}if(dist(this.player,p)>p.r+450){this.auto=p;this.notify('Approaching landing range. Tap LAND when you arrive.');return false;}if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s for atmospheric entry.');return false;}this.auto=null;this.scan=null;this.discoveryScan=null;this.scooping=false;this.shots=[];this.surface=createSurface(p,this.s.surfaceScanned);this.surfaceRecordsStart=this.s.records.length;this.player.vx=this.player.vy=0;this.notify('Surface flight engaged. Find signals and hover to scan.','good');return true;}
+ land(){if(this.s.docked||this.jump)return false;if(!this.visiblePlanets.length){this.notify('Run a discovery scan to locate worlds first.');return false;}const candidates=this.visiblePlanets.filter(isLandablePlanet);if(!candidates.length){this.notify('No landable worlds here. Gas giants cannot be entered.');return false;}const p=candidates.includes(this.target)?this.target:candidates[0];this.target=p;if(!isLandablePlanet(p)){this.notify('Gas giants cannot be landed on. Select a solid world.');return false;}if(dist(this.player,p)>p.r+450){this.auto=p;this.notify('Approaching landing range. Tap LAND when you arrive.');return false;}if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s for atmospheric entry.');return false;}this.auto=null;this.scan=null;this.discoveryScan=null;this.scooping=false;this.shots=[];this.surface=createSurface(p,this.s.surfaceScanned);this.surfaceRecordsStart=this.s.records.length;this.player.vx=this.player.vy=0;this.notify('Surface flight engaged. Find signals and hover to scan. Ping beacon when you need a bearing.','good');return true;}
  takeoff(){if(!this.surface)return false;const p=this.planets.find(p=>p.id===this.surface.planetId);this.surface=null;this.s.surface=null;this.player.x=p.x;this.player.y=p.y+p.r+360;this.player.vx=this.player.vy=0;this.target=p;this.notify('Back in orbit. Dock to sell anomaly signals.');return true;}
  scanSurface(){const s=this.surface;if(!s)return false;const a=nearestAnomaly(s);if(!a){this.notify('All anomalies here are recorded. Return to orbit.');return false;}if(Math.hypot(a.x-s.x,a.y-s.y)>230+getStats(this.s).surfaceRange){this.notify('Approach a signal to scan it.');return false;}if(Math.hypot(s.vx,s.vy)>85){this.notify('Release the stick and hover to scan.');return false;}if(s.scan)return false;s.scan={id:a.id,progress:0};this.notify('Scanning '+a.name.toLowerCase()+'.');return true;}
+ pingSurface(){
+  const s=this.surface;if(!s)return false;
+  if(s.pingCooldown>0){this.notify('Beacon recharging · '+Math.ceil(s.pingCooldown)+'s');return false;}
+  const a=nearestAnomaly(s);if(!a){this.notify('No unscanned signals remain.');return false;}
+  s.ping={x:a.x,y:a.y,life:4.5};s.pingCooldown=8;
+  this.notify('Beacon ping · nearest '+a.kind+' · '+Math.round(Math.hypot(a.x-s.x,a.y-s.y))+' m','good');
+  return true;
+ }
  scoop(){
   if(this.scooping){this.scooping=false;this.scoopRate=0;this.notify('Fuel scoop retracted.');return true;}
   if(this.surface||this.s.docked||this.jump)return false;
@@ -383,18 +418,20 @@ export class Game extends FlightGame{
    }
   }else{this.s.metrics.pirates++;if(this.s.allegiance)this.s.reputation[this.s.allegiance]=clamp(this.s.reputation[this.s.allegiance]+2,-100,100);}
  }
- rescue(){this.surface=null;this.s.surface=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.system=this.nearestPort();this.s.route=null;super.rescue();this.s.heat=25;}
+ rescue(){this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.system=this.nearestPort();this.s.route=null;super.rescue();this.s.heat=25;if(this.s.docked)this.enterStationDeck();}
  update(dt,input={}){
   dt=clamp(dt,0,.05);
   if(this.surface){this.time+=dt;this.s.playtime+=dt;const wasScan=!!this.surface.scan,result=updateSurface(this.surface,dt,input,getStats(this.s));if(result.completed){const a=result.completed;if(!this.s.surfaceScanned.includes(a.id)){this.s.surfaceScanned.push(a.id);const value=Math.round(a.value*getStats(this.s).signalMultiplier);this.s.records.push({id:a.id,kind:a.kind,value,system:this.s.system});this.logExploration({id:a.id,type:'surface',system:this.s.system,name:this.surface.planetName+' · '+a.name,value});this.s.metrics.anomalies++;if(a.kind==='geology')this.s.metrics.geology++;this.notify(a.name+' recorded. Sell the signal at a station.','good');}}else if(wasScan&&!this.surface.scan)this.notify('Scan interrupted. Hover within range.');if(result.crashed){const lost=new Set(this.s.records.slice(this.surfaceRecordsStart).map(r=>r.id));this.s.records.splice(this.surfaceRecordsStart);this.s.explorationLog=this.s.explorationLog.filter(e=>!lost.has(e.id));this.s.hull=Math.max(1,this.s.hull-20);this.takeoff();this.notify('Emergency ascent. This expedition’s signals were lost; hull damaged.','bad');}return;}
   const flightFrom={x:this.player.x,y:this.player.y};
-  const previous=this.s.system,wasDocked=this.s.docked,wasJumping=!!this.jump,beforeScanned=new Set(this.s.scanned),beforeData=this.s.data;for(const b of this.shots)if(b.trafficShot||b.playerShot){b.previousX=b.x;b.previousY=b.y;}super.update(dt,input);this.resolveTrafficShots();if(!wasDocked&&this.s.docked){this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);}const added=this.s.scanned.find(id=>!beforeScanned.has(id));if(added){const planet=this.planets.find(p=>p.id===added),value=this.s.data-beforeData;this.logExploration({id:added,type:'world',system:this.s.system,name:planet?.name||added,value});}
+  const previous=this.s.system,wasDocked=this.s.docked,wasJumping=!!this.jump,beforeScanned=new Set(this.s.scanned),beforeData=this.s.data;for(const b of this.shots)if(b.trafficShot||b.playerShot){b.previousX=b.x;b.previousY=b.y;}super.update(dt,input);this.resolveTrafficShots();if(!wasDocked&&this.s.docked){this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.enterStationDeck();}const added=this.s.scanned.find(id=>!beforeScanned.has(id));if(added){const planet=this.planets.find(p=>p.id===added),value=this.s.data-beforeData;this.logExploration({id:added,type:'world',system:this.s.system,name:planet?.name||added,value});}
   if(previous!==this.s.system){
    this.refreshRoute();
    if(wasJumping&&!this.s.docked){this.player.x=this.star.x+this.star.r+950;this.player.y=this.star.y;this.player.angle=0;this.player.vx=this.player.vy=0;this.target=this.star;this.notify('Arrived near the primary star. Run a discovery scan to catalog this system.');}
   }
   if(this.s.docked){
    this.s.heat=25;this.discoveryScan=null;this.scooping=false;this.scoopRate=0;this.s.playtime+=dt;
+   if(!this.onfoot)this.enterStationDeck();
+   if(this.onfoot){updateOnFoot(this.onfoot,dt,input);this.s.stationPos=onFootSave(this.onfoot);}
    // Station services leave local space running: traffic, patrols, and nearby drama continue.
    for(const b of this.shots){b.previousX=b.x;b.previousY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;}
    this.resolveTrafficShots();

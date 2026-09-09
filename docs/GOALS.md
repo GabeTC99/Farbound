@@ -17,6 +17,8 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-009 | Independent engine animations | Fix the reported bug where player thrust causes all ships on screen to display their engine-firing animation. Each ship’s animation should reflect that ship’s own thrust state. | Ready for review |
 | FB-010 | System background variety | Give different systems different backgrounds: standard black space with stars, nebula environments, and unusual anomaly systems with effects such as space lightning. Exact distribution and whether lightning is visual or interactive remain to be decided. | Planned |
 | FB-011 | Circular exploration frontier | Place the 64 charted systems in a roughly circular human core with 128 uncharted systems surrounding it; preserve identities and update routes for the new coordinates. | Ready for review |
+| FB-012 | Station space legs | Replace utilitarian station tab dump with a top-down walkable deck. Dock enters on-foot mode; walk to service desks to open existing panels; launch only from the hangar bay. Prison barges use a detention layout. | Ready for review |
+| FB-013 | Planetary space legs | After landing the skiff, disembark into shared on-foot mode to inspect surface POIs. Reuses the FB-012 hub layer. Full surface settlements and activities remain later scope. | Planned |
 
 ## Tracking
 
@@ -37,3 +39,5 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 8, 2026: Candidate 2.1.4 requires player participation for bounty rewards and limits security response to patrols near an active attack against the player or civilian traffic.
 
 - September 9, 2026: Candidate 2.2.0 ships seeded system uniqueness (FB-003/FB-007): 1–3 stars, 1–5 planet kinds including non-landable gas giants, variable belts, and multi-dock stations sharing one market.
+
+- September 9, 2026: Candidate 2.3.0 adds station space legs (FB-012): walkable top-down decks, desk hotspots for existing services, hangar-only launch. Light planetary polish: kind-driven surface visuals and beacon ping. Planetary on-foot (FB-013) remains planned.
