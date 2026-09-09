@@ -4,7 +4,7 @@ import {FACTIONS,missionDestination,operationDetails,nearestAnomaly,terrainAt} f
 import {RELEASE,RELEASE_NAME} from './release.mjs';
 import {readPilot,writePilot,readCheckpoint} from './pilot-storage.mjs';
 import {EngineAudio} from './engine-audio.mjs';
-import {moduleView,fleetView,guildView,factionView,mapView as galaxyHTML,robotView} from './frontier-views.mjs';
+import {moduleView,fleetView,guildView,factionView,mapView as galaxyHTML,robotView,robotStrip} from './frontier-views.mjs';
 import {STATION_ROBOT} from './station-robot.mjs';
 import {GalaxyChart} from './galaxy-chart.mjs';
 import {renderSurface} from './surface-render.mjs';
@@ -98,6 +98,7 @@ function renderPanel(){
   if(stationTab==='shipyard')body=fleetView(game);
   if(stationTab==='guilds')body=guildView(game);
   if(stationTab==='factions')body=factionView(game);
+  if(stationTab!=='concierge')body=robotStrip(game)+body;
   html=modalShell(game.sys.station,(prison?'PRISON BARGE · ':'')+game.sys.name+' · '+game.sys.eco+' · v'+RELEASE,body,{tabs,actions:`<button class="primary" data-action="launch" ${detained?'disabled':''}>${detained?'Held · pay fine':'Launch →'}</button>`,footer:`<span class="muted">${SHIPS.find(b=>b.id===s.ship).name} · ${cargoUsed(s)} / ${st.cargo} t · local space live</span><span class="accent">${fmt(s.credits)} cr</span>`});
  }
  if(panel==='map')html=modalShell('The frontier','GALAXY CHART · '+s.visited.length+' / 192 SYSTEMS VISITED',galaxyHTML(game,selectedSystem,mapQuery,mapFilter),{actions:s.docked?'<button class="primary" data-action="launch-map">Launch →</button>':''});
@@ -186,7 +187,8 @@ async function action(a,id){
   case 'repair':game.service('hull');renderPanel();save();break;
   case 'pay-bounty':game.payBounty();renderPanel();save();break;
   case 'sell-data':game.sellExplorationData();renderPanel();save();break;
-  case 'robot-talk':{const line=game.talkRobot();if(line)game.notify(STATION_ROBOT.displayName+' · '+line.text);renderPanel();save();break;}
+  case 'robot-talk':{game.talkRobot();renderPanel();save();break;}
+  case 'robot-tip':{game.talkRobot('tip');renderPanel();save();break;}
   case 'buy':game.buy(id,qty);renderPanel();save();break;
   case 'sell':game.sell(id,qty);renderPanel();save();break;
   case 'upgrade':game.upgrade(id);renderPanel();save();break;

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,contractsFor,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
-import {moduleView,fleetView,guildView,factionView,mapView,robotView} from '../dist/frontier-views.mjs';
+import {moduleView,fleetView,guildView,factionView,mapView,robotView,robotStrip} from '../dist/frontier-views.mjs';
 import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
@@ -81,23 +82,32 @@ test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogu
  assert(ROBOT_LINES.greeting.length>=3);
  assert(ROBOT_LINES.wanted.length>=2);
  assert(ROBOT_LINES.damaged.length>=2);
+ assert(ROBOT_LINES.tips.length>=6);
  const g=new Game();
  assert.equal(g.s.robotMet,false);
  const desk=robotView(g);
  assert(desk.includes(STATION_ROBOT.displayName));
  assert(desk.includes('data-action="robot-talk"'));
+ assert(desk.includes('data-action="robot-tip"'));
  assert(desk.includes('robot-face--'));
+ assert(desk.includes('viewBox="0 0 148 104"'));
+ assert(!desk.includes('cy="168"'));
+ const strip=robotStrip(g);
+ assert(strip.includes('robot-strip'));
+ assert(strip.includes('data-action="robot-tip"'));
  g.launch();
  g.player.x=g.station.x;g.player.y=g.station.y+50;
- const before=g.events.length;
  assert(g.dock());
  assert(g.s.robotMet);
- assert(g.events.length>before);
- assert(g.events.some(e=>ROBOT_LINES.greeting.some(([t])=>t===e.text)||e.text.includes('Exploration data')||e.text.includes('Docking complete')||e.text.includes('Welcome')));
  assert(g.robotState?.lastText);
+ assert(ROBOT_LINES.greeting.some(([t])=>t===g.robotState.lastText));
+ assert(robotStrip(g).includes(g.robotState.lastText));
  const line=g.talkRobot();
  assert(line?.text);
  assert(['neutral','happy','confused','annoyed','alert'].includes(line.expression));
+ const tip=g.talkRobot('tip');
+ assert(tip?.tag==='tips');
+ assert(ROBOT_LINES.tips.some(([t])=>t===tip.text));
  g.s.bounty=900;g.s.hull=40;g.s.cargo.ore=3;
  const ctx=buildRobotContext(g);
  assert(ctx.wanted);assert(ctx.damaged);assert(ctx.tags.includes('mining'));
@@ -107,5 +117,8 @@ test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogu
  const saved=validateSave(JSON.parse(JSON.stringify(g.serialize())));
  assert.equal(saved.robotMet,true);
  assert.equal(roundtrip(g).s.robotMet,true);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/robotStrip\(game\)/);
+ assert.match(app,/case 'robot-tip'/);
 });
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;

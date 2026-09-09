@@ -73,6 +73,20 @@ export const ROBOT_LINES={
   ['Local security rating: concerning. Pack optimism accordingly.','alert'],
   ['This system grades poorly on “not getting shot.” Plan your afternoon.','annoyed']
  ],
+ tips:[
+  ['Slow below 100 m/s before scanning a world or scooping fuel. Fast pilots miss the interesting parts.','happy'],
+  ['Discovery Pulse catalogs a system. Approach a world and Scan for the detailed survey payout.','happy'],
+  ['Buy where goods are produced, sell where demand is high. The Galaxy chart shows economies.','neutral'],
+  ['Stars refill fuel for free. Closer means faster scooping and more heat — move away before you cook.','alert'],
+  ['Station services keep local space running. Closing the desk launches you. Other menus pause flight.','confused'],
+  ['Assaulting civilians adds bounty and summons security. Prison barges are not always in-system.','annoyed'],
+  ['Hyperspace wakes can be scanned and followed. Slow down near one before resolving the signature.','happy'],
+  ['Cartographics sells exploration data in one package. Recovery and destruction discard unsold entries.','neutral'],
+  ['Mineral belts pay in titanium. Hold FIRE while pointed at rocks. Pirates also enjoy this advice.','confused'],
+  ['Plot routes from the Galaxy chart, then Jump next. Fuel is spent on jumps, not local flight.','happy'],
+  ['Guild commissions need acceptance before progress counts. Claim unique modules at any station desk.','neutral'],
+  ['If heat hits 100%, your hull pays the bill. Scooping at 95% retracts itself. Listen to the thermometer.','alert']
+ ],
  faction:[]
 };
 
@@ -108,7 +122,7 @@ function pickFrom(entries,avoidText){
 
 /**
  * @param {object} game
- * @param {'greeting'|'talk'} mode
+ * @param {'greeting'|'talk'|'tip'} mode
  * @returns {{text:string,expression:RobotExpression,tag:string}}
  */
 export function pickRobotLine(game,mode='talk'){
@@ -118,6 +132,11 @@ export function pickRobotLine(game,mode='talk'){
   const greet=poolFor('greeting')||ROBOT_LINES.general;
   const line=pickFrom(greet,avoid);
   return{...line,tag:'greeting'};
+ }
+ if(mode==='tip'){
+  const tips=poolFor('tips')||ROBOT_LINES.general;
+  const line=pickFrom(tips,avoid);
+  return{...line,tag:'tips'};
  }
  const situational=['wanted','damaged','explore','mining','trade','danger'].filter(t=>ctx.tags.includes(t)&&poolFor(t));
  const ambient=['repeat','friendly','general'].filter(t=>(t==='general'||ctx.tags.includes(t))&&poolFor(t));

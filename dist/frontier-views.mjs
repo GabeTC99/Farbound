@@ -2,28 +2,38 @@ import {SYSTEMS,SHIPS,UPGRADES,getStats,jumpDistance,jumpCost,findRoute,systemNa
 import {STATION_ROBOT,ensureRobotState} from './station-robot.mjs';
 const fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),row=(a,b)=>`<div class="data-row"><span>${a}</span>${b}</div>`;
 function robotFaceSvg(expression='neutral'){
- return `<svg class="robot-portrait" viewBox="0 0 160 180" aria-hidden="true">
-  <ellipse cx="80" cy="168" rx="42" ry="8" fill="#0a1520" opacity=".55"/>
-  <rect x="48" y="118" width="64" height="42" rx="8" fill="#142833" stroke="#6db6ad" stroke-width="2"/>
-  <circle cx="58" cy="160" r="10" fill="#0f1c26" stroke="#7ec8d8" stroke-width="1.6"/>
-  <circle cx="102" cy="160" r="10" fill="#0f1c26" stroke="#7ec8d8" stroke-width="1.6"/>
-  <circle cx="58" cy="160" r="3.5" fill="#4a6a78"/><circle cx="102" cy="160" r="3.5" fill="#4a6a78"/>
-  <rect x="72" y="108" width="16" height="12" rx="2" fill="#1a303c" stroke="#5a8a92" stroke-width="1.2"/>
+ return `<svg class="robot-portrait" viewBox="0 0 148 104" aria-hidden="true">
+  <rect x="8" y="10" width="132" height="84" rx="10" fill="#0c1822" stroke="#6db6ad" stroke-width="2.2"/>
+  <rect x="14" y="16" width="120" height="72" rx="6" fill="#08141c" stroke="#29404c" stroke-width="1.2"/>
   <g class="robot-face robot-face--${esc(expression)}">
-   <rect x="34" y="28" width="92" height="78" rx="10" fill="#0a1a24" stroke="#90efdc" stroke-width="2.2"/>
-   <rect class="robot-screen" x="42" y="36" width="76" height="62" rx="6" fill="#102834"/>
+   <rect class="robot-screen" x="22" y="24" width="104" height="56" rx="5" fill="#102834"/>
+   <circle cx="30" cy="32" r="2.2" fill="#90efdc" opacity=".55"/>
    <g class="robot-eyes">
-    <rect class="robot-eye robot-eye-l" x="54" y="52" width="14" height="14" rx="3" fill="#90efdc"/>
-    <rect class="robot-eye robot-eye-r" x="92" y="52" width="14" height="14" rx="3" fill="#90efdc"/>
+    <rect class="robot-eye robot-eye-l" x="42" y="38" width="16" height="16" rx="3" fill="#90efdc"/>
+    <rect class="robot-eye robot-eye-r" x="90" y="38" width="16" height="16" rx="3" fill="#90efdc"/>
    </g>
-   <rect class="robot-mouth" x="66" y="78" width="28" height="4" rx="2" fill="#6db6ad"/>
-   <path class="robot-brow robot-brow-l" d="M52 46h18" stroke="#6db6ad" stroke-width="2" stroke-linecap="round"/>
-   <path class="robot-brow robot-brow-r" d="M90 46h18" stroke="#6db6ad" stroke-width="2" stroke-linecap="round"/>
+   <rect class="robot-mouth" x="58" y="66" width="32" height="5" rx="2.5" fill="#6db6ad"/>
+   <path class="robot-brow robot-brow-l" d="M40 32h20" stroke="#6db6ad" stroke-width="2" stroke-linecap="round"/>
+   <path class="robot-brow robot-brow-r" d="M88 32h20" stroke="#6db6ad" stroke-width="2" stroke-linecap="round"/>
   </g>
-  <path d="M34 70 22 78 34 86" fill="none" stroke="#5a8a92" stroke-width="2"/>
-  <path d="M126 70 138 78 126 86" fill="none" stroke="#5a8a92" stroke-width="2"/>
-  <circle cx="22" cy="78" r="4" fill="#90efdc" opacity=".7"/><circle cx="138" cy="78" r="4" fill="#90efdc" opacity=".7"/>
+  <rect x="66" y="90" width="16" height="4" rx="1" fill="#3a5560"/>
  </svg>`;
+}
+function robotActions(docked){
+ return `<div class="section-actions robot-actions"><button class="primary" data-action="robot-talk" ${!docked?'disabled':''}>Talk</button><button data-action="robot-tip" ${!docked?'disabled':''}>Ask for a tip</button></div>`;
+}
+/** Compact face + dialogue strip shown on every station tab. */
+export function robotStrip(game){
+ const state=ensureRobotState(game),name=STATION_ROBOT.nameFor(game.sys);
+ const quote=state.lastText||'Dock services online. Tap Talk — or ask for a tip you will probably ignore.';
+ return `<aside class="robot-strip" aria-label="${esc(name)} station concierge">
+  <div class="robot-strip-face">${robotFaceSvg(state.expression||'neutral')}</div>
+  <div class="robot-strip-copy">
+   <div class="robot-strip-head"><div class="eyebrow">${esc(STATION_ROBOT.roleLabel)}</div><strong>${esc(name)}</strong></div>
+   <blockquote class="robot-quote"><p>${esc(quote)}</p></blockquote>
+   ${robotActions(!!game.s.docked)}
+  </div>
+ </aside>`;
 }
 export function robotView(game){
  const state=ensureRobotState(game),name=STATION_ROBOT.nameFor(game.sys),quote=state.lastText||'Dock services online. Tap Talk when you want company — or advice you will ignore.';
@@ -31,9 +41,9 @@ export function robotView(game){
   <div class="robot-desk-visual">${robotFaceSvg(state.expression||'neutral')}</div>
   <div class="robot-desk-copy">
    <div class="section-heading"><div><div class="eyebrow">${esc(STATION_ROBOT.roleLabel)}</div><h3>${esc(name)}</h3></div><span class="tag safe">Dock services</span></div>
-   <p class="intro">Station helper unit with a screen for a face and opinions for free. Ask for tips, rumors, or dry commentary — functionality optional, personality included.</p>
+   <p class="intro">A wall-mounted service screen with opinions for free. Ask for tips on flying, trading, scooping, or staying alive — personality included, liability waived.</p>
    <blockquote class="robot-quote"><p>${esc(quote)}</p></blockquote>
-   <div class="section-actions"><button class="primary" data-action="robot-talk" ${!game.s.docked?'disabled':''}>Talk</button></div>
+   ${robotActions(!!game.s.docked)}
    ${!game.s.docked?'<p class="detail-text">Dock to speak with station services.</p>':''}
   </div>
  </div>`;
