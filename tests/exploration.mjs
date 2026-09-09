@@ -2,7 +2,7 @@ import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {Game,newSave,validateSave,SYSTEMS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
 const ticks=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/30)g.update(1/30,input);};
@@ -59,10 +59,19 @@ test('Recovery and destruction discard unsold discovery entries while retaining 
 });
 test('Living traffic performs distinct jobs and pauses at real destinations',()=>{
  const g=new Game();assert.deepEqual(g.traffic.map(t=>t.job),['ARRIVING FROM JUMP POINT','DEPARTING FOR JUMP POINT','MINING RUN','FUEL SCOOPING','PLANETARY SURVEY']);
+ assert.deepEqual(g.traffic.map(t=>t.hull),['courier','freighter','prospector','tender','surveyor']);
+ assert.equal(new Set(g.traffic.map(t=>t.color)).size,5);
  const start=g.traffic.map(t=>[t.x,t.y]);g.launch();ticks(g,4);assert(g.traffic.some((t,i)=>t.x!==start[i][0]||t.y!==start[i][1]));assert(g.traffic.some(t=>t.thrust>0));
+ assert(g.traffic.some(t=>t.trail.length>0));
+ const angles=g.traffic.map(t=>t.angle);ticks(g,.5);assert(g.traffic.some((t,i)=>Math.abs(angleDiff(t.angle,angles[i]))>0||t.pause>0||t.status!=='IN TRANSIT'));
  const miner=g.traffic.find(t=>t.job==='MINING RUN');ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
  const scoop=g.traffic.find(t=>t.job==='FUEL SCOOPING');let worked=false;for(let i=0;i<1800;i++){g.update(1/30);if(scoop.status==='FUEL SCOOPING'&&scoop.thrust===0){worked=true;break;}}assert(worked);assert(Math.hypot(scoop.x-g.star.x,scoop.y-g.star.y)<g.star.r+650);
  const remote=frontier();remote.sys.hasStation=false;remote.makeSystem();assert.equal(remote.traffic.length,0);
+});
+test('Traffic turns smoothly and flees when assaulted',()=>{
+ const g=new Game();g.launch();const ship=g.traffic[0],from=ship.angle;ship.pause=0;ship.target=1;ship.x=800;ship.y=800;ship.points[1]={x:200,y:1400,status:'DOCKED'};
+ g.updateTraffic(1/30);assert(Math.abs(angleDiff(ship.angle,from))>0);assert(Math.abs(angleDiff(ship.angle,from))<=ship.turn/30+.001);
+ ship.underAttackUntil=g.time+5;const x=ship.x,y=ship.y;g.updateTraffic(.2);assert.equal(ship.status,'UNDER ATTACK');assert(ship.thrust>.5);assert(Math.hypot(ship.x-x,ship.y-y)>1);
 });
 test('Engine volume uses the full slider and stays silent at zero',()=>{
  const source=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),'utf8');assert(source.includes('*.32'));assert(source.includes('Math.pow'));assert(!source.includes('*.24'));assert(!source.includes('*.065'));
@@ -80,6 +89,35 @@ test('Security kills award no bounty unless the player landed a shot',()=>{
 test('Civilian destruction can yield loot, persists its bounty, and allows payment at a station',()=>{
  const g=new Game();g.launch();const civilian=g.traffic[0];civilian.x=g.player.x+250;civilian.y=g.player.y;civilian.hp=1;g.player.angle=0;g.target=civilian;const original=Math.random;Math.random=()=>0;try{g.shoot();ticks(g,.5);}finally{Math.random=original;}assert(!g.traffic.includes(civilian));assert.equal(g.s.bounty,1000);assert.equal(g.s.cargo.food,1);let h=roundtrip(g);assert.equal(h.s.bounty,1000);h.s.docked=true;h.s.credits=2000;assert(h.payBounty());assert.equal(h.s.bounty,0);assert.equal(h.s.credits,1000);assert(!h.payBounty());assert.equal(validateSave({...h.serialize(),bounty:-1}),null);
  const m=new Game();m.launch();const bystander=m.traffic[0];bystander.x=m.player.x+240;bystander.y=m.player.y;bystander.pause=10;m.player.angle=0;m.target=m.station;m.shoot();ticks(m,.4);assert(bystander.hp<bystander.max);assert.equal(m.s.bounty,400);
+});
+test('Checkpoint writes preserve the outgoing pilot instead of snapshotting the new save',()=>{
+ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(source,/writePilot\(localStorage,game\.serialize\(\),\{checkpoint:checkpoint===true\}\)/);
+ assert(!/if\(checkpoint===true\)writePilot\(localStorage,pilot\);writePilot/.test(source));
+ const map=new Map(),storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)};
+ const first=newSave();first.credits=2400;writePilot(storage,first,{now:1});
+ const second=newSave();second.credits=8800;writePilot(storage,second,{checkpoint:true,now:2});
+ const checkpoint=JSON.parse(map.get('farbound-save-v2-checkpoint'));
+ assert.equal(JSON.parse(map.get(SAVE_KEY)).credits,8800);
+ assert.equal(checkpoint.pilot.credits,2400);
+ assert(source.includes('...game.traffic,...game.visiblePlanets'));
+});
+test('Tutorial tip keeps its Got it button across HUD refreshes',()=>{
+ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(source,/tut\.dataset\.tip!==tipKey/);
+ assert.match(source,/if\(tipVisible&&tut\.dataset\.tip!==tipKey\)/);
+ assert(!/if\(showTutorial&&started&&!panel\)\{tut\.innerHTML=/.test(source));
+});
+test('Player ships have distinct silhouettes, colors, and collision radii',()=>{
+ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(source,/function drawPlayerShip/);
+ assert.match(source,/function drawPlayerHull/);
+ assert(source.includes("id==='mule'")&&source.includes("id==='kestrel'")&&source.includes("id==='wren'"));
+ const views=readFileSync(new URL('../dist/frontier-views.mjs',import.meta.url),'utf8');
+ assert(views.includes('ship-preview'));
+ assert.equal(new Set(SHIPS.map(s=>s.color)).size,3);
+ assert.deepEqual(SHIPS.map(s=>s.radius),[16,22,18]);
+ const g=new Game();assert.equal(g.player.r,16);g.s.docked=true;g.s.credits=50000;assert(g.buyShip('mule'));assert.equal(g.s.ship,'mule');assert.equal(g.player.r,22);assert(g.buyShip('kestrel'));assert.equal(g.player.r,18);
 });
 test('Player thrust and boost never control another ship’s exhaust',()=>{
  const g=new Game();g.launch();g.update(1/30,{thrust:1,boost:true});assert.equal(g.player.thrust,1);assert(g.player.boost);const patrol=g.patrols[0].thrust;g.update(1/30,{});assert.equal(g.player.thrust,0);assert(!g.player.boost);assert.equal(g.patrols[0].thrust,patrol);

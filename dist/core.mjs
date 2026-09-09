@@ -12,10 +12,11 @@ export const ECONOMIES = {
  Industrial:[1.15,1.45,.84,1.04,1.22], Research:[1.18,.95,.62,.72,1.52], Frontier:[1.38,1.12,1.48,1.46,1.1]
 };
 export const SHIPS = [
- {id:'wren',name:'Wren',role:'Light explorer',price:0,hull:100,shield:80,cargo:18,fuel:100,range:14,speed:235,turn:3.5,damage:18,desc:'Light on the stick. A little ship with a long horizon.'},
- {id:'mule',name:'Mule',role:'Freight hauler',price:9500,hull:185,shield:105,cargo:48,fuel:140,range:16,speed:190,turn:2.9,damage:21,desc:'A broad hold and a forgiving hull. Built to make a living.'},
- {id:'kestrel',name:'Kestrel',role:'Strike explorer',price:18000,hull:160,shield:160,cargo:28,fuel:155,range:21,speed:285,turn:4.6,damage:30,desc:'Long legs, quick engines, and a bite to match.'}
+ {id:'wren',name:'Wren',role:'Light explorer',price:0,hull:100,shield:80,cargo:18,fuel:100,range:14,speed:235,turn:3.5,damage:18,size:18,radius:16,color:'#b7f0e4',accent:'#7ad9c8',desc:'Light on the stick. A little ship with a long horizon.'},
+ {id:'mule',name:'Mule',role:'Freight hauler',price:9500,hull:185,shield:105,cargo:48,fuel:140,range:16,speed:190,turn:2.9,damage:21,size:26,radius:22,color:'#e0c79a',accent:'#c4a574',desc:'A broad hold and a forgiving hull. Built to make a living.'},
+ {id:'kestrel',name:'Kestrel',role:'Strike explorer',price:18000,hull:160,shield:160,cargo:28,fuel:155,range:21,speed:285,turn:4.6,damage:30,size:21,radius:18,color:'#9fd7ff',accent:'#6eb8f0',desc:'Long legs, quick engines, and a bite to match.'}
 ];
+export const shipRadius=id=>(SHIPS.find(s=>s.id===id)||SHIPS[0]).radius;
 export const UPGRADES = [
  {id:'laser',name:'Pulse cannon',desc:'+7 damage per level',base:950},
  {id:'shield',name:'Shield matrix',desc:'+30 shield per level',base:800},
@@ -75,7 +76,7 @@ export class Game {
   this.belt={id:'belt',type:'belt',name:'Asteroid field',x:650,y:1400,r:180};this.asteroids=Array.from({length:24},(_,i)=>({id:'rock-'+i,type:'asteroid',name:'Mineral deposit',x:this.belt.x+(r()-.5)*1000,y:this.belt.y+(r()-.5)*750,r:15+r()*25,hp:36,ore:r()>.76?'crystal':'ore',shape:Array.from({length:9},()=>.72+r()*.35),rotation:r()*6.28}));
   this.enemies=Array.from({length:this.sys.danger===0?1:this.sys.danger+1},(_,i)=>({id:'pirate-'+i,type:'enemy',name:['Marauder','Rogue courier','Void raider'][i%3],x:800+(r()-.5)*950,y:1950+(r()-.5)*800,angle:0,vx:0,vy:0,hp:70+this.sys.danger*20,max:70+this.sys.danger*20,r:20,fire:r()*2,bounty:420+this.sys.danger*180,originX:800,originY:1900}));
   this.traffic=Array.from({length:4},(_,i)=>({x:(r()-.5)*1200,y:(r()-.5)*1100,phase:r()*6.28,name:['Courier','Prospector','Freighter','Patrol'][i]}));
-  this.player={x:0,y:180,vx:0,vy:0,angle:-Math.PI/2,r:17};this.target=this.station;this.shots=[];this.auto=null;this.scan=null;this.effects=[];this.particles=[];
+  this.player={x:0,y:180,vx:0,vy:0,angle:-Math.PI/2,r:shipRadius(this.s.ship)};this.target=this.station;this.shots=[];this.auto=null;this.scan=null;this.effects=[];this.particles=[];
  }
  serialize(){return {...this.s,position:{x:this.player.x,y:this.player.y,angle:this.player.angle}};}
  launch(){if(!this.s.docked)return false;this.s.docked=false;this.player.x=0;this.player.y=185;this.player.angle=Math.PI/2;this.player.vx=0;this.player.vy=0;this.s.tutorial=Math.max(this.s.tutorial,1);this.notify('Departure cleared. Fly safe, pilot.');return true;}

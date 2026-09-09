@@ -1,4 +1,4 @@
-import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp} from './core.mjs';
+import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius} from './core.mjs';
 import {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface} from './surface.mjs';
 export * from './core.mjs';
@@ -55,24 +55,57 @@ export function operationDetails(s,o){
 export class Game extends FlightGame{
  constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.scooping=false;this.discoveryScan=null;this.s.heat??=25;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
- makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.star={id:'star',name:this.sys.name+' primary',type:'star',x:-900,y:-1600,r:190};this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction);for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:850+i*180,y:400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();}
+ makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.star={id:'star',name:this.sys.name+' primary',type:'star',x:-900,y:-1600,r:190};this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction);for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:850+i*180,y:400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();}
  makeTraffic(){
   if(!this.sys.hasStation)return[];
-  const station={x:this.station.x,y:this.station.y,status:'DOCKED'},jump={x:this.star.x+this.star.r+950,y:this.star.y,status:'AT JUMP POINT'},scoop={x:this.star.x+this.star.r+430,y:this.star.y,status:'FUEL SCOOPING'},mine={x:this.belt.x,y:this.belt.y,status:'MINING RUN'},world=this.planets[0];
+  const r=rng(441+this.s.system*173),lane=span=>(r()-.5)*span;
+  const station={x:this.station.x,y:this.station.y,status:'DOCKED'},jump={x:this.star.x+this.star.r+950,y:this.star.y+lane(220),status:'AT JUMP POINT'},scoop={x:this.star.x+this.star.r+430,y:this.star.y+lane(160),status:'FUEL SCOOPING'},mine={x:this.belt.x+lane(280),y:this.belt.y+lane(220),status:'MINING RUN'},world=this.planets[0],survey={x:world.x+lane(120),y:world.y+world.r+280+lane(80),status:'PLANETARY SURVEY'};
   const jobs=[
-   {name:'Inbound courier',job:'ARRIVING FROM JUMP POINT',points:[jump,station],speed:135,wait:2},
-   {name:'Outbound freighter',job:'DEPARTING FOR JUMP POINT',points:[station,jump],speed:105,wait:2},
-   {name:'Prospector',job:'MINING RUN',points:[station,mine],speed:90,wait:7},
-   {name:'Scoop tender',job:'FUEL SCOOPING',points:[station,scoop],speed:115,wait:6},
-   {name:'Survey vessel',job:'PLANETARY SURVEY',points:[station,{x:world.x,y:world.y+world.r+280,status:'PLANETARY SURVEY'}],speed:125,wait:5}
+   {name:'Inbound courier',job:'ARRIVING FROM JUMP POINT',hull:'courier',color:'#7ec8d8',size:11,turn:3.4,points:[jump,station],speed:145,wait:2.2},
+   {name:'Outbound freighter',job:'DEPARTING FOR JUMP POINT',hull:'freighter',color:'#d2b48c',size:17,turn:2.1,points:[station,jump],speed:95,wait:2.8},
+   {name:'Prospector',job:'MINING RUN',hull:'prospector',color:'#d4a067',size:13,turn:2.8,points:[station,mine],speed:88,wait:7.5},
+   {name:'Scoop tender',job:'FUEL SCOOPING',hull:'tender',color:'#e0b07a',size:14,turn:2.6,points:[station,scoop],speed:112,wait:6.2},
+   {name:'Survey vessel',job:'PLANETARY SURVEY',hull:'surveyor',color:'#8fd6c2',size:12,turn:3.1,points:[station,survey],speed:128,wait:5.4}
   ];
-  return jobs.map((j,i)=>{const start=j.points[0],next=j.points[1];return{...j,id:'traffic-'+i,type:'traffic',x:start.x,y:start.y,angle:Math.atan2(next.y-start.y,next.x-start.x),r:12,hp:55,max:55,target:1,pause:i*.7,thrust:0,status:start.status,underAttackUntil:0};});
+  return jobs.map((j,i)=>{const start=j.points[0],next=j.points[1];return{...j,id:'traffic-'+i,type:'traffic',x:start.x,y:start.y,angle:Math.atan2(next.y-start.y,next.x-start.x),r:Math.max(11,j.size-1),hp:48+j.size*2,max:48+j.size*2,target:1,pause:i*.85+r()*1.2,thrust:0,status:start.status,underAttackUntil:0,phase:r()*6.28,work:0,trail:[]};});
  }
  updateTraffic(dt){
   for(const ship of this.traffic){
-   if(ship.pause>0){ship.pause-=dt;ship.thrust=0;const stop=ship.points[1-ship.target];ship.status=dist(ship,stop)<18?stop.status:'IN TRANSIT';}
-   else{const target=ship.points[ship.target],dx=target.x-ship.x,dy=target.y-ship.y,d=Math.hypot(dx,dy);if(d<18){ship.x=target.x;ship.y=target.y;ship.pause=target.status==='DOCKED'?2:ship.wait;ship.status=target.status;ship.target=ship.target?0:1;ship.thrust=0;}else{ship.angle=Math.atan2(dy,dx);const speed=Math.min(ship.speed,Math.max(24,d*.55));ship.x+=Math.cos(ship.angle)*speed*dt;ship.y+=Math.sin(ship.angle)*speed*dt;ship.thrust=Math.min(1,speed/ship.speed);ship.status='IN TRANSIT';}}
-   if(ship.underAttackUntil>this.time)ship.status='UNDER ATTACK';
+   ship.work=(ship.work||0)+dt;
+   if(ship.underAttackUntil>this.time){
+    ship.status='UNDER ATTACK';
+    const flee=Math.atan2(ship.y-this.player.y,ship.x-this.player.x),turn=angleDiff(flee,ship.angle);
+    ship.angle+=clamp(turn,-ship.turn*dt,ship.turn*dt);ship.thrust=.85;
+    ship.x+=Math.cos(ship.angle)*ship.speed*1.15*dt;ship.y+=Math.sin(ship.angle)*ship.speed*1.15*dt;
+    continue;
+   }
+   if(ship.pause>0){
+    ship.pause-=dt;ship.thrust=0;
+    const stop=ship.points[1-ship.target];
+    if(dist(ship,stop)<18){
+     ship.status=stop.status;
+     ship.x=stop.x+Math.sin(this.time*1.4+ship.phase)*2.2;
+     ship.y=stop.y+Math.cos(this.time*1.1+ship.phase)*1.6;
+     if(stop.status==='MINING RUN'||stop.status==='PLANETARY SURVEY')ship.angle+=dt*.35;
+     else if(stop.status==='FUEL SCOOPING')ship.angle=Math.atan2(this.star.y-ship.y,this.star.x-ship.x);
+    }else ship.status='IN TRANSIT';
+   }else{
+    const target=ship.points[ship.target],dx=target.x-ship.x,dy=target.y-ship.y,d=Math.hypot(dx,dy),desired=Math.atan2(dy,dx),turn=angleDiff(desired,ship.angle);
+    ship.angle+=clamp(turn,-ship.turn*dt,ship.turn*dt);
+    const aligned=1-Math.min(1,Math.abs(turn)/1.15);
+    if(d<18&&Math.abs(turn)<.55){
+     ship.x=target.x;ship.y=target.y;ship.pause=target.status==='DOCKED'?2+ship.phase*.2:ship.wait;ship.status=target.status;ship.target=ship.target?0:1;ship.thrust=0;
+    }else{
+     const approach=Math.min(ship.speed,Math.max(22,d*.5))*Math.max(.22,aligned);
+     ship.x+=Math.cos(ship.angle)*approach*dt;ship.y+=Math.sin(ship.angle)*approach*dt;
+     ship.thrust=Math.min(1,approach/ship.speed);ship.status='IN TRANSIT';
+    }
+   }
+   if(ship.thrust>.08){
+    ship.trail.push({x:ship.x-Math.cos(ship.angle)*ship.size,y:ship.y-Math.sin(ship.angle)*ship.size,life:.35});
+    if(ship.trail.length>10)ship.trail.shift();
+   }
+   for(const t of ship.trail)t.life-=dt;ship.trail=ship.trail.filter(t=>t.life>0);
   }
  }
  reportSecurityIncident(offender,victim){
@@ -176,7 +209,7 @@ export class Game extends FlightGame{
  }
 
  claimMissions(){const done=this.s.missions.filter(m=>this.missionReady(m));super.claimMissions();if(this.s.docked)for(const m of done)if(m.type==='delivery')this.s.metrics.deliveries++;}
- buyShip(id){if(!this.s.docked||id===this.s.ship)return false;const b=SHIPS.find(b=>b.id===id);if(!b)return false;const owned=this.s.fleet.includes(id),cost=owned?0:b.price,st=getStats({...this.s,ship:id});if(this.s.credits<cost){this.notify('Insufficient credits.');return false;}if(cargoUsed(this.s)>st.cargo){this.notify('This ship cannot hold your cargo. Sell enough cargo to switch ships.');return false;}this.s.hangar[this.s.ship]={hull:this.s.hull,shield:this.s.shield,fuel:this.s.fuel};this.s.credits-=cost;this.s.ship=id;if(!owned)this.s.fleet.push(id);const h=this.s.hangar[id]||st;this.s.hull=clamp(h.hull,1,st.hull);this.s.shield=st.shield;this.s.fuel=clamp(h.fuel,0,st.fuel);this.refreshRoute();this.notify((owned?'Switched to ':'Purchased ')+b.name+'. Other ships remain in your hangar.','good');return true;}
+ buyShip(id){if(!this.s.docked||id===this.s.ship)return false;const b=SHIPS.find(b=>b.id===id);if(!b)return false;const owned=this.s.fleet.includes(id),cost=owned?0:b.price,st=getStats({...this.s,ship:id});if(this.s.credits<cost){this.notify('Insufficient credits.');return false;}if(cargoUsed(this.s)>st.cargo){this.notify('This ship cannot hold your cargo. Sell enough cargo to switch ships.');return false;}this.s.hangar[this.s.ship]={hull:this.s.hull,shield:this.s.shield,fuel:this.s.fuel};this.s.credits-=cost;this.s.ship=id;if(!owned)this.s.fleet.push(id);const h=this.s.hangar[id]||st;this.s.hull=clamp(h.hull,1,st.hull);this.s.shield=st.shield;this.s.fuel=clamp(h.fuel,0,st.fuel);this.player.r=shipRadius(id);this.refreshRoute();this.notify((owned?'Switched to ':'Purchased ')+b.name+'. Other ships remain in your hangar.','good');return true;}
  upgrade(kind){if(!this.s.docked||!MODULES[kind]?.standard)return false;const active=this.s.loadouts[this.s.ship],m=this.s.modules.find(m=>m.kind===kind&&active.includes(m.uid)),grade=m?.grade||0,cost=MODULES[kind].price*(grade+1);if(grade>=3||this.s.credits<cost)return false;if(!m&&this.s.modules.length>=85){this.notify('Module storage is full. Upgrade an existing module.');return false;}if(!m&&active.length>=moduleSlots(this.s.ship)){this.notify('Remove a module to free a slot.');return false;}this.s.credits-=cost;if(m)m.grade++;else{const item={uid:'m-'+this.s.nextModule++,kind,grade:1};this.s.modules.push(item);active.push(item.uid);}this.s.shield=getStats(this.s).shield;this.refreshRoute();this.notify(MODULES[kind].name+' fitted.','good');return true;}
  moduleLocation(uid){return shipIds.find(id=>this.s.loadouts[id].includes(uid))||null;}
  equip(uid){if(!this.s.docked)return false;const item=this.s.modules.find(m=>m.uid===uid);if(!item)return false;const a=this.s.loadouts[this.s.ship],source=this.moduleLocation(uid);if(source===this.s.ship)return false;if(a.length>=moduleSlots(this.s.ship)){this.notify('Remove a module to free a slot.');return false;}if(a.some(id=>MODULES[this.s.modules.find(m=>m.uid===id).kind].category===MODULES[item.kind].category)){this.notify('Remove the installed module in this category first.');return false;}if(source)this.s.loadouts[source]=this.s.loadouts[source].filter(id=>id!==uid);a.push(uid);this.s.shield=getStats(this.s).shield;this.refreshRoute();this.notify(MODULES[item.kind].name+' installed.','good');return true;}
