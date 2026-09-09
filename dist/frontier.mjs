@@ -11,7 +11,7 @@ export {nearestAnomaly,terrainAt} from './surface.mjs';
 export {systemSky,wantedTier} from './atmosphere.mjs';
 export {EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,eventArrowTargets} from './dynamic-events.mjs';
 export {STATION_ROBOT,ROBOT_LINES,buildRobotContext,pickRobotLine,speakRobot,ensureRobotState} from './station-robot.mjs';
-export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,PLANET_KINDS} from './system-layout.mjs';
+export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,PLANET_KINDS,STAR_TYPES} from './system-layout.mjs';
 export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};

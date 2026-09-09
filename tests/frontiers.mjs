@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,contractsFor,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
-import {moduleView,fleetView,guildView,factionView,mapView,robotView,robotStrip} from '../dist/frontier-views.mjs';
+import {moduleView,fleetView,guildView,factionView,mapView,robotStrip} from '../dist/frontier-views.mjs';
 import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
@@ -85,16 +85,14 @@ test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogu
  assert(ROBOT_LINES.tips.length>=6);
  const g=new Game();
  assert.equal(g.s.robotMet,false);
- const desk=robotView(g);
- assert(desk.includes(STATION_ROBOT.displayName));
- assert(desk.includes('data-action="robot-talk"'));
- assert(desk.includes('data-action="robot-tip"'));
- assert(desk.includes('robot-face--'));
- assert(desk.includes('viewBox="0 0 148 104"'));
- assert(!desk.includes('cy="168"'));
  const strip=robotStrip(g);
+ assert(strip.includes(STATION_ROBOT.displayName));
  assert(strip.includes('robot-strip'));
+ assert(strip.includes('data-action="robot-talk"'));
  assert(strip.includes('data-action="robot-tip"'));
+ assert(strip.includes('robot-face--'));
+ assert(strip.includes('viewBox="0 0 148 104"'));
+ assert(!strip.includes('cy="168"'));
  g.launch();
  g.player.x=g.station.x;g.player.y=g.station.y+50;
  assert(g.dock());
@@ -120,5 +118,7 @@ test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogu
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/robotStrip\(game\)/);
  assert.match(app,/case 'robot-tip'/);
+ assert(!app.includes("['concierge','Concierge']"));
+ assert(!app.includes('robotView(game)'));
 });
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;

@@ -56,7 +56,8 @@ test('System layouts are seeded, cover multi-star and multi-world variety, and g
  const a=buildSystemLayout(SYSTEMS[0]),b=buildSystemLayout(SYSTEMS[0]);
  assert.equal(a.stars.length,b.stars.length);assert.equal(a.planets.length,b.planets.length);
  assert.deepEqual(a.planets.map(p=>p.id),b.planets.map(p=>p.id));
- const stars=new Set(),planets=new Set(),docks=new Set();
+ const stars=new Set(),planets=new Set(),docks=new Set(),spectra=new Set(),colors=new Set();
+ let minPlanetDist=Infinity,minStationDist=Infinity;
  for(const sys of SYSTEMS){
   const layout=buildSystemLayout(sys),meta=systemLayoutMeta(sys);
   assert.equal(layout.stars.length,meta.starCount);
@@ -64,10 +65,18 @@ test('System layouts are seeded, cover multi-star and multi-world variety, and g
   assert.equal(surveyWorldIds(sys.id,sys).length,layout.planets.length);
   stars.add(layout.stars.length);planets.add(layout.planets.length);
   if(sys.hasStation)docks.add(layout.stations.filter(s=>s.type==='station').length);
+  for(const star of layout.stars){assert(star.spectral);spectra.add(star.spectral);colors.add(star.color);}
+  const primary=layout.primary;
+  for(const p of layout.planets)minPlanetDist=Math.min(minPlanetDist,Math.hypot(p.x-primary.x,p.y-primary.y));
+  for(const s of layout.stations.filter(s=>s.type==='station'))minStationDist=Math.min(minStationDist,Math.hypot(s.x-primary.x,s.y-primary.y));
  }
  assert(stars.has(1)&&stars.has(2)&&stars.has(3));
  assert(planets.has(1)&&planets.has(5));
  assert([...docks].some(n=>n>=2));
+ assert(spectra.size>=4,'expected multiple spectral classes across the chart');
+ assert(colors.size>=6,'expected varied star colors');
+ assert(minPlanetDist>1200,'planets should sit well clear of the primary');
+ assert(minStationDist>900,'home docks should not hug the star');
  const g=new Game();g.launch();
  const giant=g.planets.find(p=>!isLandablePlanet(p));
  if(giant){g.target=giant;g.player.x=giant.x;g.player.y=giant.y+giant.r+300;assert(!g.land());}
@@ -127,7 +136,7 @@ test('Engine volume uses the full slider and stays silent at zero',()=>{
  const source=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),'utf8');assert(source.includes('*.32'));assert(source.includes('Math.pow'));assert(!source.includes('*.24'));assert(!source.includes('*.065'));
 });
 test('Security responds to wanted attacks and assaults on innocent civilians',()=>{
- const g=new Game();g.launch();const civilian=g.traffic[0],wanted=g.enemies[0],patrol=g.patrols[0],remote=g.patrols[1];civilian.x=1100;civilian.y=900;wanted.x=1450;wanted.y=900;wanted.raidFire=0;remote.x=-2500;remote.y=-2500;const before=dist(patrol,wanted);g.update(.05);assert.equal(wanted.wanted,true);assert.equal(patrol.responseTarget,wanted.id);assert.equal(patrol.status,'RESPONDING');assert.equal(remote.responseTarget,null);assert.equal(remote.status,'PATROLLING');ticks(g,1);assert(dist(patrol,wanted)<before);assert(g.shots.some(b=>b.trafficShot&&b.enemy));
+ const g=new Game();g.launch();const civilian=g.traffic[0],wanted=g.enemies[0],patrol=g.patrols[0],remote=g.patrols[1];civilian.x=1100;civilian.y=900;wanted.x=1450;wanted.y=900;wanted.raidFire=0;patrol.x=1000;patrol.y=900;remote.x=-2500;remote.y=-2500;const before=dist(patrol,wanted);g.update(.05);assert.equal(wanted.wanted,true);assert.equal(patrol.responseTarget,wanted.id);assert.equal(patrol.status,'RESPONDING');assert.equal(remote.responseTarget,null);assert.equal(remote.status,'PATROLLING');ticks(g,1);assert(dist(patrol,wanted)<before);assert(g.shots.some(b=>b.trafficShot&&b.enemy));
  const j=new Game();j.launch();const attacker=j.enemies[0],responder=j.patrols[0];j.traffic=[];j.player.x=1400;j.player.y=900;attacker.x=1700;attacker.y=900;attacker.fire=0;responder.x=1200;responder.y=900;j.update(.05);assert.equal(attacker.wanted,true);assert.equal(responder.responseTarget,attacker.id);
  const h=new Game();h.launch();const innocent=h.traffic[0],guard=h.patrols[0],rep=h.s.reputation[guard.faction];h.player.angle=0;innocent.x=h.player.x+280;innocent.y=h.player.y;h.target=innocent;h.shoot();ticks(h,.5);assert(innocent.hp<innocent.max);assert(h.heatWanted>0);assert(h.lastKnown);assert.equal(h.s.bounty,400);assert.equal(h.s.reputation[guard.faction],rep-8);assert.equal(guard.responseTarget,'last-known');assert.equal(guard.status,'SEARCHING');guard.x=h.player.x+250;guard.y=h.player.y;guard.fire=0;h.update(.05);assert.equal(guard.responseTarget,'player');assert.equal(guard.status,'ENGAGING');assert(h.shots.some(b=>b.security&&b.enemy));
 });

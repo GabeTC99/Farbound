@@ -22,7 +22,7 @@ function robotFaceSvg(expression='neutral'){
 function robotActions(docked){
  return `<div class="section-actions robot-actions"><button class="primary" data-action="robot-talk" ${!docked?'disabled':''}>Talk</button><button data-action="robot-tip" ${!docked?'disabled':''}>Ask for a tip</button></div>`;
 }
-/** Compact face + dialogue strip shown on every station tab. */
+/** Compact face + dialogue strip shown on the Market tab. */
 export function robotStrip(game){
  const state=ensureRobotState(game),name=STATION_ROBOT.nameFor(game.sys);
  const quote=state.lastText||'Dock services online. Tap Talk — or ask for a tip you will probably ignore.';
@@ -34,19 +34,6 @@ export function robotStrip(game){
    ${robotActions(!!game.s.docked)}
   </div>
  </aside>`;
-}
-export function robotView(game){
- const state=ensureRobotState(game),name=STATION_ROBOT.nameFor(game.sys),quote=state.lastText||'Dock services online. Tap Talk when you want company — or advice you will ignore.';
- return `<div class="robot-desk">
-  <div class="robot-desk-visual">${robotFaceSvg(state.expression||'neutral')}</div>
-  <div class="robot-desk-copy">
-   <div class="section-heading"><div><div class="eyebrow">${esc(STATION_ROBOT.roleLabel)}</div><h3>${esc(name)}</h3></div><span class="tag safe">Dock services</span></div>
-   <p class="intro">A wall-mounted service screen with opinions for free. Ask for tips on flying, trading, scooping, or staying alive — personality included, liability waived.</p>
-   <blockquote class="robot-quote"><p>${esc(quote)}</p></blockquote>
-   ${robotActions(!!game.s.docked)}
-   ${!game.s.docked?'<p class="detail-text">Dock to speak with station services.</p>':''}
-  </div>
- </div>`;
 }
 function shipPreview(b){
  const c=b.color||'#b7f0e4',a=b.accent||c;
