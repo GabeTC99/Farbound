@@ -1,0 +1,14 @@
+{
+  "release": "2.1.4",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Modular Dynamic Events system for ambient pirate attacks, distress, pursuits, ambushes, mining incidents, faction skirmishes, derelicts, and anomaly activity.",
+    "Events reuse living traffic, security, wakes, and bounty rules; capped concurrency with cooldowns.",
+    "DEV menu can force each event type for testing."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

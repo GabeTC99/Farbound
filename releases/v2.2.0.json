@@ -1,0 +1,14 @@
+{
+  "release": "2.2.0",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Every system gets a seeded unique local layout: 1–3 stars, 1–5 varied planets, 0–2 asteroid belts, and occasional multi-dock stations.",
+    "Binary and trinary systems, gas giants (not landable), and shared-market multi-station docks.",
+    "Survey contracts and discovery HUD scale with each system’s world count."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

@@ -1,0 +1,16 @@
+{
+  "release": "2.1.2",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Per-system skies: clear, nebula, storm lightning, ion, dust, and deep uncharted looks.",
+    "Couriers and freighters jump between systems and leave scannable hyperspace wakes.",
+    "Wake scan reveals destination and can plot a follow route; ships reappear on arrival.",
+    "Wanted tiers escalate; wiping local security scrambles a response team.",
+    "Temporary DEV menu for teleport, credits, bounty, wakes, and response testing."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
