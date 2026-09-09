@@ -1,4 +1,5 @@
 import {nearestZone} from './onfoot.mjs';
+import {SURFACE_PALETTES} from './surface-render.mjs';
 
 function drawSpaceBackdrop(ctx,width,height,clock,accent){
  // Calm open space — fewer stars, lighter wash so the deck can read clearly.
@@ -15,6 +16,31 @@ function drawSpaceBackdrop(ctx,width,height,clock,accent){
   ctx.globalAlpha=.18+(i%5)*.06;ctx.fillRect(x,y,1,1);
  }
  ctx.globalAlpha=1;
+}
+
+function iHash(str,n){let h=n|0;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))|0;return ((h>>>0)%1000)/1000;}
+
+function drawPlanetBackdrop(ctx,width,height,s){
+ const pal=SURFACE_PALETTES[s.kindId]||SURFACE_PALETTES.mineral;
+ const sky=ctx.createLinearGradient(0,0,0,height);
+ sky.addColorStop(0,pal.sky0);sky.addColorStop(.45,pal.sky1);sky.addColorStop(1,pal.sky2);
+ ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
+ ctx.fillStyle=pal.dust;
+ for(let i=0;i<40;i++){const x=((i*131.7)%width),y=((i*71.3)%(height*.42));ctx.fillRect(x,y,1+(i%4===0?1:0),1);}
+ ctx.fillStyle=pal.terrain+'ee';
+ ctx.beginPath();ctx.moveTo(0,height*.72);
+ for(let x=0;x<=width;x+=24)ctx.lineTo(x,height*.68+Math.sin(x*.02+iHash(s.title||'',x))*18);
+ ctx.lineTo(width,height);ctx.lineTo(0,height);ctx.closePath();ctx.fill();
+}
+
+function drawLandedSkiff(ctx,x,y,scale,accent){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+ ctx.fillStyle='#00000055';ctx.beginPath();ctx.ellipse(0,14,34,8,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle='#1a3038';ctx.strokeStyle=accent||'#87b3ac';ctx.lineWidth=1.6;
+ ctx.beginPath();ctx.moveTo(-28,4);ctx.lineTo(-18,-8);ctx.lineTo(2,-12);ctx.lineTo(22,-6);ctx.lineTo(30,4);ctx.lineTo(14,10);ctx.lineTo(-16,10);ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.fillStyle='#94d8db';ctx.fillRect(-2,-8,12,4);
+ ctx.strokeStyle=accent||'#87b3ac';ctx.beginPath();ctx.moveTo(-14,10);ctx.lineTo(-18,16);ctx.moveTo(12,10);ctx.lineTo(16,16);ctx.stroke();
+ ctx.restore();
 }
 
 function drawIcon(ctx,x,y,s,kind,color){
@@ -156,20 +182,30 @@ export function renderOnFoot(ctx,width,height,s,clock){
  const scale=width<650?1.05:height<520?1.1:1.28;
  const cameraX=s.x-width*.5/scale,cameraY=s.y-height*.48/scale;
  const sx=x=>(x-cameraX)*scale,sy=y=>(y-cameraY)*scale;
+ const planet=s.kind==='planet';
 
- drawSpaceBackdrop(ctx,width,height,clock,s.accent||'#7ec8c0');
+ if(planet)drawPlanetBackdrop(ctx,width,height,s);
+ else drawSpaceBackdrop(ctx,width,height,clock,s.accent||'#7ec8c0');
 
  ctx.save();
  const wheeled=drawWheelDeck(ctx,sx,sy,scale,s);
  if(!wheeled){
-  // Fallback rectangular deck
   const padX=sx(-30),padY=sy(-30),padW=(s.width+60)*scale,padH=(s.height+60)*scale;
-  ctx.fillStyle='#0a121899';ctx.strokeStyle=(s.accent||'#7ec8c0')+'66';ctx.lineWidth=3;
-  ctx.beginPath();ctx.rect(padX,padY,padW,padH);ctx.fill();ctx.stroke();
-  ctx.beginPath();ctx.rect(sx(0),sy(0),s.width*scale,s.height*scale);ctx.clip();
-  const floor=ctx.createLinearGradient(sx(0),sy(0),sx(s.width),sy(s.height));
-  floor.addColorStop(0,s.floor||'#172430');floor.addColorStop(1,'#121c26');
-  ctx.fillStyle=floor;ctx.fillRect(sx(0),sy(0),s.width*scale,s.height*scale);
+  if(planet){
+   ctx.fillStyle=(s.floor||'#142c31')+'dd';ctx.strokeStyle=(s.accent||'#87b3ac')+'55';ctx.lineWidth=2;
+   ctx.beginPath();ctx.rect(sx(0),sy(0),s.width*scale,s.height*scale);ctx.fill();ctx.stroke();
+   ctx.beginPath();ctx.rect(sx(0),sy(0),s.width*scale,s.height*scale);ctx.clip();
+   const wash=ctx.createRadialGradient(sx(s.width*.45),sy(s.height*.5),40*scale,sx(s.width*.5),sy(s.height*.55),s.width*.55*scale);
+   wash.addColorStop(0,(s.accent||'#87b3ac')+'22');wash.addColorStop(1,'#0000');
+   ctx.fillStyle=wash;ctx.fillRect(sx(0),sy(0),s.width*scale,s.height*scale);
+  }else{
+   ctx.fillStyle='#0a121899';ctx.strokeStyle=(s.accent||'#7ec8c0')+'66';ctx.lineWidth=3;
+   ctx.beginPath();ctx.rect(padX,padY,padW,padH);ctx.fill();ctx.stroke();
+   ctx.beginPath();ctx.rect(sx(0),sy(0),s.width*scale,s.height*scale);ctx.clip();
+   const floor=ctx.createLinearGradient(sx(0),sy(0),sx(s.width),sy(s.height));
+   floor.addColorStop(0,s.floor||'#172430');floor.addColorStop(1,'#121c26');
+   ctx.fillStyle=floor;ctx.fillRect(sx(0),sy(0),s.width*scale,s.height*scale);
+  }
  }
 
  drawSigns(ctx,sx,sy,scale,s);
@@ -179,13 +215,17 @@ export function renderOnFoot(ctx,width,height,s,clock){
   const near=Math.hypot(z.x-s.x,z.y-s.y)<(z.r||40)+24;
   const zx=sx(z.x),zy=sy(z.y),zr=(z.r||40)*scale;
   const pulse=near?0.12*Math.sin(clock*4):0;
-  ctx.fillStyle=z.launch?(near?s.accent+'70':s.accent+'38'):(near?s.accent+'55':'#2a4455bb');
+  const board=!!(z.board||z.launch);
+  ctx.fillStyle=board?(near?s.accent+'70':s.accent+'38'):(near?s.accent+'55':'#2a4455bb');
   ctx.beginPath();ctx.arc(zx,zy,zr,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle=near?s.accent:'#8aa8b4aa';ctx.lineWidth=near?2.2:1.1;
   ctx.beginPath();ctx.arc(zx,zy,zr+pulse*10,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='#1a3040f0';ctx.beginPath();ctx.arc(zx,zy-3*scale,14*scale,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle=near?s.accent:'#a8c4cc';ctx.lineWidth=1.3;ctx.stroke();
-  drawIcon(ctx,zx,zy-3*scale,24*scale,z.icon||z.service,near?s.accent:'#c5dce2');
+  if(board&&planet)drawLandedSkiff(ctx,zx,zy+2*scale,scale*.9,s.accent);
+  else{
+   ctx.fillStyle='#1a3040f0';ctx.beginPath();ctx.arc(zx,zy-3*scale,14*scale,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle=near?s.accent:'#a8c4cc';ctx.lineWidth=1.3;ctx.stroke();
+   drawIcon(ctx,zx,zy-3*scale,24*scale,z.icon||z.service,near?s.accent:'#c5dce2');
+  }
   if(near){
    ctx.fillStyle='#eef8f6';ctx.font=`${Math.max(11,12.5*Math.min(1.1,scale))}px system-ui`;ctx.textAlign='center';ctx.textBaseline='alphabetic';
    ctx.fillText(z.label,zx,zy+zr+14);
@@ -195,7 +235,7 @@ export function renderOnFoot(ctx,width,height,s,clock){
  // Legacy AABB bulkheads if present
  for(const w of s.walls||[]){
   const x=sx(w.x),y=sy(w.y),ww=w.w*scale,hh=w.h*scale;
-  ctx.fillStyle='#0d1620';ctx.fillRect(x,y,ww,hh);
+  ctx.fillStyle=planet?'#1a1410':'#0d1620';ctx.fillRect(x,y,ww,hh);
   ctx.strokeStyle=(s.accent||'#7ec8c0')+'66';ctx.lineWidth=1.4;ctx.strokeRect(x+.5,y+.5,ww-1,hh-1);
  }
 
@@ -214,7 +254,9 @@ export function renderOnFoot(ctx,width,height,s,clock){
 
  if(zone){
   ctx.fillStyle=s.accent;ctx.font='13px system-ui';ctx.textAlign='center';
-  ctx.fillText(zone.launch?'INTERACT · LAUNCH':'INTERACT · '+zone.label.toUpperCase(),width/2,Math.max(140,height*.24));
+  const board=!!(zone.board||zone.launch);
+  const label=board?(planet?'INTERACT · BOARD SKIFF':'INTERACT · LAUNCH'):zone.service==='inspect'?'INTERACT · INSPECT':'INTERACT · '+zone.label.toUpperCase();
+  ctx.fillText(label,width/2,Math.max(140,height*.24));
  }
 }
 

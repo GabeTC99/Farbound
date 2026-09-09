@@ -8,13 +8,20 @@ Open the hosted game in Chrome, then use **Menu → Add to Home screen → Insta
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
+## Frontiers 2.4 — planetary landing + space legs
+
+### Candidate 2.4.0
+
+- **Skiff feel:** landing flare near the ground, altitude / sink readouts, clearer craft shadow, dust plume, and hard-landing flash. Soft-land, then **DISBARK**.
+- **Planetary space legs (FB-013):** after touchdown, walk a local surface site. Inspect nearby signal pads on foot to record anomalies. **BOARD SKIFF** to resume surface flight; **RETURN TO ORBIT** only after boarding. Far signals still require flying the skiff closer, landing again, and disembarking.
+- Hover-scan and beacon ping remain available while airborne.
+
 ## Frontiers 2.3 — station space legs
 
 ### Candidate 2.3.0
 
 - **Station space legs:** docking puts you on a top-down station deck. Walk corridors to Market, Cartographics, Contracts, Modules, Hangar, Guilds, and Factions. Interact at a desk to open the familiar service panel; close returns to the deck. Launch only from the hangar bay (or the Launch button inside a desk). Prison barges use a detention layout. Deck position saves while docked.
 - **Light planetary polish:** surface expeditions tint sky, terrain, and skiff by world kind (ocean, arid, ice, mineral). Anomaly markers are kind-specific. Out of scan range, INTERACT / SCAN pings a beacon toward the nearest unscanned signal (short cooldown).
-- Planetary on-foot exploration (disembark from the skiff) remains planned for a later release.
 
 ## Frontiers 2.1 — exploration update
 
@@ -54,17 +61,17 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.3.x). This is a solo prototype with local progression, without multiplayer. On-foot play is currently limited to station decks; planetary disembark remains planned. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.4.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
 Touch: drag the left stick toward a direction; hold BOOST to accelerate and FIRE / MINE to shoot. Select Station, Star, Worlds, or Belt, or tap a visible object; AUTO approaches it. Dock, Scan, Scoop, or Land when within range. Open Galaxy to plot routes and jump.
 
-In surface flight, the stick moves horizontally and vertically; release it to hover. Tap SCAN SIGNAL within range, or PING BEACON when out of range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition.
+In surface flight, the stick moves horizontally and vertically; release it to hover. Soft-land for **DISBARK**, or tap SCAN SIGNAL within range / PING BEACON when airborne and out of range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition (board the skiff first if you are on foot). On surface legs, walk to signal pads or the skiff pad; INTERACT inspects or boards.
 
 On a station deck, the stick walks. Tap INTERACT at a desk to open services, or at the hangar to launch. Escape closes a desk and returns to walking; open the flight menu from the deck when no desk is open.
 
-Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock / interact; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu or close desk. On a surface, A/D move sideways, W/S move vertically, and Space scans or pings. On a station deck, the stick or WASD walks and Space / E interacts.
+Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock / interact; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu or close desk. On a surface, A/D move sideways, W/S move vertically, and Space scans, pings, or disembarks when landed. On station or planetary legs, the stick or WASD walks and Space / E interacts.
 
 ## Saves and rollback
 

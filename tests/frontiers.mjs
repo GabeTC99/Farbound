@@ -177,4 +177,27 @@ test('Surface beacon ping reveals the nearest unscanned anomaly',()=>{
  ticks(g,9);
  assert(g.pingSurface());
 });
+test('Planetary space legs: disembark, inspect, board, then takeoff',()=>{
+ const g=new Game();g.launch();
+ const p=g.planets.find(pl=>pl.landable!==false)||g.planets[0];
+ g.player.x=p.x;g.player.y=p.y+p.r+300;assert(g.land());
+ const a=g.surface.anomalies[0];
+ g.surface.x=a.x;g.surface.y=terrainAt(g.surface.x,g.surface.seed)-19;g.surface.vx=g.surface.vy=0;g.surface.landed=true;
+ assert(g.disembark());
+ assert(g.onfoot);assert.equal(g.onfoot.kind,'planet');
+ assert(!g.takeoff());
+ const pad=g.onfoot.zones.find(z=>z.anomalyId===a.id);
+ assert(pad,'nearby inspect pad for landed anomaly');
+ g.onfoot.x=pad.x;g.onfoot.y=pad.y;
+ const before=g.s.records.length;
+ assert(g.interactPlanet()?.recorded);
+ assert.equal(g.s.records.length,before+1);
+ assert(a.scanned);
+ assert(g.s.surfaceScanned.includes(a.id));
+ g.onfoot.x=g.onfoot.zones.find(z=>z.board).x;g.onfoot.y=g.onfoot.zones.find(z=>z.board).y;
+ assert(g.interactPlanet()?.board);
+ assert(!g.onfoot);assert(g.surface.landed);
+ assert(g.takeoff());
+ assert(!g.surface);
+});
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;
