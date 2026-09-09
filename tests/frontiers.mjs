@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,contractsFor,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
-import {moduleView,fleetView,guildView,factionView,mapView} from '../dist/frontier-views.mjs';
+import {moduleView,fleetView,guildView,factionView,mapView,robotView} from '../dist/frontier-views.mjs';
+import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
 function roundtrip(g){const s=validateSave(JSON.parse(JSON.stringify(g.serialize())));assert(s,'Saved pilot must validate');return new Game(s);}
@@ -73,5 +74,38 @@ test('Malformed saves reject duplicate modules, duplicate rewards, overloads, an
 });
 test('Panel generators cover all navigation actions and render all guilds, factions, and modules',()=>{
  const g=new Game();const guilds=guildView(g),factions=factionView(g),modules=moduleView(g),fleet=fleetView(g);for(const guild of GUILDS)assert(guilds.includes(guild.name));assert(factions.includes('Cinder Directorate'));assert(modules.includes('data-action="upgrade"'));for(const ship of SHIPS)assert(fleet.includes(ship.name));g.setRoute(191);const chart=mapView(g,191);assert(chart.includes('Jump next')||chart.includes('Launch to jump'));assert(chart.includes('Uncharted UR-128'));assert(!chart.includes(SYSTEMS[191].name));
+});
+test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogue by context',()=>{
+ assert.equal(STATION_ROBOT.displayName,'Nellby-9');
+ assert.equal(STATION_ROBOT.roleLabel,'Station Service Unit');
+ assert(ROBOT_LINES.greeting.length>=3);
+ assert(ROBOT_LINES.wanted.length>=2);
+ assert(ROBOT_LINES.damaged.length>=2);
+ const g=new Game();
+ assert.equal(g.s.robotMet,false);
+ const desk=robotView(g);
+ assert(desk.includes(STATION_ROBOT.displayName));
+ assert(desk.includes('data-action="robot-talk"'));
+ assert(desk.includes('robot-face--'));
+ g.launch();
+ g.player.x=g.station.x;g.player.y=g.station.y+50;
+ const before=g.events.length;
+ assert(g.dock());
+ assert(g.s.robotMet);
+ assert(g.events.length>before);
+ assert(g.events.some(e=>ROBOT_LINES.greeting.some(([t])=>t===e.text)||e.text.includes('Exploration data')||e.text.includes('Docking complete')||e.text.includes('Welcome')));
+ assert(g.robotState?.lastText);
+ const line=g.talkRobot();
+ assert(line?.text);
+ assert(['neutral','happy','confused','annoyed','alert'].includes(line.expression));
+ g.s.bounty=900;g.s.hull=40;g.s.cargo.ore=3;
+ const ctx=buildRobotContext(g);
+ assert(ctx.wanted);assert(ctx.damaged);assert(ctx.tags.includes('mining'));
+ let wantedHits=0,damagedHits=0;
+ for(let i=0;i<40;i++){const pick=pickRobotLine(g,'talk');if(pick.tag==='wanted')wantedHits++;if(pick.tag==='damaged')damagedHits++;}
+ assert(wantedHits+damagedHits>=10,'expected situational dialogue bias');
+ const saved=validateSave(JSON.parse(JSON.stringify(g.serialize())));
+ assert.equal(saved.robotMet,true);
+ assert.equal(roundtrip(g).s.robotMet,true);
 });
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;

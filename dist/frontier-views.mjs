@@ -1,5 +1,43 @@
 import {SYSTEMS,SHIPS,UPGRADES,getStats,jumpDistance,jumpCost,findRoute,systemName,guildProgress,operationDetails,FACTIONS,GUILDS,MODULES,moduleSlots} from './frontier.mjs';
+import {STATION_ROBOT,ensureRobotState} from './station-robot.mjs';
 const fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),row=(a,b)=>`<div class="data-row"><span>${a}</span>${b}</div>`;
+function robotFaceSvg(expression='neutral'){
+ return `<svg class="robot-portrait" viewBox="0 0 160 180" aria-hidden="true">
+  <ellipse cx="80" cy="168" rx="42" ry="8" fill="#0a1520" opacity=".55"/>
+  <rect x="48" y="118" width="64" height="42" rx="8" fill="#142833" stroke="#6db6ad" stroke-width="2"/>
+  <circle cx="58" cy="160" r="10" fill="#0f1c26" stroke="#7ec8d8" stroke-width="1.6"/>
+  <circle cx="102" cy="160" r="10" fill="#0f1c26" stroke="#7ec8d8" stroke-width="1.6"/>
+  <circle cx="58" cy="160" r="3.5" fill="#4a6a78"/><circle cx="102" cy="160" r="3.5" fill="#4a6a78"/>
+  <rect x="72" y="108" width="16" height="12" rx="2" fill="#1a303c" stroke="#5a8a92" stroke-width="1.2"/>
+  <g class="robot-face robot-face--${esc(expression)}">
+   <rect x="34" y="28" width="92" height="78" rx="10" fill="#0a1a24" stroke="#90efdc" stroke-width="2.2"/>
+   <rect class="robot-screen" x="42" y="36" width="76" height="62" rx="6" fill="#102834"/>
+   <g class="robot-eyes">
+    <rect class="robot-eye robot-eye-l" x="54" y="52" width="14" height="14" rx="3" fill="#90efdc"/>
+    <rect class="robot-eye robot-eye-r" x="92" y="52" width="14" height="14" rx="3" fill="#90efdc"/>
+   </g>
+   <rect class="robot-mouth" x="66" y="78" width="28" height="4" rx="2" fill="#6db6ad"/>
+   <path class="robot-brow robot-brow-l" d="M52 46h18" stroke="#6db6ad" stroke-width="2" stroke-linecap="round"/>
+   <path class="robot-brow robot-brow-r" d="M90 46h18" stroke="#6db6ad" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <path d="M34 70 22 78 34 86" fill="none" stroke="#5a8a92" stroke-width="2"/>
+  <path d="M126 70 138 78 126 86" fill="none" stroke="#5a8a92" stroke-width="2"/>
+  <circle cx="22" cy="78" r="4" fill="#90efdc" opacity=".7"/><circle cx="138" cy="78" r="4" fill="#90efdc" opacity=".7"/>
+ </svg>`;
+}
+export function robotView(game){
+ const state=ensureRobotState(game),name=STATION_ROBOT.nameFor(game.sys),quote=state.lastText||'Dock services online. Tap Talk when you want company — or advice you will ignore.';
+ return `<div class="robot-desk">
+  <div class="robot-desk-visual">${robotFaceSvg(state.expression||'neutral')}</div>
+  <div class="robot-desk-copy">
+   <div class="section-heading"><div><div class="eyebrow">${esc(STATION_ROBOT.roleLabel)}</div><h3>${esc(name)}</h3></div><span class="tag safe">Dock services</span></div>
+   <p class="intro">Station helper unit with a screen for a face and opinions for free. Ask for tips, rumors, or dry commentary — functionality optional, personality included.</p>
+   <blockquote class="robot-quote"><p>${esc(quote)}</p></blockquote>
+   <div class="section-actions"><button class="primary" data-action="robot-talk" ${!game.s.docked?'disabled':''}>Talk</button></div>
+   ${!game.s.docked?'<p class="detail-text">Dock to speak with station services.</p>':''}
+  </div>
+ </div>`;
+}
 function shipPreview(b){
  const c=b.color||'#b7f0e4',a=b.accent||c;
  if(b.id==='mule')return `<svg class="ship-preview" viewBox="0 0 120 72" aria-hidden="true"><rect x="18" y="18" width="70" height="36" rx="6" fill="#142833" stroke="${c}" stroke-width="2"/><path d="M88 24 108 36 88 48Z" fill="#142833" stroke="${c}" stroke-width="2"/><rect x="28" y="26" width="40" height="20" fill="none" stroke="${a}" stroke-width="1.4" opacity=".7"/><circle cx="96" cy="36" r="4" fill="#d8fff8"/><path d="M18 28 6 36 18 44" fill="${a}" opacity=".55"/><path d="M18 44 6 52 18 52" fill="${a}" opacity=".35"/></svg>`;

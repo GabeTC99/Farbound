@@ -2,15 +2,19 @@ import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,
 import {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface} from './surface.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
+import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets} from './dynamic-events.mjs';
+import {speakRobot,ensureRobotState} from './station-robot.mjs';
 export * from './core.mjs';
 export {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 export {nearestAnomaly,terrainAt} from './surface.mjs';
 export {systemSky,wantedTier} from './atmosphere.mjs';
+export {EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,eventArrowTargets} from './dynamic-events.mjs';
+export {STATION_ROBOT,ROBOT_LINES,buildRobotContext,pickRobotLine,speakRobot,ensureRobotState} from './station-robot.mjs';
 export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};
 export function newSave(){return {...migrate(v1Save()),systemScans:[]};}
-function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],heat:25,bounty:0,detained:false,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
+function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],heat:25,bounty:0,detained:false,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
 export function validateSave(x){
  if(!x||![1,2].includes(x.version))return null;const base=v1Validate({...x,version:1});if(!base)return null;if(x.version===1)return migrate(base);
  try{const s=migrate(base);
@@ -18,6 +22,7 @@ export function validateSave(x){
   if(x.heat!==undefined){if(!Number.isFinite(x.heat)||x.heat<0||x.heat>150)return null;s.heat=x.heat;}
   if(x.bounty!==undefined){if(!numeric(x.bounty))return null;s.bounty=x.bounty;}
   if(x.detained!==undefined){if(typeof x.detained!=='boolean')return null;s.detained=x.detained;}
+  if(x.robotMet!==undefined){if(typeof x.robotMet!=='boolean')return null;s.robotMet=x.robotMet;}
   if(x.transit!==undefined){
    if(!Array.isArray(x.transit)||x.transit.length>32||x.transit.some(t=>!t||typeof t.uid!=='string'||t.uid.length>40||typeof t.name!=='string'||!t.name.length||t.name.length>60||typeof t.hull!=='string'||!Number.isInteger(t.from)||!SYSTEMS[t.from]||!Number.isInteger(t.to)||!SYSTEMS[t.to]||!Number.isFinite(t.eta)))return null;
    s.transit=x.transit.map(t=>({uid:t.uid,name:t.name,hull:t.hull,color:t.color||'#7ec8d8',size:t.size||12,speed:t.speed||120,turn:t.turn||2.8,wait:t.wait||2.5,from:t.from,to:t.to,eta:t.eta}));
@@ -60,10 +65,11 @@ export function operationDetails(s,o){
  return {...d,destination,next,ready:d.ready&&SYSTEMS[s.system].hasStation,navLabel:destination!==s.system?'Plot route':combat?'Find target':'Select station'};
 }
 export class Game extends FlightGame{
- constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.scooping=false;this.discoveryScan=null;this.wakes=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}}
+ constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.scooping=false;this.discoveryScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
  nearestPrison(){const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);return (barges.sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0]||SYSTEMS.find(s=>s.hasStation)).id;}
- makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.star={id:'star',name:this.sys.name+' primary',type:'star',x:-900,y:-1600,r:190};this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction);for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:850+i*180,y:400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
+ makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.star={id:'star',name:this.sys.name+' primary',type:'star',x:-900,y:-1600,r:190};this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];this.dyn?.reset();this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction);for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:850+i*180,y:400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
+ triggerDynamicEvent(type){if(this.s.docked)this.launch();EVENT_CONFIG.log=true;const ok=this.dyn.trigger(type);this.notify(ok?('DEV · dynamic event · '+type):('DEV · could not start '+type),ok?'good':'bad');return ok;}
  onCombatLoss(loss,{security}= {}){
   this.surface=null;this.s.surface=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.responseAt=null;
   if(security){
@@ -129,7 +135,9 @@ export class Game extends FlightGame{
    ship.work=(ship.work||0)+dt;
    if(ship.underAttackUntil>this.time){
     ship.status='UNDER ATTACK';
-    const flee=Math.atan2(ship.y-this.player.y,ship.x-this.player.x),turn=angleDiff(flee,ship.angle);
+    const threats=[...this.enemies.filter(e=>!e.response||e.wanted),this.player];
+    const threat=threats.filter(t=>dist(ship,t)<1400).sort((a,b)=>dist(ship,a)-dist(ship,b))[0]||this.player;
+    const flee=Math.atan2(ship.y-threat.y,ship.x-threat.x),turn=angleDiff(flee,ship.angle);
     ship.angle+=clamp(turn,-ship.turn*dt,ship.turn*dt);ship.thrust=.85;
     ship.x+=Math.cos(ship.angle)*ship.speed*1.15*dt;ship.y+=Math.sin(ship.angle)*ship.speed*1.15*dt;
     continue;
@@ -264,7 +272,8 @@ export class Game extends FlightGame{
  }
  spawnOperations(){for(const op of this.s.operations||[]){if(op.type!=='combat'||op.target!==this.s.system||op.kills>=2)continue;const f=FACTIONS.find(f=>f.id===op.faction).rival,c=this.s.cleared[this.s.system]||[];for(let i=0;i<2;i++){const id=op.uid+'-'+i;if(c.includes(id)||this.enemies.some(e=>e.id===id))continue;this.enemies.push({id,type:'enemy',name:FACTIONS.find(fac=>fac.id===f).name+' interceptor',faction:f,x:600+i*300,y:1850+i*140,angle:0,hp:110,max:110,r:21,fire:1,bounty:300});}}}
  serialize(){return{...super.serialize(),surface:this.surface?{planetId:this.surface.planetId,x:this.surface.x,y:this.surface.y,integrity:this.surface.integrity,recordStart:this.surfaceRecordsStart}:null};}
- select(id){if(id.startsWith('planet-')&&!this.visiblePlanets.some(p=>p.id===id))return null;if(id==='star'){this.target=this.star;this.auto=null;return this.star;}const wake=this.wakes.find(w=>w.id===id);if(wake){this.target=wake;this.auto=null;return wake;}const p=this.patrols.find(p=>p.id===id);if(p){this.target=p;this.auto=null;return p;}return super.select(id);}
+ select(id){if(id.startsWith('planet-')&&!this.visiblePlanets.some(p=>p.id===id))return null;if(id==='star'){this.target=this.star;this.auto=null;return this.star;}const wake=this.wakes.find(w=>w.id===id);if(wake){this.target=wake;this.auto=null;return wake;}const sig=this.signals.find(s=>s.id===id);if(sig){this.target=sig;this.auto=null;return sig;}const der=this.derelicts.find(d=>d.id===id);if(der){this.target=der;this.auto=null;return der;}const p=this.patrols.find(p=>p.id===id);if(p){this.target=p;this.auto=null;return p;}return super.select(id);}
+ scanDynamic(){return scanDynamicTarget(this);}
  setRoute(destination){const path=findRoute(this.s.system,destination,getStats(this.s).range);if(!path){this.notify('No route within your drive range.');return false;}this.s.route={destination,path};this.notify(path.length?`Route plotted · ${path.length} jumps to ${systemName(SYSTEMS[destination],this.s)}`:'Destination is in this system.','good');return true;}
  routeContract(id){const m=this.s.missions.find(m=>m.id===id);if(!m)return false;const to=missionDestination(this.s,m);if(!this.setRoute(to))return false;if(to===this.s.system)this.target=m.type==='survey'?this.visiblePlanets.find(p=>!this.s.scanned.includes(p.id))||this.star:m.type==='mining'&&this.s.cargo.ore<m.tons||m.type==='bounty'&&this.s.metrics.pirates-m.startKills<2?this.belt:this.station;return true;}
  routeOperation(uid){
@@ -276,7 +285,8 @@ export class Game extends FlightGame{
  refreshRoute(){if(this.s.route)this.s.route.path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range)||[];}
  jumpNext(){if(!this.s.route)return false;const path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range);if(!path?.length){this.notify('Route complete.');return false;}this.s.route.path=path;return this.jumpTo(path[0]);}
  jumpTo(id){if(this.surface){this.notify('Return to orbit before jumping.');return false;}const ok=super.jumpTo(id);if(ok){this.scooping=false;this.discoveryScan=null;}return ok;}
- dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}if(!this.s.docked&&dist(this.player,this.station)>200){this.target=this.station;this.auto=this.station;this.notify('Autopilot set for the station.');return false;}const pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.s.heat=25;this.notify(pending||this.s.records.length?'Exploration data ready for review at Cartographics.':'No exploration data aboard.');}return ok;}
+ dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}if(!this.s.docked&&dist(this.player,this.station)>200){this.target=this.station;this.auto=this.station;this.notify('Autopilot set for the station.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.s.heat=25;this.notify(pending||this.s.records.length?'Exploration data ready for review at Cartographics.':'No exploration data aboard.');const line=speakRobot(this,'greeting');this.notify(line.text);}return ok;}
+ talkRobot(){if(!this.s.docked){this.notify('Dock before chatting with station services.');return null;}return speakRobot(this,'talk');}
  get visiblePlanets(){return this.planets.filter(p=>!this.sys.uncharted||this.s.systemScans?.includes(this.s.system)||this.s.scanned.includes(p.id));}
  discover(){
   if(this.s.docked||this.surface||this.jump){this.notify('Launch into local space to use the discovery scanner.');return false;}
@@ -377,13 +387,14 @@ export class Game extends FlightGame{
    for(const b of this.shots){b.previousX=b.x;b.previousY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;}
    this.resolveTrafficShots();
    for(const e of this.enemies){e.thrust=.2;e.angle+=dt*.28;e.x+=Math.cos(e.angle)*26*dt;e.y+=Math.sin(e.angle)*26*dt;}
-   this.updateTraffic(dt);this.updateSecurity(dt);this.shots=this.shots.filter(b=>b.life>0);
+   this.updateTraffic(dt);this.updateSecurity(dt);this.dyn?.update(dt);this.shots=this.shots.filter(b=>b.life>0);
    return;
   }
   if(this.jump){this.scooping=false;this.scoopRate=0;return;}
   this.updateStellar(dt);
   this.updateTraffic(dt);
   this.updateSecurity(dt);
+  this.dyn?.update(dt);
   if(!wasJumping)this.resolveFlightCollisions(flightFrom);
   if(this.s.hull<=0){super.update(0,{});this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;return;}
   if(this.discoveryScan){

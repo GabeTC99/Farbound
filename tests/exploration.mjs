@@ -2,7 +2,7 @@ import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier,EVENT_IDS,EVENT_CONFIG,eventArrowTargets} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
 const ticks=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/30)g.update(1/30,input);};
@@ -65,13 +65,15 @@ test('Station close launches and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.1\.3'/);
+ assert.match(release,/export const RELEASE='2\.1\.5'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/const leaveStation=\(\)=>\{if\(game\.s\.docked\)\{if\(!game\.launch\(\)\)/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)leaveStation\(\)/);
- assert.match(sw,/farbound-v2\.1\.3/);
- assert.match(sw,/release:'2\.1\.3'/);
+ assert.match(sw,/farbound-v2\.1\.5/);
+ assert.match(sw,/release:'2\.1\.5'/);
+ assert.match(sw,/dynamic-events\.mjs/);
+ assert.match(sw,/station-robot\.mjs/);
  assert(sw.includes("'./release.mjs'"));
  const g=new Game();assert(g.s.docked);assert(g.launch());assert(!g.s.docked);
 });
@@ -251,6 +253,36 @@ test('Wanted escalation and system skies are available for testing',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/function drawSkyBackdrop/);assert.match(app,/case 'dev':openPanel\('dev'\)/);
  assert.match(app,/WANTED · HEAT/);assert.match(app,/spawnResponseTeam\(\{force:true\}\)/);
+});
+test('Dynamic events start, resolve, and reuse living NPCs',()=>{
+ assert.equal(EVENT_IDS.length,8);assert(EVENT_CONFIG.maxActive<=2);
+ const g=new Game();g.launch();
+ assert(g.triggerDynamicEvent('distressSignal'));assert.equal(g.dyn.active.length,1);assert(g.signals.length>=1);
+ ticks(g,2);assert(g.dyn.active.some(e=>e.type==='distressSignal')||g.signals.length>=0);
+ const h=new Game();h.launch();assert(h.triggerDynamicEvent('pirateAttack'));
+ assert(h.enemies.some(e=>e.wanted||e.eventOwned));
+ assert(h.triggerDynamicEvent('derelictWreck'));assert(h.derelicts.length>=1);
+ const d=h.derelicts[0];h.target=d;h.player.x=d.x;h.player.y=d.y;h.player.vx=h.player.vy=0;assert(h.scanDynamic());assert(d.scanned);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'dev-event'/);assert.match(app,/triggerDynamicEvent/);
+ assert.match(app,/function drawEdgeArrow/);assert.match(app,/eventArrowTargets\(game\)/);
+});
+test('Event direction arrows require discovery or combat alert',()=>{
+ const g=new Game();g.launch();
+ g.player.x=g.star.x+8000;g.player.y=g.star.y;
+ assert(g.triggerDynamicEvent('distressSignal'));
+ const sig=g.signals[0];assert(sig);sig.discovered=false;
+ assert.equal(eventArrowTargets(g).length,0);
+ sig.discovered=true;
+ const arrows=eventArrowTargets(g);assert.equal(arrows.length,1);assert.equal(arrows[0].color,'#efa778');assert.equal(arrows[0].id,sig.id);
+ const h=new Game();h.launch();
+ h.player.x=h.star.x+8000;h.player.y=h.star.y;
+ assert(h.triggerDynamicEvent('pirateAttack'));
+ const raid=h.dyn.active.find(e=>e.type==='pirateAttack');assert(raid);
+ raid.alerted=false;
+ assert.equal(eventArrowTargets(h).filter(a=>a.kind==='pirateAttack').length,0);
+ raid.alerted=true;if(!raid.beacon){const v=h.traffic.find(t=>t.id===raid.victimId)||h.enemies[0];raid.beacon={x:v.x,y:v.y};}
+ assert(eventArrowTargets(h).some(a=>a.kind==='pirateAttack'&&a.color==='#ee918b'));
 });
 test('Operation guidance survives reload and navigates combat, delivery and reporting stages',()=>{
  let g=new Game();const faction=FACTIONS[0].id;assert(g.acceptOperation(faction,'combat'));g=roundtrip(g);let op=g.s.operations[0],d=operationDetails(g.s,op);
