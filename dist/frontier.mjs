@@ -1,20 +1,27 @@
 import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius} from './core.mjs';
 import {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface} from './surface.mjs';
+import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 export * from './core.mjs';
 export {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
 export {nearestAnomaly,terrainAt} from './surface.mjs';
+export {systemSky,wantedTier} from './atmosphere.mjs';
 export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};
 export function newSave(){return {...migrate(v1Save()),systemScans:[]};}
-function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],heat:25,bounty:0,explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
+function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],heat:25,bounty:0,detained:false,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
 export function validateSave(x){
  if(!x||![1,2].includes(x.version))return null;const base=v1Validate({...x,version:1});if(!base)return null;if(x.version===1)return migrate(base);
  try{const s=migrate(base);
   if(x.systemScans!==undefined){if(!Array.isArray(x.systemScans)||x.systemScans.length>SYSTEMS.length||x.systemScans.some(id=>!Number.isInteger(id)||!SYSTEMS[id]||!s.visited.includes(id)))return null;s.systemScans=[...new Set(x.systemScans)];}
   if(x.heat!==undefined){if(!Number.isFinite(x.heat)||x.heat<0||x.heat>150)return null;s.heat=x.heat;}
   if(x.bounty!==undefined){if(!numeric(x.bounty))return null;s.bounty=x.bounty;}
+  if(x.detained!==undefined){if(typeof x.detained!=='boolean')return null;s.detained=x.detained;}
+  if(x.transit!==undefined){
+   if(!Array.isArray(x.transit)||x.transit.length>32||x.transit.some(t=>!t||typeof t.uid!=='string'||t.uid.length>40||typeof t.name!=='string'||!t.name.length||t.name.length>60||typeof t.hull!=='string'||!Number.isInteger(t.from)||!SYSTEMS[t.from]||!Number.isInteger(t.to)||!SYSTEMS[t.to]||!Number.isFinite(t.eta)))return null;
+   s.transit=x.transit.map(t=>({uid:t.uid,name:t.name,hull:t.hull,color:t.color||'#7ec8d8',size:t.size||12,speed:t.speed||120,turn:t.turn||2.8,wait:t.wait||2.5,from:t.from,to:t.to,eta:t.eta}));
+  }
   if(x.explorationLog!==undefined){
    if(!Array.isArray(x.explorationLog)||x.explorationLog.length>4096||x.explorationLog.some(e=>!e||typeof e.id!=='string'||e.id.length>80||!['system','world','surface','legacy'].includes(e.type)||!Number.isInteger(e.system)||!SYSTEMS[e.system]||typeof e.name!=='string'||!e.name.length||e.name.length>100||!numeric(e.value)||e.value>100000||typeof e.sold!=='boolean'))return null;
    if(new Set(x.explorationLog.map(e=>e.id)).size!==x.explorationLog.length)return null;
@@ -53,24 +60,72 @@ export function operationDetails(s,o){
  return {...d,destination,next,ready:d.ready&&SYSTEMS[s.system].hasStation,navLabel:destination!==s.system?'Plot route':combat?'Find target':'Select station'};
 }
 export class Game extends FlightGame{
- constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.scooping=false;this.discoveryScan=null;this.s.heat??=25;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}}
+ constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.scooping=false;this.discoveryScan=null;this.wakes=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.systemScans??=[...this.s.visited];this.s.explorationLog??=[];this.s.transit??=[];this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;}}}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
- makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.star={id:'star',name:this.sys.name+' primary',type:'star',x:-900,y:-1600,r:190};this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction);for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:850+i*180,y:400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();}
+ nearestPrison(){const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);return (barges.sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0]||SYSTEMS.find(s=>s.hasStation)).id;}
+ makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.star={id:'star',name:this.sys.name+' primary',type:'star',x:-900,y:-1600,r:190};this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction);for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:850+i*180,y:400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
+ onCombatLoss(loss,{security}= {}){
+  this.surface=null;this.s.surface=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.responseAt=null;
+  if(security){
+   const id=this.nearestPrison();
+   this.s.system=id;if(!this.s.visited.includes(id))this.s.visited.push(id);this.s.route=null;this.s.detained=true;this.s.bounty=Math.max(this.s.bounty||0,500);
+   this.makeSystem();
+   this.notify(`Detained by system security. Transferred to ${this.sys.station} · lost cargo and ${loss.toLocaleString()} cr.`,'bad');
+   return true;
+  }
+  this.makeSystem();
+  this.notify(`Escape pod recovered. Lost cargo and ${loss.toLocaleString()} cr.`,'bad');
+  return true;
+ }
+ launch(){if(this.s.detained){this.notify('Pay your fine at the detention desk before launch.','bad');return false;}return super.launch();}
+ markWanted(amount=35,at=null){
+  const pos=at||{x:this.player.x,y:this.player.y};
+  this.heatWanted=clamp(this.heatWanted+amount,0,100);
+  this.lastKnown={x:pos.x,y:pos.y};
+  this.playerCrime={x:pos.x,y:pos.y};
+  this.playerCrimeUntil=this.time+18+this.heatWanted*.35;
+ }
+ securityFaction(){return this.sys.faction||this.s.allegiance||FACTIONS[0].id;}
+ securityWatchers(){return [...this.patrols,...this.enemies.filter(e=>e.response||String(e.id||'').startsWith('patrol-'))];}
+ jumpAnchor(lane=0){return{x:this.star.x+this.star.r+950,y:this.star.y+lane,status:'AT JUMP POINT'};}
  makeTraffic(){
   if(!this.sys.hasStation)return[];
   const r=rng(441+this.s.system*173),lane=span=>(r()-.5)*span;
-  const station={x:this.station.x,y:this.station.y,status:'DOCKED'},jump={x:this.star.x+this.star.r+950,y:this.star.y+lane(220),status:'AT JUMP POINT'},scoop={x:this.star.x+this.star.r+430,y:this.star.y+lane(160),status:'FUEL SCOOPING'},mine={x:this.belt.x+lane(280),y:this.belt.y+lane(220),status:'MINING RUN'},world=this.planets[0],survey={x:world.x+lane(120),y:world.y+world.r+280+lane(80),status:'PLANETARY SURVEY'};
+  const station={x:this.station.x,y:this.station.y,status:'DOCKED'},jump=this.jumpAnchor(lane(220)),scoop={x:this.star.x+this.star.r+430,y:this.star.y+lane(160),status:'FUEL SCOOPING'},mine={x:this.belt.x+lane(280),y:this.belt.y+lane(220),status:'MINING RUN'},world=this.planets[0],survey={x:world.x+lane(120),y:world.y+world.r+280+lane(80),status:'PLANETARY SURVEY'};
   const jobs=[
-   {name:'Inbound courier',job:'ARRIVING FROM JUMP POINT',hull:'courier',color:'#7ec8d8',size:11,turn:3.4,points:[jump,station],speed:145,wait:2.2},
-   {name:'Outbound freighter',job:'DEPARTING FOR JUMP POINT',hull:'freighter',color:'#d2b48c',size:17,turn:2.1,points:[station,jump],speed:95,wait:2.8},
+   {name:'Inbound courier',job:'ARRIVING FROM JUMP POINT',hull:'courier',color:'#7ec8d8',size:11,turn:3.4,points:[jump,station],speed:145,wait:2.2,canJump:true},
+   {name:'Outbound freighter',job:'DEPARTING FOR JUMP POINT',hull:'freighter',color:'#d2b48c',size:17,turn:2.1,points:[station,jump],speed:95,wait:2.8,canJump:true,destination:pickTradeDestination(this.s.system,SYSTEMS,jumpDistance)},
    {name:'Prospector',job:'MINING RUN',hull:'prospector',color:'#d4a067',size:13,turn:2.8,points:[station,mine],speed:88,wait:7.5},
    {name:'Scoop tender',job:'FUEL SCOOPING',hull:'tender',color:'#e0b07a',size:14,turn:2.6,points:[station,scoop],speed:112,wait:6.2},
    {name:'Survey vessel',job:'PLANETARY SURVEY',hull:'surveyor',color:'#8fd6c2',size:12,turn:3.1,points:[station,survey],speed:128,wait:5.4}
   ];
-  return jobs.map((j,i)=>{const start=j.points[0],next=j.points[1];return{...j,id:'traffic-'+i,type:'traffic',x:start.x,y:start.y,angle:Math.atan2(next.y-start.y,next.x-start.x),r:Math.max(11,j.size-1),hp:48+j.size*2,max:48+j.size*2,target:1,pause:i*.85+r()*1.2,thrust:0,status:start.status,underAttackUntil:0,phase:r()*6.28,work:0,trail:[]};});
+  return jobs.map((j,i)=>{const start=j.points[0],next=j.points[1];return{...j,id:'traffic-'+i,uid:'tv-'+this.s.system+'-'+i+'-'+Math.floor(r()*1e6),type:'traffic',x:start.x,y:start.y,angle:Math.atan2(next.y-start.y,next.x-start.x),r:Math.max(11,j.size-1),hp:48+j.size*2,max:48+j.size*2,target:1,pause:i*.85+r()*1.2,thrust:0,status:start.status,underAttackUntil:0,phase:r()*6.28,work:0,trail:[]};});
+ }
+ ingestTransitArrivals(){
+  if(!this.sys.hasStation)return;
+  const due=this.s.transit.filter(t=>t.to===this.s.system&&t.eta<=this.s.playtime+1);
+  this.s.transit=this.s.transit.filter(t=>!(t.to===this.s.system&&t.eta<=this.s.playtime+1));
+  for(const t of due){
+   const jump=this.jumpAnchor((Math.random()-.5)*180),station={x:this.station.x,y:this.station.y,status:'DOCKED'};
+   this.traffic.push({id:'traffic-arr-'+t.uid,uid:t.uid,type:'traffic',name:t.name,job:'ARRIVING FROM JUMP POINT',hull:t.hull,color:t.color,size:t.size,turn:t.turn,speed:t.speed,wait:t.wait,canJump:true,points:[jump,station],x:jump.x,y:jump.y,angle:Math.atan2(station.y-jump.y,station.x-jump.x),r:Math.max(11,t.size-1),hp:48+t.size*2,max:48+t.size*2,target:1,pause:0.4,thrust:0,status:'AT JUMP POINT',underAttackUntil:0,phase:Math.random()*6,work:0,trail:[]});
+  }
+ }
+ departJump(ship){
+  const to=ship.destination??pickTradeDestination(this.s.system,SYSTEMS,jumpDistance);
+  if(to==null){ship.target=ship.target?0:1;ship.pause=ship.wait;return;}
+  const wake={id:'wake-'+ship.uid+'-'+Math.floor(this.time*10),type:'wake',name:ship.name+' wake',x:ship.x,y:ship.y,r:30,from:this.s.system,to,shipName:ship.name,hull:ship.hull,color:ship.color,size:ship.size,uid:ship.uid,scanned:false,life:90};
+  this.wakes.push(wake);
+  this.s.transit.push({uid:ship.uid,name:ship.name,hull:ship.hull,color:ship.color,size:ship.size,speed:ship.speed,turn:ship.turn,wait:ship.wait,from:this.s.system,to,eta:this.s.playtime+6+jumpDistance(this.s.system,to)*.2});
+  if(this.s.transit.length>24)this.s.transit.shift();
+  this.traffic=this.traffic.filter(t=>t!==ship);
+  this.burst(ship.x,ship.y,'#9be7ff',14);
+  if(this.target===ship)this.target=wake;
  }
  updateTraffic(dt){
-  for(const ship of this.traffic){
+  for(const w of this.wakes)w.life-=dt;
+  this.wakes=this.wakes.filter(w=>w.life>0);
+  if(this.target?.type==='wake'&&!this.wakes.includes(this.target))this.target=this.station;
+  for(const ship of [...this.traffic]){
    ship.work=(ship.work||0)+dt;
    if(ship.underAttackUntil>this.time){
     ship.status='UNDER ATTACK';
@@ -89,6 +144,14 @@ export class Game extends FlightGame{
      if(stop.status==='MINING RUN'||stop.status==='PLANETARY SURVEY')ship.angle+=dt*.35;
      else if(stop.status==='FUEL SCOOPING')ship.angle=Math.atan2(this.star.y-ship.y,this.star.x-ship.x);
     }else ship.status='IN TRANSIT';
+    if(ship.pause<=0&&ship.canJump&&stop.status==='AT JUMP POINT'&&ship.job==='DEPARTING FOR JUMP POINT'){this.departJump(ship);continue;}
+    if(ship.pause<=0&&ship.canJump&&stop.status==='DOCKED'){
+     const jump=this.jumpAnchor((Math.random()-.5)*160);
+     ship.destination=pickTradeDestination(this.s.system,SYSTEMS,jumpDistance);
+     ship.job='DEPARTING FOR JUMP POINT';
+     ship.points=[{x:this.station.x,y:this.station.y,status:'DOCKED'},jump];
+     ship.target=1;ship.pause=0.2;ship.status='DOCKED';
+    }
    }else{
     const target=ship.points[ship.target],dx=target.x-ship.x,dy=target.y-ship.y,d=Math.hypot(dx,dy),desired=Math.atan2(dy,dx),turn=angleDiff(desired,ship.angle);
     ship.angle+=clamp(turn,-ship.turn*dt,ship.turn*dt);
@@ -110,25 +173,87 @@ export class Game extends FlightGame{
  }
  reportSecurityIncident(offender,victim){
   victim.underAttackUntil=this.time+8;
-  if(offender==='player'){const fresh=!victim.playerReported;victim.playerReported=true;this.playerCrimeUntil=this.time+24;this.playerCrime={x:victim.x,y:victim.y};if(fresh){this.s.bounty+=400;const faction=this.sys.faction;if(faction)this.s.reputation[faction]=clamp(this.s.reputation[faction]-8,-100,100);this.notify('Civilian assault reported · 400 cr bounty.','bad');}}
+  if(offender==='player'){const fresh=!victim.playerReported;victim.playerReported=true;this.markWanted(fresh?45:18,{x:victim.x,y:victim.y});if(fresh){this.s.bounty+=400;const faction=this.sys.faction;if(faction)this.s.reputation[faction]=clamp(this.s.reputation[faction]-8,-100,100);this.notify('Civilian assault reported · 400 cr bounty.','bad');}}
   else{offender.wanted=true;offender.lastCrime=this.time;offender.crimeX=victim.x;offender.crimeY=victim.y;}
   return !!this.patrols.length;
  }
  civilianLoot(ship){
-  this.s.bounty+=600;const free=getStats(this.s).cargo-cargoUsed(this.s);if(free>0&&Math.random()<.45){const goods=['food','ore','tech','meds'],good=goods[Math.floor(Math.random()*goods.length)],amount=Math.min(free,1+Math.floor(Math.random()*3));this.s.cargo[good]+=amount;this.notify(`${ship.name} destroyed · ${amount} t ${GOODS.find(g=>g.id===good).name} recovered · bounty ${this.s.bounty.toLocaleString()} cr.`,'bad');return{good,amount};}this.notify(`${ship.name} destroyed · bounty ${this.s.bounty.toLocaleString()} cr. No cargo recovered.`,'bad');return null;
+  this.s.bounty+=600;this.markWanted(55,{x:ship.x,y:ship.y});const free=getStats(this.s).cargo-cargoUsed(this.s);if(free>0&&Math.random()<.45){const goods=['food','ore','tech','meds'],good=goods[Math.floor(Math.random()*goods.length)],amount=Math.min(free,1+Math.floor(Math.random()*3));this.s.cargo[good]+=amount;this.notify(`${ship.name} destroyed · ${amount} t ${GOODS.find(g=>g.id===good).name} recovered · bounty ${this.s.bounty.toLocaleString()} cr.`,'bad');return{good,amount};}this.notify(`${ship.name} destroyed · bounty ${this.s.bounty.toLocaleString()} cr. No cargo recovered.`,'bad');return null;
  }
  resolveTrafficShots(){
-  for(const b of this.shots){if(!b.trafficShot&&!b.playerShot)continue;const candidates=b.trafficTarget?this.traffic.filter(t=>t.id===b.trafficTarget):this.traffic,from={x:b.previousX??b.x,y:b.previousY??b.y},ship=candidates.filter(t=>beamDistance(t,from,b)<t.r+6).sort((a,c)=>dist(from,a)-dist(from,c))[0];if(!ship)continue;ship.hp-=b.damage;b.life=0;ship.underAttackUntil=this.time+8;this.burst(ship.x,ship.y,'#8fc8d5',5);if(b.playerShot)this.reportSecurityIncident('player',ship);if(ship.hp<=0){this.traffic=this.traffic.filter(t=>t!==ship);this.burst(ship.x,ship.y,'#ffd297',18);if(b.playerShot)this.civilianLoot(ship);else this.notify(ship.name+' destroyed.','bad');if(this.target===ship)this.target=this.station;}}
+  for(const b of this.shots){if(!b.trafficShot&&!b.playerShot)continue;const candidates=b.trafficTarget?this.traffic.filter(t=>t.id===b.trafficTarget):this.traffic,from={x:b.previousX??b.x,y:b.previousY??b.y},ship=candidates.filter(t=>beamDistance(t,from,b)<t.r+6).sort((a,c)=>dist(from,a)-dist(from,c))[0];if(!ship)continue;ship.hp-=b.damage;b.life=0;ship.underAttackUntil=this.time+8;this.burst(ship.x,ship.y,'#8fc8d5',5);if(b.playerShot)this.reportSecurityIncident('player',ship);if(ship.hp<=0){this.traffic=this.traffic.filter(t=>t!==ship);this.burst(ship.x,ship.y,'#ffd297',18);if(b.playerShot)this.civilianLoot(ship);if(this.target===ship)this.target=this.station;}}
   this.shots=this.shots.filter(b=>b.life>0);
  }
  updateSecurity(dt){
-  for(const e of this.enemies){const victim=this.traffic.filter(t=>dist(e,t)<780).sort((a,b)=>dist(e,a)-dist(e,b))[0];e.raidFire=(e.raidFire??.4)-dt;if(victim&&e.raidFire<=0){e.raidFire=1.8+Math.random()*.8;const a=Math.atan2(victim.y-e.y,victim.x-e.x);this.shots.push({x:e.x,y:e.y,vx:Math.cos(a)*430,vy:Math.sin(a)*430,life:2.2,enemy:true,trafficShot:true,trafficTarget:victim.id,damage:7});this.reportSecurityIncident(e,victim);}}
+  if(this.responseAt!=null&&this.time>=this.responseAt){this.responseAt=null;this.spawnResponseTeam();}
+  if(this.heatWanted>0){
+   this.heatWanted=Math.max(0,this.heatWanted-dt*(this.heatWanted>55?2.4:3.8));
+   if(this.heatWanted<=0){this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;}
+   else if(this.securityWatchers().some(w=>dist(w,this.player)<780)){this.lastKnown={x:this.player.x,y:this.player.y};this.playerCrime={x:this.player.x,y:this.player.y};this.playerCrimeUntil=Math.max(this.playerCrimeUntil,this.time+10);}
+  }
+  for(const e of this.enemies){
+   if(e.response||String(e.id||'').startsWith('patrol-'))continue;
+   const victim=this.traffic.filter(t=>dist(e,t)<780).sort((a,b)=>dist(e,a)-dist(e,b))[0];e.raidFire=(e.raidFire??.4)-dt;if(victim&&e.raidFire<=0){e.raidFire=1.8+Math.random()*.8;const a=Math.atan2(victim.y-e.y,victim.x-e.x);this.shots.push({x:e.x,y:e.y,vx:Math.cos(a)*430,vy:Math.sin(a)*430,life:2.2,enemy:true,trafficShot:true,trafficTarget:victim.id,damage:7});this.reportSecurityIncident(e,victim);}
+  }
   for(const p of [...this.patrols]){
    if(this.s.reputation[p.faction]<=-20){p.type='enemy';this.enemies.push(p);this.patrols=this.patrols.filter(q=>q!==p);continue;}
-   const responseRange=1200,nearIncident=e=>Math.hypot(p.x-(e.crimeX??e.x),p.y-(e.crimeY??e.y))<=responseRange||dist(p,e)<=responseRange,threats=this.enemies.filter(e=>this.time-(e.lastCrime??-100)<18&&nearIncident(e)||p.faction===this.s.allegiance&&dist(p,e)<620),nearPlayerCrime=this.playerCrimeUntil>this.time&&(dist(p,this.player)<=responseRange||this.playerCrime&&Math.hypot(p.x-this.playerCrime.x,p.y-this.playerCrime.y)<=responseRange),target=nearPlayerCrime?this.player:threats.sort((a,b)=>dist(p,a)-dist(p,b))[0];
-   if(target){const d=dist(p,target),a=Math.atan2(target.y-p.y,target.x-p.x);p.responseTarget=target===this.player?'player':target.id;p.status='RESPONDING';p.angle=a;const speed=d>310?135:d<180?-55:0;p.thrust=speed>0?.75:0;p.x+=Math.cos(a)*speed*dt;p.y+=Math.sin(a)*speed*dt;p.fire-=dt;if(d<620&&p.fire<0){p.fire=1.15;this.shots.push({x:p.x,y:p.y,vx:Math.cos(a)*600,vy:Math.sin(a)*600,damage:9,enemy:target===this.player,ally:target!==this.player,security:true,life:1.2});}}
+   const responseRange=1200+wantedTier(this.s.bounty).level*150,nearIncident=e=>Math.hypot(p.x-(e.crimeX??e.x),p.y-(e.crimeY??e.y))<=responseRange||dist(p,e)<=responseRange,threats=this.enemies.filter(e=>!e.response&&!String(e.id||'').startsWith('patrol-')&&(this.time-(e.lastCrime??-100)<18&&nearIncident(e)||p.faction===this.s.allegiance&&dist(p,e)<620));
+   const hunting=this.heatWanted>0&&this.lastKnown,playerVisible=hunting&&dist(p,this.player)<780,aim=hunting?(playerVisible?this.player:this.lastKnown):null;
+   const pirate=threats.sort((a,b)=>dist(p,a)-dist(p,b))[0],target=aim||pirate;
+   if(target){
+    const d=dist(p,target),a=Math.atan2(target.y-p.y,target.x-p.x);p.responseTarget=aim?(playerVisible?'player':'last-known'):target.id;p.status=aim?(playerVisible?'ENGAGING':'SEARCHING'):'RESPONDING';p.angle=a;
+    const speed=d>90?125:d<40?-40:0;p.thrust=speed>0?.7:0;p.x+=Math.cos(a)*speed*dt;p.y+=Math.sin(a)*speed*dt;p.fire-=dt;
+    if(playerVisible&&d<620&&p.fire<0){p.fire=1.15;this.shots.push({x:p.x,y:p.y,vx:Math.cos(a)*600,vy:Math.sin(a)*600,damage:9,enemy:true,ally:false,security:true,life:1.2});}
+    else if(!aim&&pirate&&d<620&&p.fire<0){p.fire=1.15;this.shots.push({x:p.x,y:p.y,vx:Math.cos(a)*600,vy:Math.sin(a)*600,damage:9,enemy:false,ally:true,security:true,life:1.2});}
+    if(aim&&!playerVisible&&d<55){p.angle+=dt*.9;p.thrust=.2;p.x+=Math.cos(p.angle)*28*dt;p.y+=Math.sin(p.angle)*28*dt;}
+   }
    else{p.responseTarget=null;p.status='PATROLLING';p.thrust=.25;p.angle+=dt*.15;p.x+=Math.cos(p.angle)*30*dt;p.y+=Math.sin(p.angle)*30*dt;}
   }
+  for(const e of this.enemies.filter(e=>e.response)){
+   if(!(this.heatWanted>0&&this.lastKnown)){e.thrust=.2;e.angle+=dt*.2;e.x+=Math.cos(e.angle)*40*dt;e.y+=Math.sin(e.angle)*40*dt;e.status='PATROLLING';continue;}
+   const playerVisible=dist(e,this.player)<900,aim=playerVisible?this.player:this.lastKnown,a=Math.atan2(aim.y-e.y,aim.x-e.x),d=dist(e,aim);
+   e.angle=a;e.status=playerVisible?'ENGAGING':'SEARCHING';const speed=d>120?155:d<55?-25:40;e.thrust=speed>0?.9:0;e.x+=Math.cos(a)*speed*dt;e.y+=Math.sin(a)*speed*dt;e.fire-=dt;
+   if(playerVisible&&d<780&&e.fire<0){e.fire=.85;this.shots.push({x:e.x,y:e.y,vx:Math.cos(a)*640,vy:Math.sin(a)*640,damage:12,enemy:true,security:true,life:1.3});}
+   if(!playerVisible&&d<70){e.angle+=dt*1.1;e.x+=Math.cos(e.angle)*35*dt;e.y+=Math.sin(e.angle)*35*dt;}
+  }
+ }
+ scheduleResponseTeam(delay=10){if(this.responseAt!=null)return false;if(!this.sys.hasStation&&!this.sys.faction){this.notify('No local security authority to scramble here.');return false;}this.responseAt=this.time+delay;this.notify('Local security is scrambling a response team.','bad');return true;}
+ spawnResponseTeam(opts={}){
+  const force=!!opts.force;
+  if(!this.sys.hasStation&&!this.sys.faction&&!force){this.notify('No local security authority here to scramble.');return false;}
+  const f=this.securityFaction(),cleared=this.s.cleared?.[this.s.system]||[];
+  this.responseWave=(this.responseWave||0)+1;
+  let spawned=0;
+  for(let i=0;i<3;i++){
+   const id='patrol-response-'+f+'-w'+this.responseWave+'-'+i;
+   if(!force&&cleared.includes(id))continue;
+   if(this.enemies.some(e=>e.id===id))continue;
+   const a=(this.player.angle||0)+i*2.1,spawnAt=this.lastKnown||this.player;
+   this.enemies.push({id,name:'Security response',type:'enemy',faction:f,response:true,x:spawnAt.x+Math.cos(a)*520,y:spawnAt.y+Math.sin(a)*520,angle:a+Math.PI,hp:145,max:145,r:22,fire:.4,bounty:420,wanted:false,status:'SEARCHING'});
+   spawned++;
+  }
+  if(!spawned){this.notify('Response team could not launch — try again or clear the area.');return false;}
+  this.s.bounty+=500;this.markWanted(70,this.lastKnown||this.player);
+  this.notify('Security response team inbound · '+spawned+' ships!','bad');
+  return true;
+ }
+ scanWake(){
+  if(this.s.docked||this.surface||this.jump){this.notify('Launch into local space to scan wakes.');return false;}
+  const wake=this.target?.type==='wake'?this.target:this.wakes.filter(w=>dist(this.player,w)<260).sort((a,b)=>dist(this.player,a)-dist(this.player,b))[0];
+  if(!wake){this.notify('No hyperspace wake in range.');return false;}
+  if(Math.hypot(this.player.vx,this.player.vy)>140){this.notify('Slow below 140 m/s to resolve a wake.');return false;}
+  this.target=wake;wake.scanned=true;
+  this.notify(`${wake.shipName} jumped toward ${systemName(SYSTEMS[wake.to],this.s)}.`,'good');
+  return true;
+ }
+ followWake(){const wake=this.target?.type==='wake'?this.target:null;if(!wake){this.notify('Target a scanned wake first.');return false;}if(!wake.scanned)return this.scanWake();return this.setRoute(wake.to);}
+ payBounty(){if(!this.s.docked||!(this.s.bounty||this.s.detained))return false;const fine=Math.max(this.s.bounty||0,this.s.detained?500:0);if(this.s.credits<fine){this.notify(this.s.detained?'Insufficient credits to clear the detention fine.':'Insufficient credits to clear the bounty.','bad');return false;}const paid=fine;this.s.credits-=paid;this.s.bounty=0;this.s.detained=false;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.notify((this.sys.prison?'Detention fine cleared':'Bounty cleared')+' · '+paid.toLocaleString()+' cr · standing CLEAN','good');return true;}
+ teleportTo(systemId,{docked=false,credits=null,bounty=null,fuel=true,repair=true}={}){
+  if(!SYSTEMS[systemId])return false;
+  this.surface=null;this.s.surface=null;this.jump=null;this.s.system=systemId;if(!this.s.visited.includes(systemId))this.s.visited.push(systemId);this.s.docked=!!docked;if(credits!=null)this.s.credits=credits;if(bounty!=null)this.s.bounty=bounty;this.makeSystem();
+  const st=getStats(this.s);if(fuel)this.s.fuel=st.fuel;if(repair){this.s.hull=st.hull;this.s.shield=st.shield;}
+  if(!docked){this.player.x=this.star.x+this.star.r+950;this.player.y=this.star.y;this.player.vx=this.player.vy=0;}
+  this.notify('Dev teleport · '+systemName(this.sys,this.s)+(docked?' (docked)':''),'good');return true;
  }
  logExploration(entry){if(!this.s.explorationLog.some(e=>e.id===entry.id))this.s.explorationLog.push({...entry,sold:false});}
  sellExplorationData(){
@@ -137,10 +262,9 @@ export class Game extends FlightGame{
   this.s.credits+=total;this.s.data=0;this.s.records=[];for(const entry of this.s.explorationLog)if(!entry.sold)entry.sold=true;
   this.notify('Exploration data sold · +'+total.toLocaleString()+' cr','good');return true;
  }
- payBounty(){if(!this.s.docked||!this.s.bounty)return false;if(this.s.credits<this.s.bounty){this.notify('Insufficient credits to clear the bounty.','bad');return false;}const paid=this.s.bounty;this.s.credits-=paid;this.s.bounty=0;this.playerCrimeUntil=0;this.notify('Bounty cleared · '+paid.toLocaleString()+' cr','good');return true;}
  spawnOperations(){for(const op of this.s.operations||[]){if(op.type!=='combat'||op.target!==this.s.system||op.kills>=2)continue;const f=FACTIONS.find(f=>f.id===op.faction).rival,c=this.s.cleared[this.s.system]||[];for(let i=0;i<2;i++){const id=op.uid+'-'+i;if(c.includes(id)||this.enemies.some(e=>e.id===id))continue;this.enemies.push({id,type:'enemy',name:FACTIONS.find(fac=>fac.id===f).name+' interceptor',faction:f,x:600+i*300,y:1850+i*140,angle:0,hp:110,max:110,r:21,fire:1,bounty:300});}}}
  serialize(){return{...super.serialize(),surface:this.surface?{planetId:this.surface.planetId,x:this.surface.x,y:this.surface.y,integrity:this.surface.integrity,recordStart:this.surfaceRecordsStart}:null};}
- select(id){if(id.startsWith('planet-')&&!this.visiblePlanets.some(p=>p.id===id))return null;if(id==='star'){this.target=this.star;this.auto=null;return this.star;}const p=this.patrols.find(p=>p.id===id);if(p){this.target=p;this.auto=null;return p;}return super.select(id);}
+ select(id){if(id.startsWith('planet-')&&!this.visiblePlanets.some(p=>p.id===id))return null;if(id==='star'){this.target=this.star;this.auto=null;return this.star;}const wake=this.wakes.find(w=>w.id===id);if(wake){this.target=wake;this.auto=null;return wake;}const p=this.patrols.find(p=>p.id===id);if(p){this.target=p;this.auto=null;return p;}return super.select(id);}
  setRoute(destination){const path=findRoute(this.s.system,destination,getStats(this.s).range);if(!path){this.notify('No route within your drive range.');return false;}this.s.route={destination,path};this.notify(path.length?`Route plotted · ${path.length} jumps to ${systemName(SYSTEMS[destination],this.s)}`:'Destination is in this system.','good');return true;}
  routeContract(id){const m=this.s.missions.find(m=>m.id===id);if(!m)return false;const to=missionDestination(this.s,m);if(!this.setRoute(to))return false;if(to===this.s.system)this.target=m.type==='survey'?this.visiblePlanets.find(p=>!this.s.scanned.includes(p.id))||this.star:m.type==='mining'&&this.s.cargo.ore<m.tons||m.type==='bounty'&&this.s.metrics.pirates-m.startKills<2?this.belt:this.station;return true;}
  routeOperation(uid){
@@ -203,7 +327,7 @@ export class Game extends FlightGame{
   const before=this.s.heat;this.s.heat=clamp(before+(equilibrium-before)*(1-Math.exp(-dt*.18)),0,150);
   if(before<80&&this.s.heat>=80)this.notify('Heat warning. Move away from the star to cool.','bad');
   if(this.scooping&&this.s.heat>=95){this.scooping=false;this.notify('Scoop emergency retraction: critical heat. Move away!','bad');}
-  if(this.s.heat>100){this.s.hull-=dt*(this.s.heat-100)*.35;this.lastDamage=this.time;}
+  if(this.s.heat>100){this.s.hull-=dt*(this.s.heat-100)*.35;this.lastDamage=this.time;this.lastHitSecurity=false;}
   this.scoopRate=this.scooping?4+12*clamp((650-altitude)/500,0,1):0;
   if(this.scooping){this.s.fuel=Math.min(getStats(this.s).fuel,this.s.fuel+this.scoopRate*dt);if(this.s.fuel>=getStats(this.s).fuel){this.scooping=false;this.scoopRate=0;this.notify('Fuel tank full. Scoop retracted.','good');}}
  }
@@ -223,7 +347,20 @@ export class Game extends FlightGame{
  engageFaction(p){if(!p||p.type!=='faction')return false;this.patrols=this.patrols.filter(e=>e.id!==p.id);p.type='enemy';this.enemies.push(p);this.s.reputation[p.faction]=clamp(this.s.reputation[p.faction]-12,-100,100);this.notify('Weapons engaged against '+FACTIONS.find(f=>f.id===p.faction).name+'.','bad');return true;}
  shoot(){const civilian=this.target?.type==='traffic'?this.target:null;if(this.target?.type==='faction')this.engageFaction(this.target);const before=this.shots.length;super.shoot();if(this.shots.length===before)return;const b=this.shots.at(-1);b.playerShot=true;b.previousX=b.x;b.previousY=b.y;if(civilian&&dist(this.player,civilian)<700){const lead=dist(this.player,civilian)/820,moving=civilian.pause>0?0:civilian.speed,destination=civilian.points[civilian.target],course=Math.atan2(destination.y-civilian.y,destination.x-civilian.x),tx=civilian.x+Math.cos(course)*moving*lead,ty=civilian.y+Math.sin(course)*moving*lead,a=Math.atan2(ty-this.player.y,tx-this.player.x);b.vx=Math.cos(a)*820+this.player.vx;b.vy=Math.sin(a)*820+this.player.vy;b.trafficShot=true;b.trafficTarget=civilian.id;}}
  onHostileAttack(offender,victim){this.reportSecurityIncident(offender,victim);}
- onDestroyed(t,playerCredit=true){this.s.cleared[this.s.system]??=[];if(!this.s.cleared[this.s.system].includes(t.id))this.s.cleared[this.s.system].push(t.id);if(t.type!=='enemy'||!playerCredit)return;if(t.faction){this.s.metrics.factionKills[t.faction]++;this.s.reputation[t.faction]=clamp(this.s.reputation[t.faction]-10,-100,100);for(const o of this.s.operations)if(o.type==='combat'&&o.target===this.s.system&&FACTIONS.find(f=>f.id===o.faction).rival===t.faction)o.kills=Math.min(2,o.kills+1);}else{this.s.metrics.pirates++;if(this.s.allegiance)this.s.reputation[this.s.allegiance]=clamp(this.s.reputation[this.s.allegiance]+2,-100,100);}}
+ onDestroyed(t,playerCredit=true){
+  this.s.cleared[this.s.system]??=[];if(!this.s.cleared[this.s.system].includes(t.id))this.s.cleared[this.s.system].push(t.id);
+  if(t.type!=='enemy'||!playerCredit)return;
+  if(t.faction){
+   this.s.metrics.factionKills[t.faction]++;this.s.reputation[t.faction]=clamp(this.s.reputation[t.faction]-10,-100,100);
+   for(const o of this.s.operations)if(o.type==='combat'&&o.target===this.s.system&&FACTIONS.find(f=>f.id===o.faction).rival===t.faction)o.kills=Math.min(2,o.kills+1);
+   if(String(t.id||'').startsWith('patrol-')||t.response){
+    this.s.bounty+=t.response?800:400;this.markWanted(t.response?50:40,{x:t.x,y:t.y});
+    const securityLeft=this.patrols.length+this.enemies.filter(e=>e!==t&&(e.response||String(e.id||'').startsWith('patrol-'))).length;
+    if(securityLeft===0)this.scheduleResponseTeam(8);
+    this.notify(`Security vessel destroyed · bounty ${wantedTier(this.s.bounty).label} · ${this.s.bounty.toLocaleString()} cr`,'bad');
+   }
+  }else{this.s.metrics.pirates++;if(this.s.allegiance)this.s.reputation[this.s.allegiance]=clamp(this.s.reputation[this.s.allegiance]+2,-100,100);}
+ }
  rescue(){this.surface=null;this.s.surface=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.system=this.nearestPort();this.s.route=null;super.rescue();this.s.heat=25;}
  update(dt,input={}){
   dt=clamp(dt,0,.05);
@@ -234,7 +371,15 @@ export class Game extends FlightGame{
    this.refreshRoute();
    if(wasJumping&&!this.s.docked){this.player.x=this.star.x+this.star.r+950;this.player.y=this.star.y;this.player.angle=0;this.player.vx=this.player.vy=0;this.target=this.star;this.notify('Arrived near the primary star. Run a discovery scan to catalog this system.');}
   }
-  if(this.s.docked){this.s.heat=25;this.discoveryScan=null;this.scooping=false;this.scoopRate=0;return;}
+  if(this.s.docked){
+   this.s.heat=25;this.discoveryScan=null;this.scooping=false;this.scoopRate=0;this.s.playtime+=dt;
+   // Station services leave local space running: traffic, patrols, and nearby drama continue.
+   for(const b of this.shots){b.previousX=b.x;b.previousY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;}
+   this.resolveTrafficShots();
+   for(const e of this.enemies){e.thrust=.2;e.angle+=dt*.28;e.x+=Math.cos(e.angle)*26*dt;e.y+=Math.sin(e.angle)*26*dt;}
+   this.updateTraffic(dt);this.updateSecurity(dt);this.shots=this.shots.filter(b=>b.life>0);
+   return;
+  }
   if(this.jump){this.scooping=false;this.scoopRate=0;return;}
   this.updateStellar(dt);
   this.updateTraffic(dt);

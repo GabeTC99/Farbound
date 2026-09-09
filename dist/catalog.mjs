@@ -1,4 +1,4 @@
-export const RELEASE='2.1.6';
+export {RELEASE,RELEASE_NAME} from './release.mjs';
 export const GALAXY_CORE={x:0,y:0,radius:34};
 export const FACTIONS=[
  {id:'concord',name:'Orion Concord',color:'#8fdbc9',desc:'A coalition protecting trade and scientific access.',rival:'directorate'},
@@ -47,4 +47,12 @@ export function expandGalaxy(systems,rng){
  for(const sys of systems){const p=sites[sys.id],r=rng(9263+sys.id*59);sys.x=p.x+(r()-.5)*2;sys.y=p.y+(r()-.5)*2;}
  systems[0].x=systems[0].y=0;
  for(const sys of systems.slice(0,24)){sys.uncharted=false;sys.hasStation=true;sys.faction=FACTIONS[Math.floor(sys.id/4)%3].id;}
+ // Sparse detention barges (~7 across 72 stations). Never on Solace.
+ const barge=['Helix','Lock','Pillar','Vault','Chain','Bastion','Gauge'];
+ for(const sys of systems){
+  if(!sys.hasStation||sys.id===0||(sys.id*7)%11!==3)continue;
+  sys.prison=true;
+  sys.station='Prison barge '+barge[sys.id%barge.length];
+  sys.lore='A remote detention barge holds pilots who crossed local security. Fines clear here.';
+ }
 }

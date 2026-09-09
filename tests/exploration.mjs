@@ -2,7 +2,7 @@ import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
 const ticks=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/30)g.update(1/30,input);};
@@ -57,6 +57,32 @@ test('Recovery and destruction discard unsold discovery entries while retaining 
  g.launch();g.s.explorationLog.push({id:'pending-2',type:'legacy',system:0,name:'Pending cache 2',value:90,sold:false});g.s.data=90;g.s.hull=0;ticks(g,.1);assert(g.s.docked);assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
  const invalid={...g.serialize(),explorationLog:[{id:'bad',type:'rumor',system:0,name:'Bad',value:1,sold:false}]};assert.equal(validateSave(invalid),null);
 });
+test('Docked station time keeps traffic and playtime moving',()=>{
+ const g=new Game();assert(g.s.docked);assert(g.traffic.length);const start=g.traffic.map(t=>[t.x,t.y]),play=g.s.playtime;
+ ticks(g,2);assert(g.s.docked);assert(g.s.playtime>play);assert(g.traffic.some((t,i)=>t.x!==start[i][0]||t.y!==start[i][1]));
+});
+test('Station close launches and version comes from release.mjs',()=>{
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
+ const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
+ assert.match(release,/export const RELEASE='2\.1\.3'/);
+ assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
+ assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
+ assert.match(app,/const leaveStation=\(\)=>\{if\(game\.s\.docked\)\{if\(!game\.launch\(\)\)/);
+ assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)leaveStation\(\)/);
+ assert.match(sw,/farbound-v2\.1\.3/);
+ assert.match(sw,/release:'2\.1\.3'/);
+ assert(sw.includes("'./release.mjs'"));
+ const g=new Game();assert(g.s.docked);assert(g.launch());assert(!g.s.docked);
+});
+test('Security cutters and prospector boom use dedicated hull geometry',()=>{
+ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(source,/function drawSecurityShip/);
+ assert(source.includes("drawSecurityShip(p)")&&source.includes('drawSecurityShip(e,true)'));
+ assert(source.includes("#ff3b4a")&&source.includes("#3b8cff"));
+ assert(!source.includes('ctx.lineTo(size*.95,size*1.05)'));
+ assert.match(source,/tr\.hull==='prospector'[\s\S]*?size\*\.72,size\*\.55/);
+});
 test('Living traffic performs distinct jobs and pauses at real destinations',()=>{
  const g=new Game();assert.deepEqual(g.traffic.map(t=>t.job),['ARRIVING FROM JUMP POINT','DEPARTING FOR JUMP POINT','MINING RUN','FUEL SCOOPING','PLANETARY SURVEY']);
  assert.deepEqual(g.traffic.map(t=>t.hull),['courier','freighter','prospector','tender','surveyor']);
@@ -79,12 +105,59 @@ test('Engine volume uses the full slider and stays silent at zero',()=>{
 test('Security responds to wanted attacks and assaults on innocent civilians',()=>{
  const g=new Game();g.launch();const civilian=g.traffic[0],wanted=g.enemies[0],patrol=g.patrols[0],remote=g.patrols[1];civilian.x=1100;civilian.y=900;wanted.x=1450;wanted.y=900;wanted.raidFire=0;remote.x=-2500;remote.y=-2500;const before=dist(patrol,wanted);g.update(.05);assert.equal(wanted.wanted,true);assert.equal(patrol.responseTarget,wanted.id);assert.equal(patrol.status,'RESPONDING');assert.equal(remote.responseTarget,null);assert.equal(remote.status,'PATROLLING');ticks(g,1);assert(dist(patrol,wanted)<before);assert(g.shots.some(b=>b.trafficShot&&b.enemy));
  const j=new Game();j.launch();const attacker=j.enemies[0],responder=j.patrols[0];j.traffic=[];j.player.x=1400;j.player.y=900;attacker.x=1700;attacker.y=900;attacker.fire=0;responder.x=1200;responder.y=900;j.update(.05);assert.equal(attacker.wanted,true);assert.equal(responder.responseTarget,attacker.id);
- const h=new Game();h.launch();const innocent=h.traffic[0],guard=h.patrols[0],rep=h.s.reputation[guard.faction];h.player.angle=0;innocent.x=h.player.x+280;innocent.y=h.player.y;h.target=innocent;h.shoot();ticks(h,.5);assert(innocent.hp<innocent.max);assert(h.playerCrimeUntil>h.time);assert.equal(h.s.bounty,400);assert.equal(h.s.reputation[guard.faction],rep-8);assert.equal(guard.responseTarget,'player');assert.equal(guard.status,'RESPONDING');guard.x=h.player.x+250;guard.y=h.player.y;guard.fire=0;h.update(.05);assert(h.shots.some(b=>b.security&&b.enemy));
+ const h=new Game();h.launch();const innocent=h.traffic[0],guard=h.patrols[0],rep=h.s.reputation[guard.faction];h.player.angle=0;innocent.x=h.player.x+280;innocent.y=h.player.y;h.target=innocent;h.shoot();ticks(h,.5);assert(innocent.hp<innocent.max);assert(h.heatWanted>0);assert(h.lastKnown);assert.equal(h.s.bounty,400);assert.equal(h.s.reputation[guard.faction],rep-8);assert.equal(guard.responseTarget,'last-known');assert.equal(guard.status,'SEARCHING');guard.x=h.player.x+250;guard.y=h.player.y;guard.fire=0;h.update(.05);assert.equal(guard.responseTarget,'player');assert.equal(guard.status,'ENGAGING');assert(h.shots.some(b=>b.security&&b.enemy));
+});
+test('Wanted heat decays, clears on jump, and security hunts last known position',()=>{
+ const g=new Game();g.launch();g.markWanted(80,{x:400,y:500});assert.equal(g.heatWanted,80);assert.deepEqual(g.lastKnown,{x:400,y:500});
+ const patrol=g.patrols[0];patrol.x=100;patrol.y=100;g.player.x=2000;g.player.y=2000;g.updateSecurity(.05);
+ assert.equal(patrol.responseTarget,'last-known');assert.equal(patrol.status,'SEARCHING');
+ const before=dist(patrol,g.lastKnown);ticks(g,2);assert(dist(patrol,g.lastKnown)<before);
+ g.player.x=patrol.x+120;g.player.y=patrol.y;patrol.fire=0;g.updateSecurity(.05);
+ assert.equal(patrol.responseTarget,'player');assert.equal(patrol.status,'ENGAGING');
+ const heat=g.heatWanted;g.updateSecurity(5);assert(g.heatWanted<heat);
+ const dest=SYSTEMS.find(s=>s.id!==g.s.system&&s.hasStation).id;g.teleportTo(dest,{docked:false});
+ assert.equal(g.heatWanted,0);assert.equal(g.lastKnown,null);
+ assert(g.spawnResponseTeam({force:true}));assert(g.enemies.filter(e=>e.response).length>=3);
+ assert(g.spawnResponseTeam({force:true}));assert(g.enemies.filter(e=>e.response).length>=6);
+});
+test('Response team hunts the player and never raids civilian traffic',()=>{
+ const g=new Game();g.launch();g.traffic.forEach(t=>{t.x=g.player.x+180;t.y=g.player.y;});
+ assert(g.spawnResponseTeam({force:true}));
+ const team=g.enemies.filter(e=>e.response);assert.equal(team.length,3);
+ for(const e of team){e.x=g.player.x+400;e.y=g.player.y;e.fire=0;e.raidFire=0;}
+ g.updateSecurity(.05);
+ assert(team.every(e=>!e.wanted&&e.status==='ENGAGING'));
+ assert(g.shots.some(b=>b.security&&b.enemy));
+ assert(!g.shots.some(b=>b.trafficShot));
+ assert(team.every(e=>e.wanted===false));
+});
+test('Prison barges exist sparsely and security kills transfer you there',()=>{
+ const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);
+ assert(barges.length>=5);assert(barges.length<=10);assert(!SYSTEMS[0].prison);
+ assert(barges.every(s=>String(s.station).startsWith('Prison barge ')));
+ const g=new Game();g.launch();g.s.credits=5000;g.s.bounty=800;g.s.cargo.ore=3;g.s.data=120;
+ const from=g.s.system,nearest=g.nearestPrison();assert.notEqual(nearest,undefined);
+ g.lastHitSecurity=true;g.s.hull=1;g.s.shield=0;g.shots=[{x:g.player.x,y:g.player.y,vx:0,vy:0,damage:50,enemy:true,security:true,life:1}];
+ g.update(.05);
+ assert(g.s.docked);assert.equal(g.s.detained,true);assert.equal(g.s.system,nearest);assert(g.sys.prison);
+ assert.equal(g.s.cargo.ore,0);assert.equal(g.s.data,0);assert(g.s.bounty>=800);assert(!g.launch());
+ assert(g.s.credits>=0);g.s.credits=Math.max(g.s.credits,g.s.bounty);assert(g.payBounty());assert.equal(g.s.detained,false);assert.equal(g.s.bounty,0);assert(g.launch());
+ const h=new Game();h.launch();h.s.system=from;h.makeSystem();h.lastHitSecurity=false;h.s.hull=1;h.s.shield=0;h.shots=[{x:h.player.x,y:h.player.y,vx:0,vy:0,damage:50,enemy:true,security:false,life:1}];
+ h.update(.05);assert(h.s.docked);assert.equal(h.s.detained,false);assert.equal(h.s.system,from);
 });
 test('Security kills award no bounty unless the player landed a shot',()=>{
  const securityShot=e=>({x:e.x-12,y:e.y,vx:600,vy:0,damage:9,enemy:false,ally:true,security:true,life:1.2});
- const g=new Game();g.launch();g.traffic=[];g.patrols=[];const enemy=g.enemies[0],credits=g.s.credits,pirates=g.s.metrics.pirates;g.enemies=[enemy];enemy.x=250;enemy.y=185;enemy.hp=1;g.shots=[securityShot(enemy)];g.update(.05);assert.equal(g.enemies.length,0);assert.equal(g.s.credits,credits);assert.equal(g.s.kills,0);assert.equal(g.s.metrics.pirates,pirates);assert(g.events.at(-1).text.includes('No bounty awarded'));
+ const g=new Game();g.launch();g.traffic=[];g.patrols=[];const enemy=g.enemies[0],credits=g.s.credits,pirates=g.s.metrics.pirates;g.enemies=[enemy];enemy.x=250;enemy.y=185;enemy.hp=1;g.events=[];g.shots=[securityShot(enemy)];g.update(.05);assert.equal(g.enemies.length,0);assert.equal(g.s.credits,credits);assert.equal(g.s.kills,0);assert.equal(g.s.metrics.pirates,pirates);assert.equal(g.events.length,0);
  const h=new Game();h.launch();h.traffic=[];h.patrols=[];const assisted=h.enemies[0],before=h.s.credits,startPirates=h.s.metrics.pirates;h.enemies=[assisted];assisted.x=250;assisted.y=185;assisted.hp=25;h.player.x=0;h.player.y=185;h.player.angle=0;h.shoot();ticks(h,.4);assert.equal(assisted.playerHit,true);assisted.hp=1;h.shots=[securityShot(assisted)];h.update(.05);assert.equal(h.enemies.length,0);assert.equal(h.s.credits,before+assisted.bounty);assert.equal(h.s.kills,1);assert.equal(h.s.metrics.pirates,startPirates+1);
+});
+test('Ambient NPC combat stays silent and security shots do not mine for the player',()=>{
+ const securityShot=t=>({x:t.x-12,y:t.y,vx:600,vy:0,damage:20,enemy:false,ally:true,security:true,life:1.2});
+ const g=new Game();g.launch();g.patrols=[];const rock=g.asteroids[0],ore=g.s.cargo.ore,mined=g.s.mined;g.asteroids=[rock];rock.x=250;rock.y=185;rock.hp=1;g.events=[];g.shots=[securityShot(rock)];g.update(.05);assert.equal(g.asteroids.length,1);assert.equal(g.s.cargo.ore,ore);assert.equal(g.s.mined,mined);assert.equal(g.events.length,0);
+ const h=new Game();h.launch();const civilian=h.traffic[0];civilian.x=400;civilian.y=185;civilian.hp=1;h.events=[];h.shots=[{x:civilian.x-8,y:civilian.y,vx:600,vy:0,damage:20,enemy:true,trafficShot:true,trafficTarget:civilian.id,life:1.2,previousX:civilian.x-14,previousY:civilian.y}];h.resolveTrafficShots();assert(!h.traffic.includes(civilian));assert.equal(h.events.length,0);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/game\.s\.shield<st\.shield&&game\.time-game\.lastDamage>4/);
+ assert(!app.includes("circle(p.x,p.y,size+18,'#a9e9df18',true)"));
+ assert.match(app,/ctx\.lineWidth=1;ctx\.stroke\(\);ctx\.lineWidth=prev/);
 });
 test('Civilian destruction can yield loot, persists its bounty, and allows payment at a station',()=>{
  const g=new Game();g.launch();const civilian=g.traffic[0];civilian.x=g.player.x+250;civilian.y=g.player.y;civilian.hp=1;g.player.angle=0;g.target=civilian;const original=Math.random;Math.random=()=>0;try{g.shoot();ticks(g,.5);}finally{Math.random=original;}assert(!g.traffic.includes(civilian));assert.equal(g.s.bounty,1000);assert.equal(g.s.cargo.food,1);let h=roundtrip(g);assert.equal(h.s.bounty,1000);h.s.docked=true;h.s.credits=2000;assert(h.payBounty());assert.equal(h.s.bounty,0);assert.equal(h.s.credits,1000);assert(!h.payBounty());assert.equal(validateSave({...h.serialize(),bounty:-1}),null);
@@ -150,11 +223,11 @@ test('Asteroids and every NPC class block contact, including boosted passes',()=
  }
  const g=new Game();g.launch();g.enemies=[];g.traffic=[];g.patrols=[];const rock=g.asteroids[0];g.asteroids=[rock];g.player.x=rock.x-rock.r-g.player.r-1;g.player.y=rock.y;g.player.vx=200;g.update(.05);assert(dist(g.player,rock)>=rock.r+g.player.r);
 });
-test('Every NPC stop label matches its physical location over complete round trips',()=>{
- const g=new Game(),seen=new Map(g.traffic.map(t=>[t.id,new Set()]));
+test('Every local worker stop label matches its physical location over complete round trips',()=>{
+ const g=new Game(),workers=g.traffic.filter(t=>!t.canJump),seen=new Map(workers.map(t=>[t.id,new Set()]));
  for(let frame=0;frame<7200;frame++){
   g.updateTraffic(1/30);
-  for(const ship of g.traffic){
+  for(const ship of g.traffic.filter(t=>!t.canJump)){
    if(ship.status==='IN TRANSIT')continue;
    seen.get(ship.id).add(ship.status);
    const stop=ship.points.find(p=>p.status===ship.status);assert(stop,ship.status);assert(dist(ship,stop)<18);
@@ -162,7 +235,22 @@ test('Every NPC stop label matches its physical location over complete round tri
    if(ship.status==='FUEL SCOOPING')assert(dist(ship,g.star)<g.star.r+650);
   }
  }
- for(const ship of g.traffic)for(const stop of ship.points)assert(seen.get(ship.id).has(stop.status),ship.name+' reaches '+stop.status);
+ for(const ship of workers)for(const stop of ship.points)assert(seen.get(ship.id).has(stop.status),ship.name+' reaches '+stop.status);
+});
+test('Jump traffic leaves wakes that can be scanned and followed across systems',()=>{
+ const g=new Game();g.launch();const freighter=g.traffic.find(t=>t.job==='DEPARTING FOR JUMP POINT');assert(freighter.canJump);assert(Number.isInteger(freighter.destination));
+ freighter.x=g.jumpAnchor().x;freighter.y=g.jumpAnchor().y;freighter.pause=0;freighter.target=0;g.departJump(freighter);
+ assert.equal(g.traffic.includes(freighter),false);assert.equal(g.wakes.length,1);assert.equal(g.s.transit.length,1);
+ const wake=g.wakes[0],dest=wake.to;g.target=wake;assert(g.scanWake());assert(wake.scanned);assert(g.followWake());assert.equal(g.s.route.destination,dest);
+ g.s.transit[0].eta=g.s.playtime;g.teleportTo(dest,{docked:false});assert(g.traffic.some(t=>t.uid===wake.uid||t.job==='ARRIVING FROM JUMP POINT'));
+});
+test('Wanted escalation and system skies are available for testing',()=>{
+ assert.equal(wantedTier(0).label,'CLEAN');assert.equal(wantedTier(600).label,'WANTED');assert.equal(wantedTier(3000).label,'EXTREME');
+ assert(SYSTEMS.some(s=>systemSky(s).kind==='storm'));assert(SYSTEMS.some(s=>systemSky(s).lightning));
+ const g=new Game();g.launch();assert(g.scheduleResponseTeam(0));g.responseAt=g.time;g.updateSecurity(0);assert(g.enemies.some(e=>e.response));
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/function drawSkyBackdrop/);assert.match(app,/case 'dev':openPanel\('dev'\)/);
+ assert.match(app,/WANTED · HEAT/);assert.match(app,/spawnResponseTeam\(\{force:true\}\)/);
 });
 test('Operation guidance survives reload and navigates combat, delivery and reporting stages',()=>{
  let g=new Game();const faction=FACTIONS[0].id;assert(g.acceptOperation(faction,'combat'));g=roundtrip(g);let op=g.s.operations[0],d=operationDetails(g.s,op);

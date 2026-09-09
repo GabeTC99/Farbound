@@ -45,7 +45,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Menus pause the simulation. This is a solo prototype with local progression, without multiplayer or on-foot play. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station services leave local space running, and closing them launches you back out. Player-facing version lives in `dist/release.mjs` (2.1.x, with letter suffixes for tiny fixes). This is a solo prototype with local progression, without multiplayer or on-foot play. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

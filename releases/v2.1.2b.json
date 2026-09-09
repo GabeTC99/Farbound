@@ -1,0 +1,14 @@
+{
+  "release": "2.1.2b",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Wanted heat is visible while active, decays over time, and clears on system jump.",
+    "Security and response teams chase last known position instead of locking onto you.",
+    "DEV Spawn response always launches a fresh wave and reports failures clearly."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
