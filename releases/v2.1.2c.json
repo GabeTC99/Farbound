@@ -1,0 +1,13 @@
+{
+  "release": "2.1.2c",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Security response teams no longer raid civilian traffic or drop out of the hunt.",
+    "Response ships engage the player when in sensor range after chasing last contact."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

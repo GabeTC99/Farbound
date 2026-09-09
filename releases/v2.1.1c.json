@@ -1,0 +1,14 @@
+{
+  "release": "2.1.1c",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Status toasts only fire for player actions; NPC security kills and ambient civilian losses stay silent.",
+    "Security weapons no longer mine asteroids into the player hold.",
+    "Removed the always-on flickering ring around the player ship."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

@@ -1,0 +1,13 @@
+{
+  "release": "2.1.5",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Station concierge Nellby-9 is a screen-only face with Talk and Ask for a tip on every station tab.",
+    "Dock greetings appear in the station dialogue strip instead of vanishing under toast notifications."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

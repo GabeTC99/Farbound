@@ -4,7 +4,7 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'dist' / 'Farbound-Android-Source.zip'
 files = [ROOT / 'README.md']
-for folder in ('dist', 'android', 'tests', 'releases', 'scripts'):
+for folder in ('dist', 'android', 'tests', 'releases', 'scripts', 'docs'):
     files += [p for p in (ROOT / folder).rglob('*') if p.is_file()
               and p != OUT and '.gradle' not in p.parts and 'build' not in p.parts
               and '__pycache__' not in p.parts]

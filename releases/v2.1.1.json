@@ -1,0 +1,14 @@
+{
+  "release": "2.1.1",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Station services no longer pause local space; traffic and patrols keep moving while docked.",
+    "Closing station services launches back to space.",
+    "In-game version label follows incremental 2.1.x releases."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

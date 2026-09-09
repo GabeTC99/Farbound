@@ -1,0 +1,14 @@
+{
+  "release": "2.1.3",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Sparse prison barges exist across the frontier (not in every system).",
+    "Being disabled by system security transfers you to the nearest prison barge.",
+    "Pay the detention fine to clear standing and launch; Escape/launch stay locked while detained."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

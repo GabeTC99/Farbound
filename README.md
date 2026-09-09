@@ -8,9 +8,35 @@ Open the hosted game in Chrome, then use **Menu → Add to Home screen → Insta
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
-## Frontiers 2.0
+## Frontiers 2.1 — exploration update
 
-- **192 deterministic systems:** the original 24 retain their identities and coordinates. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. First discoveries award exploration data.
+### Candidate 2.1.6
+
+- Active faction operations show the next objective in flight, Contracts, and the faction desk, with navigation to combat targets and reporting stations. NPC activity labels now come from the actual stop reached, including the inbound courier’s jump-point and station stops.
+
+- Fly over planets, stars, and stations. Only asteroids and NPC ships physically block flight; contact stops inward motion without adding damage or crime. Stellar heat still applies.
+
+- Bounty rewards and kill progress now require at least one successful player hit. A target destroyed entirely by system security gives no credits or combat credit.
+- Security response is local to a recent attack against the player or civilian traffic. Patrols outside the incident area continue their normal route instead of acquiring wanted ships across the system.
+- Civilian ships now take hits from both selected aim-assist shots and manually aimed fire. The first damaging hit applies a 400 cr bounty; destroying the vessel adds another 600 cr. Destroyed civilians have a 45% chance to yield one to three tons of recoverable cargo when hold space is available. Bounties persist in the pilot save and can be cleared at a station market.
+- Maximum engine output is increased again while preserving the slider's full silent-to-maximum range.
+- Security patrols now respond to active attacks. They pursue and engage wanted ships attacking the player or civilian traffic, and they turn on the player after an unprovoked attack on an innocent civilian vessel.
+- Engine volume now uses the full slider range with a louder perceptual curve.
+- Civilian traffic performs visible arrival, departure, mining, fuel-scooping, and planetary-survey routes instead of orbiting the station. Ships coast or stop their exhaust while working.
+- Docking leaves exploration data aboard. The new **Cartographics** service lists unsold and sold system catalogs, detailed world surveys, and surface anomalies with individual values. **Sell all** completes the transaction when the pilot chooses. Destruction, emergency recovery, and failed surface expeditions remove the applicable unsold entries.
+
+
+- **Engine animation fix:** each ship supplies its own thrust to the renderer. Player boost no longer lights up civilian engines; coasting does not count as thrust.
+- **Circular galaxy:** 64 charted systems form a roughly circular human core centered on Solace. Another 128 uncharted systems surround it in every direction. System IDs, names, local planets, stations, and saved progress are retained; galaxy coordinates, jump costs, and routes change. Saved routes are recalculated when loaded. Overview fits the new map automatically.
+- **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the primary star and two worlds, revealing worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Unknown-system discovery credit and Explorers Guild progress now require completing the pulse. Then approach a world and use **Scan / R** for its separate detailed survey. Slow below 100 m/s and hold fire during world surveys. Repeated taps do not restart an active scan. Dock and sell data manually at Cartographics; each catalog and world pays once.
+- **Stellar arrival and scooping:** jumps arrive near the primary star, outside its scoop zone. All current ships have a built-in scoop, and all current primary stars are eligible. Approach the star, slow below 100 m/s, then deploy the scoop. Collection rate rises closer to the star, alongside heat. Heat warns at 80%, the scoop retracts at 95%, and temperatures above 100% damage the hull. Move away to cool; tanks stop filling at capacity. Heat persists across reloads.
+- **Save compatibility:** old v1/v2 saves remain supported. Previously visited systems retain their catalogs and discovery rewards. Before an older v2 pilot is overwritten, its exact original JSON is retained under `farbound-save-pre-2.1`, separately from rolling checkpoints. If that backup cannot be stored, saving fails without overwriting the original pilot.
+
+This update is prepared for review; publishing is a separate step. The preserved GitHub branch `baseline/frontiers-2.0` points to the known-good 2.0 baseline (`da5a4c5a0154b07f1855509c0dde20d4b0a982d2`). To roll back the served game, publish that baseline; to restore the exact pre-update pilot, use the preserved JSON backup. New discovery-catalog and heat state are specific to 2.1.
+
+## Retained Frontiers features
+
+- **192 deterministic systems:** all systems retain their identities, with coordinates now arranged around the circular core. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. Discovery pulses award exploration data.
 - **Contract navigation:** active contracts have a Plot destination route button. Nearby destinations use a direct jump; farther destinations use a route of legal jumps. Survey routes return to the issuing station after both worlds are recorded. The chart supports search, filters, pan, pinch/wheel zoom, locate-me, overview, and route fuel estimates. Jump next executes one leg at a time.
 - **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
 - **Four guilds:** Trading, Miners, Freelancer, and Explorers. Join any or all at station desks. Each guild offers three sequential commissions with unique module rewards. Accept commissions before doing the work; return to a desk to claim rewards. Supply commissions consume the requested cargo.
@@ -19,7 +45,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Menus pause the simulation. This is a solo prototype with local progression, without multiplayer or on-foot play. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station services leave local space running, and closing them launches you back out. Player-facing version lives in `dist/release.mjs` (2.1.x, with letter suffixes for tiny fixes). This is a solo prototype with local progression, without multiplayer or on-foot play. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -27,7 +53,7 @@ Touch: drag the left stick toward a direction; hold BOOST to accelerate and FIRE
 
 In surface flight, the stick moves horizontally and vertically; release it to hover. Tap SCAN SIGNAL within range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition.
 
-Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock; R scan; P autopilot; L land/return to orbit; Escape menu. On a surface, A/D move sideways, W/S move vertically, and Space scans.
+Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu. On a surface, A/D move sideways, W/S move vertically, and Space scans.
 
 ## Saves and rollback
 
@@ -49,10 +75,11 @@ When updating an installed game, open it online, wait for its offline files to u
 node --check dist/app.js
 node tests/gameplay.mjs
 node tests/frontiers.mjs
+node tests/exploration.mjs
 node tests/offline.mjs
 ```
 
-Validation includes 9 retained classic gameplay checks, 19 Frontiers progression and migration checks, and 3 offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
+Validation includes 9 retained classic gameplay checks, 19 Frontiers progression and migration checks, 9 exploration regression checks, and 3 offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
 
 ## Build the native Android app
 
