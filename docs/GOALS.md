@@ -19,6 +19,7 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-011 | Circular exploration frontier | Place the 64 charted systems in a roughly circular human core with 128 uncharted systems surrounding it; preserve identities and update routes for the new coordinates. | Ready for review |
 | FB-012 | Station space legs | Replace utilitarian station tab dump with a top-down walkable deck. Dock enters on-foot mode; walk to service desks to open existing panels; launch only from the hangar bay. Prison barges use a detention layout. | Ready for review |
 | FB-013 | Planetary space legs | After landing the skiff, disembark into shared on-foot mode to inspect surface POIs. Reuses the FB-012 hub layer. Full surface settlements and activities remain later scope. | Ready for review |
+| FB-014 | Better combat | Weapon variety (Pulse / Beam / Seeker + mining laser split), loadout identity (hull and module fire modes), and combat feedback (hit confirm, threat warning, lock UI). Energy/ammo tradeoffs on capacitors and seekers. | Ready for review |
 
 ## Tracking
 
@@ -47,3 +48,5 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 9, 2026: Candidate 2.5.0 polishes system skies and ambient beds (FB-010), ships distinct space anomalies (gravity lens, radio storm, silent relic — FB-001), and richer surface sites (salvage cache + survey dwell).
 
 - September 9, 2026: Candidate 2.6.0 ships the initial 20-hull roster (FB-008): data-driven silhouettes, per-hull slots, hangar role filters, and save loadout padding for new ship ids.
+
+- September 9, 2026: Candidate 2.7.0 ships better combat (FB-014): Pulse / Beam / Seeker weapon modes, mining laser split from combat fire, hull/module fire-mode identity, capacitors and seeker ammo, lock brackets, hit numbers, and incoming-fire feedback.

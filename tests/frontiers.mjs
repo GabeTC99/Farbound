@@ -203,4 +203,20 @@ test('Planetary space legs: disembark, inspect, board, then takeoff',()=>{
  assert(g.takeoff());
  assert(!g.surface);
 });
+test('Weapon modes, mining split, loadout identity, and combat feedback',()=>{
+ const g=new Game();assert.equal(getStats(g.s).weapon,'pulse');assert.equal(getStats(g.s).weaponName,'Pulse cannon');
+ g.s.credits=50000;assert(g.upgrade('beam'));assert.equal(getStats(g.s).weapon,'beam');assert.equal(MODULES.beam.category,'weapon');
+ assert(!g.upgrade('missile'),'Cannot fit a second weapon category');assert(g.unequip(g.s.loadouts.wren.find(uid=>g.s.modules.find(m=>m.uid===uid).kind==='beam')));
+ assert(g.upgrade('missile'));assert.equal(getStats(g.s).weapon,'missile');assert.equal(getStats(g.s).missileMax,6);
+ g.launch();assert.equal(g.missiles,6);g.enemies=[];const rock=g.asteroids[0];g.asteroids=[rock];g.player.x=rock.x-110;g.player.y=rock.y;g.player.angle=0;g.target=rock;g.energy=100;
+ ticks(g,2,{fire:true});assert.equal(g.s.mined,1);assert(!g.asteroids.length,'Mining laser depletes rocks');
+ const h=new Game();h.s.ship='falcon';h.s.hull=getStats(h.s).hull;h.s.shield=getStats(h.s).shield;h.launch();assert.equal(getStats(h.s).weapon,'beam');
+ h.enemies=[{id:'e-beam',type:'enemy',x:h.player.x+180,y:h.player.y,hp:40,max:40,r:16,angle:0,bounty:50,fire:9}];h.asteroids=[];h.player.angle=0;h.target=h.enemies[0];h.energy=100;
+ const hpBefore=h.enemies[0].hp;ticks(h,.5,{fire:true});assert(h.shots.some(s=>s.kind==='beam')||h.enemies.length===0||h.enemies[0].hp<hpBefore);assert(h.hitMarks.length||h.enemies.length===0||h.enemies[0].hp<hpBefore);
+ const v=new Game();v.s.ship='vulture';v.s.hull=getStats(v.s).hull;v.s.shield=getStats(v.s).shield;v.launch();assert.equal(getStats(v.s).weapon,'missile');assert.equal(v.missiles,8);
+ v.enemies=[{id:'e-m',type:'enemy',x:v.player.x+240,y:v.player.y,hp:90,max:90,r:16,angle:0,bounty:50,fire:9}];v.asteroids=[];v.player.angle=0;v.target=v.enemies[0];v.energy=100;
+ const before=v.missiles;v.shoot();assert.equal(v.missiles,before-1);assert(v.shots.some(s=>s.kind==='missile'&&s.seek==='e-m'));
+ const p=new Game();fit(p,'prospector');assert.equal(getStats(p.s).miningDamage,32);assert.equal(getStats(p.s).miningYield,2);
+ const modules=moduleView(p);assert(modules.includes('Beam lance'));assert(modules.includes('Seeker rack'));
+});
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;

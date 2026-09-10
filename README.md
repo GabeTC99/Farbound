@@ -6,7 +6,23 @@ An original solo space sandbox for Android touchscreens and desktop browsers. In
 
 Open the hosted game in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner.
 
+## Beta builds (share with testers)
+
+Public beta builds are deployed from the `beta` branch to GitHub Pages:
+
+**https://gabetc99.github.io/Farbound/**
+
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks.
+
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
+
+## Frontiers 2.7 — combat weapons
+
+### Candidate 2.7.0
+
+- **Weapon variety (FB-014):** Pulse cannon, Beam lance, and Seeker rack are distinct fire modes. Mining laser is separate from combat fire — combat shots ignore rocks; targeting a rock (or an empty cone of rocks) mines.
+- **Loadout identity:** Combat hulls ship with native hardpoints (Jackal/Raptor pulse, Falcon/Eagle beam, Vulture missile). Fitting a weapon module overrides the hull mode. Capacitors drain while firing; seekers restock slowly and refill on dock/launch.
+- **Combat feedback:** Lock brackets on aim-assist targets, floating hit numbers, INCOMING FIRE status, and a red threat frame when you take damage.
 
 ## Frontiers 2.6 — twenty-ship roster
 
@@ -77,7 +93,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.6.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.7.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
