@@ -1,0 +1,13 @@
+{
+  "release": "2.9.0",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Galaxy chart declutter: wider display spacing, zoom-scaled labels, quieter link mesh when zoomed out, clearer you-are-here ring.",
+    "New System map nav: local chart of your current system with live ship position, orbit guides, and tap-to-target."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
