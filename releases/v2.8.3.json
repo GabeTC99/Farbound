@@ -1,0 +1,13 @@
+{
+  "release": "2.8.3",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Procedural Milky Way band behind local gas washes: seeded tilt and kind strength, with faint band dust and a soft core bulge.",
+    "Strongest in deep/nebula skies, quieter in clear/dust/storm so ships and lightning still read."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
