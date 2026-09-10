@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.8\.5'/);
+ assert.match(release,/export const RELEASE='2\.8\.6'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.8\.5/);
- assert.match(sw,/release:'2\.8\.5'/);
+ assert.match(sw,/farbound-v2\.8\.6/);
+ assert.match(sw,/release:'2\.8\.6'/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
@@ -356,9 +356,11 @@ test('Wanted escalation and system skies are available for testing',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/function drawSkyBackdrop/);assert.match(app,/case 'dev':openPanel\('dev'\)/);
  assert.match(app,/WANTED · HEAT/);assert.match(app,/spawnResponseTeam\(\{force:true\}\)/);
+ assert.match(app,/Soft ion curtains/);
  assert.match(app,/Procedural gas washes/);
  assert.match(app,/Soft Milky Way band/);
  assert.ok(!/drawImage\(nebula/.test(app));
+ assert.ok(!/lineTo\(x\+10\+i\*2\.5,height\)/.test(app));
  assert(SYSTEMS.every(s=>{const sky=systemSky(s);return Array.isArray(sky.wash)&&sky.wash.length>0&&Number.isFinite(sky.galaxy)&&Number.isFinite(sky.bandAngle)&&!/#a56dff/i.test([sky.tint,sky.bg,...sky.wash].join(''));}));
 });
 test('Dynamic events start, resolve, and reuse living NPCs',()=>{
