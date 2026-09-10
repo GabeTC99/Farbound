@@ -1,5 +1,5 @@
-import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius} from './core.mjs';
-import {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
+import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius,moduleSlots} from './core.mjs';
+import {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface,terrainAt} from './surface.mjs';
 import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
 import {createStationLayout} from './station-layout.mjs';
@@ -9,7 +9,8 @@ import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,
 import {speakRobot,ensureRobotState} from './station-robot.mjs';
 import {surveyWorldIds,systemLayoutMeta,isLandablePlanet} from './system-layout.mjs';
 export * from './core.mjs';
-export {FACTIONS,GUILDS,MODULES,moduleSlots} from './catalog.mjs';
+export {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
+export {moduleSlots} from './core.mjs';
 export {nearestAnomaly,terrainAt,surfaceAltitude} from './surface.mjs';
 export {nearestZone,createOnFoot,updateOnFoot,onFootSave} from './onfoot.mjs';
 export {createStationLayout} from './station-layout.mjs';
@@ -43,7 +44,7 @@ export function validateSave(x){
   }
   if(!Array.isArray(x.fleet)||!x.fleet.includes(s.ship)||x.fleet.some(id=>!shipIds.includes(id)))return null;s.fleet=[...new Set(x.fleet)];
   if(!Array.isArray(x.modules)||x.modules.length>100||x.modules.some(m=>!m||!/^m-\d+$/.test(m.uid)||!Object.hasOwn(MODULES,m.kind)||!Number.isInteger(m.grade)||m.grade<1||m.grade>(MODULES[m.kind].standard?3:1)))return null;s.modules=x.modules.map(m=>({uid:m.uid,kind:m.kind,grade:m.grade}));const ids=new Set(s.modules.map(m=>m.uid));if(ids.size!==s.modules.length)return null;const used=new Set();
-  for(const id of shipIds){const a=x.loadouts?.[id];if(!Array.isArray(a)||a.length>moduleSlots(id)||(!s.fleet.includes(id)&&a.length))return null;const cat=new Set();for(const uid of a){if(!ids.has(uid)||used.has(uid))return null;const c=MODULES[s.modules.find(m=>m.uid===uid).kind].category;if(cat.has(c))return null;cat.add(c);used.add(uid);}s.loadouts[id]=[...a];}
+  for(const id of shipIds){const a=x.loadouts?.[id];if(a===undefined){s.loadouts[id]=[];continue;}if(!Array.isArray(a)||a.length>moduleSlots(id)||(!s.fleet.includes(id)&&a.length))return null;const cat=new Set();for(const uid of a){if(!ids.has(uid)||used.has(uid))return null;const c=MODULES[s.modules.find(m=>m.uid===uid).kind].category;if(cat.has(c))return null;cat.add(c);used.add(uid);}s.loadouts[id]=[...a];}
   for(const id of factionIds){if(!Number.isFinite(x.reputation?.[id])||Math.abs(x.reputation[id])>100)return null;s.reputation[id]=x.reputation[id];}
   for(const id of guildIds){const g=x.guilds?.[id];if(!g||(!g.joined&&g.active)||!Number.isInteger(g.stage)||g.stage<0||g.stage>3||!numeric(g.baseline))return null;s.guilds[id]={joined:!!g.joined,stage:g.stage,active:!!g.active&&g.stage<3,baseline:g.baseline};}
   for(const [id,h]of Object.entries(x.hangar||{})){if(!shipIds.includes(id)||!h||!['hull','shield','fuel'].every(k=>numeric(h[k])))return null;s.hangar[id]={hull:h.hull,shield:h.shield,fuel:h.fuel};}

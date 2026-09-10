@@ -13,7 +13,7 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-005 | Stellar heat | Add heat from stars as a gameplay mechanic, including during fuel scooping. Initial implementation: distance-dependent heat, cooling away from stars, warning at 80%, scoop retraction at 95%, hull damage above 100%. | Ready for review |
 | FB-006 | System arrival location | Place the player near the destination system’s primary star upon arrival in a new system. Initial implementation: arrival 950 local units above the primary star’s surface, outside scoop range, with zero velocity. | Ready for review |
 | FB-007 | Multiple-star systems | Include occasional binary and trinary systems alongside single-star systems. Frequency and arrangement rules remain to be decided. | Ready for review |
-| FB-008 | Initial ship roster | Create at least 20 distinct ships, each with its own textures and features. Include dedicated warships and exploration vessels with meaningful role differences. Full roster, stats, and additional roles remain to be decided. | Planned |
+| FB-008 | Initial ship roster | Create at least 20 distinct ships, each with its own textures and features. Include dedicated warships and exploration vessels with meaningful role differences. Full roster, stats, and additional roles remain to be decided. | Ready for review |
 | FB-009 | Independent engine animations | Fix the reported bug where player thrust causes all ships on screen to display their engine-firing animation. Each ship’s animation should reflect that ship’s own thrust state. | Ready for review |
 | FB-010 | System background variety | Give different systems different backgrounds: standard black space with stars, nebula environments, and unusual anomaly systems with effects such as space lightning. Exact distribution and whether lightning is visual or interactive remain to be decided. | Ready for review |
 | FB-011 | Circular exploration frontier | Place the 64 charted systems in a roughly circular human core with 128 uncharted systems surrounding it; preserve identities and update routes for the new coordinates. | Ready for review |
@@ -45,3 +45,5 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 9, 2026: Candidate 2.4.0 ships planetary space legs (FB-013): skiff landing flare and readouts, disembark into a local on-foot site, inspect nearby signals on foot, board skiff to fly elsewhere, takeoff gated until boarded.
 
 - September 9, 2026: Candidate 2.5.0 polishes system skies and ambient beds (FB-010), ships distinct space anomalies (gravity lens, radio storm, silent relic — FB-001), and richer surface sites (salvage cache + survey dwell).
+
+- September 9, 2026: Candidate 2.6.0 ships the initial 20-hull roster (FB-008): data-driven silhouettes, per-hull slots, hangar role filters, and save loadout padding for new ship ids.

@@ -8,6 +8,14 @@ Open the hosted game in Chrome, then use **Menu → Add to Home screen → Insta
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
+## Frontiers 2.6 — twenty-ship roster
+
+### Candidate 2.6.0
+
+- **Twenty player hulls (FB-008):** explorers, scouts, traders, miners, couriers, and combat ships from the free Wren to the Eagle battlecruiser. Each hull has its own stats, slot count, silhouette, hangar preview, and reason to buy.
+- **Hangar filters:** role chips (All / Explorer / Trader / Miner / Combat / Courier) plus a responsive card grid for browsing the yard.
+- **Save-safe expansion:** older Frontiers pilots pad empty loadouts for new hull ids instead of failing validation.
+
 ## Frontiers 2.5 — atmosphere + exploration
 
 ### Candidate 2.5.0
@@ -65,11 +73,11 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Station decks:** docking drops you onto a walkable top-down deck. Visit service desks on foot; closing a desk keeps you aboard. Leave through the hangar bay.
 - **Four guilds:** Trading, Miners, Freelancer, and Explorers. Join any or all at station desks. Each guild offers three sequential commissions with unique module rewards. Accept commissions before doing the work; return to a desk to claim rewards. Supply commissions consume the requested cargo.
 - **Three factions:** Orion Concord, Cinder Directorate, and Outer Freeholds. Relief and combat operations improve standing. Pledging lets friendly patrols assist nearby combat; attacking a faction worsens relations and can make its patrols hostile. Standing also affects local prices.
-- **Physical modules and owned ships:** new ships stay in the hangar. Each hull has its own loadout, condition, and fuel. At a station, remove modules to storage, switch ships, and install them; Move here transfers a module directly from another owned ship. Slot limits and category limits make loadouts a choice. Cargo stays with the pilot and capacity checks prevent losses.
+- **Physical modules and owned ships:** twenty hulls stay in the hangar when purchased. Each hull has its own loadout, condition, and fuel. At a station, remove modules to storage, switch ships, and install them; Move here transfers a module directly from another owned ship. Slot limits and category limits make loadouts a choice. Cargo stays with the pilot and capacity checks prevent losses.
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.5.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.6.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

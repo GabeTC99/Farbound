@@ -8,6 +8,7 @@ import {STATION_ROBOT} from './station-robot.mjs';
 import {GalaxyChart} from './galaxy-chart.mjs';
 import {renderSurface} from './surface-render.mjs';
 import {renderOnFoot} from './onfoot-render.mjs';
+import {getHullDef,drawHullDef} from './hull-defs.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
 const icon=(name)=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.ship}</svg>`;
@@ -16,7 +17,7 @@ const leaveStation=()=>{if(game.s.docked){const z=nearestZone(game.onfoot);if(z?
 let boot;try{boot=readPilot(localStorage);}catch{boot={pilot:newSave(),existing:false,error:true};}
 let saved=boot.existing?boot.pilot:null,storageOK=!boot.error;
 let game=new Game(boot.pilot),started=false,panel=null,stationTab='market',deskVisit=false,qty=1,selectedSystem=game.s.system,installPrompt=null,offlineReady=false;
-const engine=new EngineAudio();let mapQuery='',mapFilter='all',mapChart=null,mapCamera={x:SYSTEMS[game.s.system].x,y:SYSTEMS[game.s.system].y,scale:8};
+const engine=new EngineAudio();let mapQuery='',mapFilter='all',shipFilter='all',mapChart=null,mapCamera={x:SYSTEMS[game.s.system].x,y:SYSTEMS[game.s.system].y,scale:8};
 let keys={},touch={aim:null,thrust:0,fire:false,boost:false},stickPointer=null,showTutorial=game.s.tutorial<2,lastStore=0,lastHUD=0,clock=0,saveErrorShown=false,confirmAction=null,lastFocus=null,shipBank=0,playerTrail=[];
 const canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false});let width=innerWidth,height=innerHeight,dpr=Math.min(devicePixelRatio||1,2),cam={x:0,y:0,zoom:.6};
 const nebula=new Image();nebula.src='./nebula.webp';const starRand=rng(2471),stars=Array.from({length:260},()=>({x:starRand(),y:starRand(),r:.4+starRand()*1.25,a:.15+starRand()*.65,depth:.025+starRand()*.075}));
@@ -28,7 +29,7 @@ function buildHUD(){
  setupStick();updateHUD();
 }
 function showWelcome(){
- $('welcome-layer').innerHTML=`<div class="welcome-cover"><section class="welcome"><div class="eyebrow">SOLO SPACE SANDBOX · ${RELEASE_NAME.toUpperCase()} ${RELEASE}</div><h1>FARBOUND<span>THE QUIET FRONTIER</span></h1><p>A small ship. An open sky. Make your living between the stars — as a trader, a prospector, an explorer, or a hunter.</p><div class="welcome-actions"><button class="primary" data-action="start">${saved?'Continue your journey':'Begin your journey'} &nbsp; →</button><button class="quiet" data-action="welcome-help">How to fly</button></div><div class="welcome-notes"><span>192 star systems</span><span>Planetary exploration</span><span>4 guilds · 3 factions</span><span>v${RELEASE}</span></div></section><div class="welcome-footer">HEADPHONES RECOMMENDED &nbsp; / &nbsp; TOUCH + KEYBOARD &nbsp; / &nbsp; v${RELEASE}</div></div>`;
+ $('welcome-layer').innerHTML=`<div class="welcome-cover"><section class="welcome"><div class="eyebrow">SOLO SPACE SANDBOX · ${RELEASE_NAME.toUpperCase()} ${RELEASE}</div><h1>FARBOUND<span>THE QUIET FRONTIER</span></h1><p>A small ship. An open sky. Make your living between the stars — as a trader, a prospector, an explorer, or a hunter.</p><div class="welcome-actions"><button class="primary" data-action="start">${saved?'Continue your journey':'Begin your journey'} &nbsp; →</button><button class="quiet" data-action="welcome-help">How to fly</button></div><div class="welcome-notes"><span>192 star systems</span><span>20 flyable ships</span><span>4 guilds · 3 factions</span><span>v${RELEASE}</span></div></section><div class="welcome-footer">HEADPHONES RECOMMENDED &nbsp; / &nbsp; TOUCH + KEYBOARD &nbsp; / &nbsp; v${RELEASE}</div></div>`;
 }
 function risk(s){return ['Secure','Patrolled','Contested','Lawless'][s.danger];}
 function updateHUD(){
@@ -145,7 +146,7 @@ function renderPanel(){
   if(stationTab==='data')body=explorationView(game);
   if(stationTab==='contracts')body=contractsView(true);
   if(stationTab==='outfitting')body=moduleView(game);
-  if(stationTab==='shipyard')body=fleetView(game);
+  if(stationTab==='shipyard')body=fleetView(game,shipFilter);
   if(stationTab==='guilds')body=guildView(game);
   if(stationTab==='factions')body=factionView(game);
   if(stationTab==='market')body=robotStrip(game)+body;
@@ -154,7 +155,7 @@ function renderPanel(){
   html=modalShell(meta.title,(game.station?.name||game.sys.station)+' · deck terminal',intro+body,{desk:true,actions:launchBtn,footer:`<span class="muted">Walk the deck to visit other services</span><span class="accent">${fmt(s.credits)} cr</span>`});
  }
  if(panel==='map')html=modalShell('The frontier','GALAXY CHART · '+s.visited.length+' / 192 SYSTEMS VISITED',galaxyHTML(game,selectedSystem,mapQuery,mapFilter),{actions:s.docked?'<button class="primary" data-action="launch-map">Launch →</button>':''});
- if(['guilds','factions','modules','fleet'].includes(panel)){const views={guilds:guildView,factions:factionView,modules:moduleView,fleet:fleetView},names={guilds:'Guild commissions',factions:'Factions & operations',modules:'Ship modules',fleet:'Your hangar'};html=modalShell(names[panel],s.docked?game.sys.station:'FLIGHT LOG · DOCK TO FIT & CLAIM',views[panel](game),{tabs:'<nav class="tabs">'+Object.entries(names).map(([id,title])=>`<button data-action="${id}" class="${panel===id?'active':''}">${title}</button>`).join('')+'</nav>'});}
+ if(['guilds','factions','modules','fleet'].includes(panel)){const views={guilds:guildView,factions:factionView,modules:moduleView,fleet:g=>fleetView(g,shipFilter)},names={guilds:'Guild commissions',factions:'Factions & operations',modules:'Ship modules',fleet:'Your hangar'};html=modalShell(names[panel],s.docked?game.sys.station:'FLIGHT LOG · DOCK TO FIT & CLAIM',views[panel](game),{tabs:'<nav class="tabs">'+Object.entries(names).map(([id,title])=>`<button data-action="${id}" class="${panel===id?'active':''}">${title}</button>`).join('')+'</nav>'});}
  if(panel==='missions')html=modalShell('Your contracts','FLIGHT LOG · '+s.contracts+' COMPLETED',contractsView(false));
  if(panel==='ship')html=modalShell(st.name,'SHIP & PILOT',`<p class="intro">${st.desc}</p><div class="section-actions"><button data-action="modules">Manage modules</button><button data-action="fleet">Hangar</button><button data-action="factions">Factions</button></div><div class="stats-grid">${[[s.visited.length,'Systems visited'],[s.scanned.length,'Worlds surveyed'],[s.kills,'Ships defeated'],[s.mined,'Tons mined'],[s.contracts,'Contracts complete'],[fmt(s.bounty)+' cr','Active bounty']].map(([v,l])=>`<div class="stat-card"><b>${v}</b><span>${l}</span></div>`).join('')}</div>${[['Role',st.role],['Cargo',cargoUsed(s)+' / '+st.cargo+' t'],['Fold range',st.range+' ly'],['Pulse damage',st.damage],['Cruise speed',st.speed+' m/s'],['Trading revenue',fmt(s.trade)+' cr'],['Unsold data',fmt(s.data+s.records.reduce((v,r)=>v+r.value,0))+' cr']].map(([k,v])=>`<div class="data-row"><span>${k}</span>${v}</div>`).join('')}<h3 style="margin:23px 0 10px">Cargo manifest</h3>${GOODS.filter(g=>s.cargo[g.id]).map(g=>`<div class="data-row"><span>${g.name}</span>${s.cargo[g.id]} t</div>`).join('')||'<p class="detail-text">No commodities aboard.</p>'}${s.missions.filter(m=>m.type==='delivery').map(m=>`<div class="data-row"><span>Sealed contract supplies</span>${m.tons} t</div>`).join('')}<p class="intro" style="margin-top:20px">Dock at any station to upgrade modules, buy a new ship, or clear a bounty.</p>`);
  if(panel==='menu'||panel==='help'){
@@ -251,6 +252,7 @@ async function action(a,id){
   case 'sell':game.sell(id,qty);renderPanel();save();break;
   case 'upgrade':game.upgrade(id);renderPanel();save();break;
   case 'buy-ship':game.buyShip(id);renderPanel();save();break;
+  case 'ship-filter':shipFilter=id||'all';renderPanel();break;
   case 'accept':game.accept(id);renderPanel();save();break;
   case 'claim':game.claimMissions();renderPanel();save();break;
   case 'station-contracts':openDesk('contracts');break;
@@ -319,25 +321,6 @@ function drawSecurityShip(p,hostile=false){
  ctx.globalAlpha=.9;ctx.fillStyle=flash?'#ff3b4a':'#3b8cff';ctx.fillRect(-size*.05,-2.4,7,4.8);ctx.globalAlpha=1;
  ctx.restore();
 }
-function drawPlayerHull(id,size,color){
- ctx.fillStyle='#152833';ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.beginPath();
- if(id==='mule'){ctx.moveTo(size*1.05,0);ctx.lineTo(size*.35,size*.78);ctx.lineTo(-size*.85,size*.9);ctx.lineTo(-size,size*.35);ctx.lineTo(-size*.7,0);ctx.lineTo(-size,-size*.35);ctx.lineTo(-size*.85,-size*.9);ctx.lineTo(size*.35,-size*.78);}
- else if(id==='kestrel'){ctx.moveTo(size*1.35,0);ctx.lineTo(size*.15,size*.42);ctx.lineTo(-size*.35,size*.95);ctx.lineTo(-size*.15,size*.35);ctx.lineTo(-size,size*.48);ctx.lineTo(-size*.55,0);ctx.lineTo(-size,-size*.48);ctx.lineTo(-size*.15,-size*.35);ctx.lineTo(-size*.35,-size*.95);ctx.lineTo(size*.15,-size*.42);}
- else{ctx.moveTo(size*1.3,0);ctx.lineTo(-size*.1,size*.48);ctx.lineTo(-size,size*.32);ctx.lineTo(-size*.45,0);ctx.lineTo(-size,-size*.32);ctx.lineTo(-size*.1,-size*.48);}
- ctx.closePath();ctx.fill();ctx.stroke();
- if(id==='mule'){ctx.globalAlpha=.5;ctx.beginPath();ctx.rect(-size*.55,-size*.45,size*.7,size*.9);ctx.stroke();ctx.beginPath();ctx.moveTo(-size*.2,-size*.45);ctx.lineTo(-size*.2,size*.45);ctx.moveTo(size*.05,-size*.4);ctx.lineTo(size*.05,size*.4);ctx.stroke();ctx.globalAlpha=1;}
- if(id==='kestrel'){ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(size*.55,0);ctx.lineTo(-size*.2,0);ctx.moveTo(-size*.05,size*.55);ctx.lineTo(size*.2,size*.2);ctx.moveTo(-size*.05,-size*.55);ctx.lineTo(size*.2,-size*.2);ctx.stroke();ctx.globalAlpha=1;}
- if(id==='wren'){ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(size*.7,0);ctx.lineTo(-size*.35,0);ctx.stroke();ctx.globalAlpha=1;}
-}
-function drawPlayerExhaust(id,size,thrust,boost){
- if(thrust<=.04)return;
- const len=(10+Math.random()*(boost?52:18))*thrust,flame=boost?'#9bfff0':'#76efdb';
- ctx.fillStyle=flame;ctx.globalAlpha=.7;
- const nozzles=id==='mule'?[[-size+2,size*.38],[-size+2,-size*.38]]:id==='kestrel'?[[-size+1,size*.28],[-size+1,-size*.28]]:[[-size+3,0]];
- for(const [nx,ny] of nozzles){ctx.beginPath();ctx.moveTo(nx,ny-3.5);ctx.lineTo(nx-len*(id==='wren'?1:0.85),ny);ctx.lineTo(nx,ny+3.5);ctx.fill();}
- if(boost){ctx.globalAlpha=.28;ctx.beginPath();ctx.arc(-size-len*.35,0,8+thrust*10,0,6.28);ctx.fill();}
- ctx.globalAlpha=1;
-}
 function drawPlayerShip(dt=1/60){
  const p=game.player,hull=SHIPS.find(s=>s.id===game.s.ship)||SHIPS[0],size=hull.size,color=hull.color,thrust=started?p.thrust||0:0,boost=!!p.boost,st=getStats(game.s);
  const turn=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
@@ -348,13 +331,7 @@ function drawPlayerShip(dt=1/60){
  if(game.time-game.lastDamage<.3)circle(p.x,p.y,size+14,'#a4f5ed88',true);
  else if(game.s.shield>0&&game.s.shield<st.shield&&game.time-game.lastDamage>4){ctx.globalAlpha=.14+.05*Math.sin(clock*2);circle(p.x,p.y,size+12,color,true);ctx.globalAlpha=1;}
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);ctx.transform(1,0,Math.tan(shipBank)*.35,1,0,0);
- drawPlayerExhaust(hull.id,size,thrust,boost);
- drawPlayerHull(hull.id,size,color);
- ctx.fillStyle='#d8fff8';ctx.globalAlpha=.85+.15*Math.sin(clock*4);ctx.beginPath();
- if(hull.id==='mule')ctx.ellipse(size*.35,0,5.5,4.2,0,0,6.28);else if(hull.id==='kestrel')ctx.ellipse(size*.55,0,5,3.2,0,0,6.28);else ctx.ellipse(size*.4,0,4.5,3,0,0,6.28);
- ctx.fill();ctx.globalAlpha=1;
- const blink=((clock*2.6)%1)<.5;ctx.fillStyle=blink?'#ff6b6b':'#31414a';ctx.fillRect(-2,size*.48,3.2,3.2);ctx.fillStyle=blink?'#31414a':'#7dffb8';ctx.fillRect(-2,-size*.48-3.2,3.2,3.2);
- if(hull.id==='kestrel'){ctx.fillStyle=hull.accent;ctx.globalAlpha=.7;ctx.fillRect(size*.1,size*.62,7,2);ctx.fillRect(size*.1,-size*.62-2,7,2);ctx.globalAlpha=1;}
+ drawHullDef(ctx,getHullDef(hull.id),size,color,hull.accent,{thrust,boost,clock});
  ctx.restore();
  if(boost){ctx.globalAlpha=.2;circle(p.x,p.y,size+28,hull.accent,true);ctx.globalAlpha=1;}
 }
