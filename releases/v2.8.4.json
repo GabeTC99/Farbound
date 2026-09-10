@@ -1,0 +1,12 @@
+{
+  "release": "2.8.4",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Soften the procedural Milky Way band: wider falloff, lower core brightness, tinted haze instead of bright star-core slap."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
