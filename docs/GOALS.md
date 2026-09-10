@@ -8,7 +8,7 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | --- | --- | --- | --- |
 | FB-001 | Space anomalies | Add discoverable anomalies in space. Specific anomaly types and interactions remain to be designed. | Ready for review |
 | FB-002 | Discovery scanning | Create exploration and discovery scanning mechanics inspired by Elite Dangerous. Initial implementation: four-second system pulse, followed by separate close-range world surveys. Touch controls and H/R shortcuts; data sells at stations. | Ready for review |
-| FB-003 | Procedural planet variety | Create varied planet types with randomized variations constrained by physically plausible rules. Planet classification, composition, and appearance must remain consistent; no Earth-like gas giants. Generation rules and planet categories remain to be designed. | Ready for review |
+| FB-003 | Procedural planet variety | Create varied planet types with randomized variations constrained by physically plausible rules. Planet classification, composition, and appearance must remain consistent; no Earth-like gas giants. Generation rules and planet categories remain to be designed. | Complete |
 | FB-004 | Fuel scooping | Allow ships to collect fuel from stars through a fuel-scooping mechanic. Initial implementation: built-in scoops on all current ships, distance-dependent collection at all current primary stars, speed limits, and automatic retraction. | Ready for review |
 | FB-005 | Stellar heat | Add heat from stars as a gameplay mechanic, including during fuel scooping. Initial implementation: distance-dependent heat, cooling away from stars, warning at 80%, scoop retraction at 95%, hull damage above 100%. | Ready for review |
 | FB-006 | System arrival location | Place the player near the destination system’s primary star upon arrival in a new system. Initial implementation: arrival 950 local units above the primary star’s surface, outside scoop range, with zero velocity. | Ready for review |
@@ -20,12 +20,15 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-012 | Station space legs | Replace utilitarian station tab dump with a top-down walkable deck. Dock enters on-foot mode; walk to service desks to open existing panels; launch only from the hangar bay. Prison barges use a detention layout. | Ready for review |
 | FB-013 | Planetary space legs | After landing the skiff, disembark into shared on-foot mode to inspect surface POIs. Reuses the FB-012 hub layer. Full surface settlements and activities remain later scope. | Ready for review |
 | FB-014 | Better combat | Weapon variety (Pulse / Beam / Seeker + mining laser split), loadout identity (hull and module fire modes), and combat feedback (hit confirm, threat warning, lock UI). Energy/ammo tradeoffs on capacitors and seekers. | Ready for review |
+| FB-015 | Orbital mechanics | Move planets and moons along Keplerian orbits using stored orbit radius, angle, mass, and period. 2.8 stores the static fields; motion and period gameplay remain for a later update. | Planned |
 
 ## Tracking
 
 Use the stable FB identifiers when adding detail, choosing priorities, or updating progress. Suggested progression: Planned → Ready → In progress → Verification → Complete. Ready for review means implemented and tested, awaiting review and publication.
 
 ## Change history
+
+- September 10, 2026: Candidate 2.8.0 Planetary Rework completes FB-003 appearance consistency: expanded kinds, landmasses vs giant banding, moons, Spectrum Scanner dossiers, non-landable giants, and orbital groundwork fields (FB-015 Planned).
 
 - September 8, 2026: Created the initial log from Gabe’s requested goals. No game changes requested or performed as part of logging these plans.
 

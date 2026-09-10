@@ -16,6 +16,15 @@ To publish a new beta: merge or cherry-pick the build you want onto `beta`, push
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
+## Frontiers 2.8 — Planetary Rework
+
+### Candidate 2.8.0
+
+- **Alive worlds (FB-003):** earth-like, ocean, arid, ice, metal-rich, mineral, gas giant, and ice giant bodies. Terrestrials draw seeded landmasses; only giants keep atmospheric banding. Physics-tied density, mass, gravity, temperature band, atmosphere, and composition.
+- **Moons:** some planets host one or two rocky/ice/metal moons. Moons are surveyable and landable; gas and ice giants are labeled **non-landable** and refuse landing.
+- **Spectrum Scanner:** after the Discovery Pulse, target a body and **SCAN** from long range to analyze it (~2.5s). The body dossier shows class, landable status, gravity, temp, atmosphere, composition, rings, and moon count. Approach and slow below 100 m/s for the detailed cartographics survey (bonus if already spectrum-scanned).
+- **Orbital groundwork (FB-015):** bodies store orbit radius/angle, host star, mass, and period for a future orbital-mechanics update; local space positions stay fixed in 2.8.
+
 ## Frontiers 2.7 — combat weapons
 
 ### Candidate 2.7.0
@@ -75,7 +84,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 - **Engine animation fix:** each ship supplies its own thrust to the renderer. Player boost no longer lights up civilian engines; coasting does not count as thrust.
 - **Circular galaxy:** 64 charted systems form a roughly circular human core centered on Solace. Another 128 uncharted systems surround it in every direction. System IDs, names, local planets, stations, and saved progress are retained; galaxy coordinates, jump costs, and routes change. Saved routes are recalculated when loaded. Overview fits the new map automatically.
-- **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the primary star and two worlds, revealing worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Unknown-system discovery credit and Explorers Guild progress now require completing the pulse. Then approach a world and use **Scan / R** for its separate detailed survey. Slow below 100 m/s and hold fire during world surveys. Repeated taps do not restart an active scan. Dock and sell data manually at Cartographics; each catalog and world pays once.
+- **Discovery scanning:** use **Discovery pulse / H** in local space. A four-second pulse catalogs the system and reveals worlds in unexplored systems. It awards 150 cr of data in charted systems or 500 cr in uncharted systems, before module bonuses. Then **SCAN / R** from long range for a **Spectrum analysis** (body dossier), and approach slowly for the detailed cartographics survey. Dock and sell data manually at Cartographics; each catalog and world pays once.
 - **Stellar arrival and scooping:** jumps arrive near the primary star, outside its scoop zone. All current ships have a built-in scoop, and all current primary stars are eligible. Approach the star, slow below 100 m/s, then deploy the scoop. Collection rate rises closer to the star, alongside heat. Heat warns at 80%, the scoop retracts at 95%, and temperatures above 100% damage the hull. Move away to cool; tanks stop filling at capacity. Heat persists across reloads.
 - **Save compatibility:** old v1/v2 saves remain supported. Previously visited systems retain their catalogs and discovery rewards. Before an older v2 pilot is overwritten, its exact original JSON is retained under `farbound-save-pre-2.1`, separately from rolling checkpoints. If that backup cannot be stored, saving fails without overwriting the original pilot.
 
@@ -93,7 +102,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.7.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.8.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -103,7 +112,7 @@ In surface flight, the stick moves horizontally and vertically; release it to ho
 
 On a station deck, the stick walks. Tap INTERACT at a desk to open services, or at the hangar to launch. Escape closes a desk and returns to walking; open the flight menu from the deck when no desk is open.
 
-Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock / interact; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu or close desk. On a surface, A/D move sideways, W/S move vertically, and Space scans, pings, or disembarks when landed. On station or planetary legs, the stick or WASD walks and Space / E interacts.
+Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock / interact; R spectrum scan / world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu or close desk. On a surface, A/D move sideways, W/S move vertically, and Space scans, pings, or disembarks when landed. On station or planetary legs, the stick or WASD walks and Space / E interacts.
 
 ## Saves and rollback
 

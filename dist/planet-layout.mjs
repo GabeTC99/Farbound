@@ -6,7 +6,7 @@ const rng=seed=>()=>{let t=seed+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.
 
 function zone(id,label,service,x,y,r,icon,extra={}){return{id,label,service,x,y,r,icon,...extra};}
 
-const CACHE_GOOD={ocean:'meds',arid:'ore',ice:'tech',mineral:'ore',gas:'crystal'};
+const CACHE_GOOD={earthlike:'food',ocean:'meds',arid:'ore',ice:'tech',metal:'crystal',mineral:'ore',gas:'crystal',icegiant:'tech'};
 
 /** Nearby unscanned anomalies within world range become inspect pads. */
 export function createPlanetLayout(surface){

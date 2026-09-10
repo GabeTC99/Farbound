@@ -1,11 +1,14 @@
 import {terrainAt,nearestAnomaly,surfaceAltitude} from './surface.mjs';
 
 export const SURFACE_PALETTES={
+ earthlike:{sky0:'#041820',sky1:'#0d3a48',sky2:'#2a5a58',terrain:'#1a3a30',stroke:'#6ec4a0',hills:['#0a2830','#1a4038'],dust:'#9ad4c066',skiff:'#1a4a45',skiffLine:'#a8f0d8',floor:'#1a3a30',accent:'#6ec4a0'},
  ocean:{sky0:'#041820',sky1:'#0d3a48',sky2:'#1a5a5e',terrain:'#0f2e36',stroke:'#6ec4c8',hills:['#0a2830','#123840'],dust:'#9ad4d866',skiff:'#1a4a55',skiffLine:'#a8f0ea',floor:'#0f2e36',accent:'#6ec4c8'},
  arid:{sky0:'#1a1008',sky1:'#3a2814',sky2:'#6a4a28',terrain:'#2a1c10',stroke:'#d4a86a',hills:['#241808','#3a2814'],dust:'#e8c48a55',skiff:'#3a2a18',skiffLine:'#f0d4a0',floor:'#2a1c10',accent:'#d4a86a'},
  ice:{sky0:'#0a1420',sky1:'#1a3048',sky2:'#4a6a80',terrain:'#152030',stroke:'#c8e0f0',hills:['#101c28','#1e3040'],dust:'#d8ecff66',skiff:'#1a2838',skiffLine:'#d0e8f8',floor:'#152030',accent:'#c8e0f0'},
+ metal:{sky0:'#0a0c10',sky1:'#1a2030',sky2:'#3a4450',terrain:'#1a2028',stroke:'#a8b0b8',hills:['#141820','#242a34'],dust:'#c8d0d866',skiff:'#2a3038',skiffLine:'#d0d8e0',floor:'#1a2028',accent:'#a8b0b8'},
  mineral:{sky0:'#07131f',sky1:'#183141',sky2:'#3a4545',terrain:'#142c31',stroke:'#87b3ac',hills:['#233f49','#2a474e'],dust:'#bbd5e066',skiff:'#25444f',skiffLine:'#b7eee0',floor:'#142c31',accent:'#87b3ac'},
- gas:{sky0:'#120818',sky1:'#2a1840',sky2:'#4a3860',terrain:'#1a1428',stroke:'#b8a0d8',hills:['#221830','#2e2040'],dust:'#d0b8f055',skiff:'#2a2038',skiffLine:'#e0d0f8',floor:'#1a1428',accent:'#b8a0d8'}
+ gas:{sky0:'#120818',sky1:'#2a1840',sky2:'#4a3860',terrain:'#1a1428',stroke:'#b8a0d8',hills:['#221830','#2e2040'],dust:'#d0b8f055',skiff:'#2a2038',skiffLine:'#e0d0f8',floor:'#1a1428',accent:'#b8a0d8'},
+ icegiant:{sky0:'#081018',sky1:'#183048',sky2:'#3a5870',terrain:'#142030',stroke:'#88b8d0',hills:['#101c28','#1e3040'],dust:'#a8d0e066',skiff:'#1a2838',skiffLine:'#c0e0f0',floor:'#142030',accent:'#88b8d0'}
 };
 
 export function renderSurface(ctx,width,height,s,clock,stats){

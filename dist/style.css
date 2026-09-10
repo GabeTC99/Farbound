@@ -15,7 +15,7 @@
 @media(max-height:520px) and (min-width:651px){.target-panel{width:192px}.target-panel .target-row{display:none}.landing-button{min-height:32px!important}.nav button{padding:9px}.route-hud button{margin-top:5px;max-width:250px}.surface-mode .location-info h2{font-size:1.3rem}.map-surface,.galaxy-map{height:265px;min-height:265px}}
 
 /* Exploration controls share the flight HUD on touch and desktop. */
-.scanner-status{font-size:.75rem;line-height:1.4;color:var(--muted);margin-top:8px}.stat.heat .meter i{background:#88b6ea}.underbar .stat{min-width:0;flex:0 1 130px}.target-panel [hidden]{display:none!important}
+.scanner-status{font-size:.75rem;line-height:1.4;color:var(--muted);margin-top:8px}.body-dossier{margin-top:8px;padding:8px 10px;border:1px solid #2a4a58;background:#0a1820cc;display:flex;flex-direction:column;gap:3px;font-size:.72rem;line-height:1.35;color:#9bb4c0}.body-dossier .eyebrow{letter-spacing:.08em;font-size:.62rem;color:#6a8a98}.body-dossier strong{color:#d4ece8;font-size:.82rem}.stat.heat .meter i{background:#88b6ea}.underbar .stat{min-width:0;flex:0 1 130px}.target-panel [hidden]{display:none!important}
 @media(max-width:650px){.underbar{gap:10px}.underbar .stat{flex:1}.stat-label{gap:4px}.stat-label b{font-size:.7rem}.scanner-status{display:none}.target-panel #discovery-button{min-height:30px;padding:4px 5px;font-size:.65rem}}
 @media(max-height:600px){.scanner-status{display:none}.target-panel #discovery-button{min-height:28px;padding:3px}.target-panel{padding-top:6px;padding-bottom:6px}}
 
