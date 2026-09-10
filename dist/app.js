@@ -27,6 +27,7 @@ function softFX(){return graphicsMode()!=='high';}
 function canvasDpr(){return Math.min(devicePixelRatio||1,2);}
 let dpr=canvasDpr(),radarTick=0;
 const starRand=rng(2471),stars=Array.from({length:340},()=>({x:starRand(),y:starRand(),r:.3+starRand()*1.35,a:.12+starRand()*.7,depth:.02+starRand()*.09,bright:starRand()>.92}));
+const galaxyDust=Array.from({length:110},()=>({u:starRand()*2-1,v:(starRand()-.5)*.55,r:.2+starRand()*.85,a:.06+starRand()*.22,warm:starRand()>.78}));
 let audio=null;function sound(kind='click'){if(!game.s.sound||!started)return;try{audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),gain=audio.createGain(),t=audio.currentTime;const f=kind==='fire'?440:kind==='good'?700:kind==='jump'?110:330;o.type=kind==='fire'?'triangle':'sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(kind==='fire'?100:f*1.4,t+.09);gain.gain.setValueAtTime(kind==='fire'?.035:.045,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);o.connect(gain);gain.connect(audio.destination);o.start(t);o.stop(t+.16);}catch{}}
 function save(checkpoint=false){try{writePilot(localStorage,game.serialize(),{checkpoint:checkpoint===true});storageOK=true;return true;}catch{storageOK=false;if(!saveErrorShown){game.notify('Device storage is unavailable. Export your save from the flight menu.','bad');saveErrorShown=true;}return false;}}
 function resetControls(){engine.mute();keys={};touch={aim:null,thrust:0,fire:false,boost:false};stickPointer=null;const knob=$('stick-knob');if(knob)knob.style.transform='';document.querySelectorAll('.held').forEach(x=>x.classList.remove('held'));}
@@ -445,11 +446,33 @@ function drawWake(w){
 function drawSkyBackdrop(){
  const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
  ctx.fillStyle=sky.bg;ctx.fillRect(0,0,width,height);
+ const seed=sky.seed||0,span=Math.max(width,height);
+ // Soft Milky Way band behind local gas — seeded tilt, kind strength, tiny cam drift.
+ if(!lite&&(sky.galaxy||0)>.05){
+  const gMul=sky.galaxy,ang=sky.bandAngle||0;
+  const px=width*.5-cam.x*.012,py=height*.5-cam.y*.012;
+  ctx.save();ctx.translate(px,py);ctx.rotate(ang);
+  const band=ctx.createLinearGradient(0,-span*.22,0,span*.22);
+  const core=Math.floor(28+gMul*70).toString(16).padStart(2,'0');
+  const mid=Math.floor(14+gMul*36).toString(16).padStart(2,'0');
+  band.addColorStop(0,'#0000');band.addColorStop(.28,sky.tint+mid);band.addColorStop(.5,sky.star+core);
+  band.addColorStop(.72,sky.tint+mid);band.addColorStop(1,'#0000');
+  ctx.globalAlpha=.55+gMul*.35;ctx.fillStyle=band;ctx.fillRect(-span*.85,-span*.22,span*1.7,span*.44);
+  const bulge=ctx.createRadialGradient(0,0,span*.02,0,0,span*.38);
+  bulge.addColorStop(0,sky.star+(Math.floor(20+gMul*40).toString(16).padStart(2,'0')));
+  bulge.addColorStop(.45,sky.tint+'18');bulge.addColorStop(1,sky.tint+'00');
+  ctx.globalAlpha=.4+gMul*.4;ctx.fillStyle=bulge;ctx.fillRect(-span*.5,-span*.28,span,span*.56);
+  const dustN=soft?55:galaxyDust.length;
+  for(let i=0;i<dustN;i++){
+   const d=galaxyDust[i],x=d.u*span*.72,y=d.v*span*.18+Math.sin(d.u*3.1+(seed&7))*.01*span;
+   ctx.globalAlpha=d.a*gMul*(d.warm?1.15:1);ctx.fillStyle=d.warm?sky.tint:sky.star;
+   ctx.fillRect(x,y,d.r,d.r);
+  }
+  ctx.restore();ctx.globalAlpha=1;
+ }
  // Procedural gas washes — Quiet Frontier mint/slate, deterministic per system.
  if(!lite){
   const washes=sky.wash||[sky.tint];
-  const seed=sky.seed||0;
-  const span=Math.max(width,height);
   for(let i=0;i<washes.length;i++){
    const ox=((seed>>((i*7)%24))&255)/255,oy=((seed>>((i*11+3)%24))&255)/255;
    const cx=width*(.15+ox*.7)+Math.sin(clock*.03+i)*span*.01;

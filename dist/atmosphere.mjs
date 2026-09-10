@@ -11,15 +11,17 @@ export function systemSky(sys){
  else if(bucket===1)kind='ion';
  // Quiet Frontier palette: mint / cyan / slate — no stock-nebula purple.
  const palettes={
-  clear:{bg:'#060c16',star:'#c2e5f1',tint:'#6aa8c0',wash:['#1a3a48','#0d2838'],nebulaAlpha:.4,lightning:false},
-  nebula:{bg:'#061018',star:'#d0f4ee',tint:'#5ec4b0',wash:['#0a3a40','#164858','#0e2a38'],nebulaAlpha:.72,lightning:false},
-  storm:{bg:'#070a14',star:'#d7e8ff',tint:'#6a8ab8',wash:['#122038','#1a2848'],nebulaAlpha:.65,lightning:true},
-  ion:{bg:'#06141a',star:'#9ff0e0',tint:'#3fd0b8',wash:['#0a3038','#124850'],nebulaAlpha:.55,lightning:false},
-  dust:{bg:'#100c0a',star:'#ffd4a8',tint:'#c48858',wash:['#2a1c14','#3a2818'],nebulaAlpha:.5,lightning:false},
-  deep:{bg:'#04060f',star:'#8aa0c8',tint:'#405070',wash:['#0a1020'],nebulaAlpha:.28,lightning:false}
+  clear:{bg:'#060c16',star:'#c2e5f1',tint:'#6aa8c0',wash:['#1a3a48','#0d2838'],nebulaAlpha:.4,galaxy:.3,lightning:false},
+  nebula:{bg:'#061018',star:'#d0f4ee',tint:'#5ec4b0',wash:['#0a3a40','#164858','#0e2a38'],nebulaAlpha:.72,galaxy:.46,lightning:false},
+  storm:{bg:'#070a14',star:'#d7e8ff',tint:'#6a8ab8',wash:['#122038','#1a2848'],nebulaAlpha:.65,galaxy:.2,lightning:true},
+  ion:{bg:'#06141a',star:'#9ff0e0',tint:'#3fd0b8',wash:['#0a3038','#124850'],nebulaAlpha:.55,galaxy:.34,lightning:false},
+  dust:{bg:'#100c0a',star:'#ffd4a8',tint:'#c48858',wash:['#2a1c14','#3a2818'],nebulaAlpha:.5,galaxy:.16,lightning:false},
+  deep:{bg:'#04060f',star:'#8aa0c8',tint:'#405070',wash:['#0a1020'],nebulaAlpha:.28,galaxy:.58,lightning:false}
  };
  const p=palettes[kind];
- return{kind,label:kind.toUpperCase(),seed:h,hue:h%360,fog:0.18+(h%40)/200,...p};
+ // Seeded Milky Way tilt — same sky profile, different band orientation per system.
+ const bandAngle=(((h>>>8)%157)-78)*Math.PI/180;
+ return{kind,label:kind.toUpperCase(),seed:h,hue:h%360,fog:0.18+(h%40)/200,bandAngle,...p};
 }
 
 export function wantedTier(bounty=0){
