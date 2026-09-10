@@ -1,0 +1,17 @@
+{
+  "name": "Farbound",
+  "install": "node --check dist/app.js",
+  "terminals": [
+    {
+      "name": "dev-server",
+      "command": "python3 -m http.server 8080 --directory dist",
+      "description": "Static HTTP server for the dependency-free web game in dist/. ES modules require HTTP; open http://localhost:8080/ to play Farbound."
+    }
+  ],
+  "ports": [
+    {
+      "name": "dev-server",
+      "port": 8080
+    }
+  ]
+}
