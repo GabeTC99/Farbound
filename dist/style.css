@@ -64,3 +64,5 @@
 .desk-clerk{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:radial-gradient(circle at 35% 30%,#cfe8e2,#1a3844 55%,#0d1a22);border:2px solid #7ec8c0;box-shadow:0 0 12px #7ec8c044;position:relative}
 .desk-clerk:after{content:'';position:absolute;left:50%;top:42%;width:18px;height:8px;transform:translate(-50%,-50%);border-radius:40%;background:#9ff0e0aa}
 @media(max-width:650px){.desk-cover{padding:8px}.desk-terminal{max-height:82dvh;border-radius:12px}.desk-banner{padding:10px 12px}}
+
+.setting-row .section-actions{margin:0;justify-content:flex-end}
