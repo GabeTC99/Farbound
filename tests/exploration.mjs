@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.8\.3'/);
+ assert.match(release,/export const RELEASE='2\.8\.4'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.8\.3/);
- assert.match(sw,/release:'2\.8\.3'/);
+ assert.match(sw,/farbound-v2\.8\.4/);
+ assert.match(sw,/release:'2\.8\.4'/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);

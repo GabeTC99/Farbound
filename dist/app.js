@@ -452,20 +452,21 @@ function drawSkyBackdrop(){
   const gMul=sky.galaxy,ang=sky.bandAngle||0;
   const px=width*.5-cam.x*.012,py=height*.5-cam.y*.012;
   ctx.save();ctx.translate(px,py);ctx.rotate(ang);
-  const band=ctx.createLinearGradient(0,-span*.22,0,span*.22);
-  const core=Math.floor(28+gMul*70).toString(16).padStart(2,'0');
-  const mid=Math.floor(14+gMul*36).toString(16).padStart(2,'0');
-  band.addColorStop(0,'#0000');band.addColorStop(.28,sky.tint+mid);band.addColorStop(.5,sky.star+core);
-  band.addColorStop(.72,sky.tint+mid);band.addColorStop(1,'#0000');
-  ctx.globalAlpha=.55+gMul*.35;ctx.fillStyle=band;ctx.fillRect(-span*.85,-span*.22,span*1.7,span*.44);
-  const bulge=ctx.createRadialGradient(0,0,span*.02,0,0,span*.38);
-  bulge.addColorStop(0,sky.star+(Math.floor(20+gMul*40).toString(16).padStart(2,'0')));
-  bulge.addColorStop(.45,sky.tint+'18');bulge.addColorStop(1,sky.tint+'00');
-  ctx.globalAlpha=.4+gMul*.4;ctx.fillStyle=bulge;ctx.fillRect(-span*.5,-span*.28,span,span*.56);
+  // Wide, low-contrast ribbon — tinted haze instead of bright star-core slap.
+  const band=ctx.createLinearGradient(0,-span*.34,0,span*.34);
+  const core=Math.floor(10+gMul*28).toString(16).padStart(2,'0');
+  const mid=Math.floor(6+gMul*16).toString(16).padStart(2,'0');
+  band.addColorStop(0,'#0000');band.addColorStop(.32,sky.tint+mid);band.addColorStop(.5,sky.tint+core);
+  band.addColorStop(.68,sky.tint+mid);band.addColorStop(1,'#0000');
+  ctx.globalAlpha=.26+gMul*.28;ctx.fillStyle=band;ctx.fillRect(-span*.9,-span*.34,span*1.8,span*.68);
+  const bulge=ctx.createRadialGradient(0,0,span*.04,0,0,span*.42);
+  bulge.addColorStop(0,sky.star+(Math.floor(8+gMul*18).toString(16).padStart(2,'0')));
+  bulge.addColorStop(.5,sky.tint+'10');bulge.addColorStop(1,sky.tint+'00');
+  ctx.globalAlpha=.18+gMul*.26;ctx.fillStyle=bulge;ctx.fillRect(-span*.55,-span*.3,span*1.1,span*.6);
   const dustN=soft?55:galaxyDust.length;
   for(let i=0;i<dustN;i++){
    const d=galaxyDust[i],x=d.u*span*.72,y=d.v*span*.18+Math.sin(d.u*3.1+(seed&7))*.01*span;
-   ctx.globalAlpha=d.a*gMul*(d.warm?1.15:1);ctx.fillStyle=d.warm?sky.tint:sky.star;
+   ctx.globalAlpha=d.a*gMul*.55*(d.warm?1.1:1);ctx.fillStyle=d.warm?sky.tint:sky.star;
    ctx.fillRect(x,y,d.r,d.r);
   }
   ctx.restore();ctx.globalAlpha=1;
