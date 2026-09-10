@@ -107,6 +107,14 @@ test('Spectrum scan unlocks body dossier fields before close survey payout',()=>
  g.player.y=p.y+p.r+300;assert(g.scanTarget());ticks(g,3.1);assert(g.s.scanned.includes(p.id));
  const h=roundtrip(g);assert(h.s.spectrumScanned.includes(p.id));
 });
+test('Spectrum SCAN hops to the next unanalyzed body after the first dossier',()=>{
+ const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);
+ const worlds=g.planets.filter(p=>p.type==='planet');assert(worlds.length>=2);
+ const a=worlds[0],b=worlds[1];
+ g.player.x=(a.x+b.x)/2;g.player.y=(a.y+b.y)/2;g.player.vx=g.player.vy=0;
+ g.target=a;assert(g.scanTarget());ticks(g,2.6);assert(g.s.spectrumScanned.includes(a.id));
+ g.target=a;assert(g.scanTarget());assert.equal(g.target,b);assert(g.spectrumScan);ticks(g,2.6);assert(g.s.spectrumScanned.includes(b.id));
+});
 test('Recovery and destruction discard unsold discovery entries while retaining sold history',()=>{
  const g=new Game();g.s.explorationLog=[{id:'sold',type:'legacy',system:0,name:'Sold cache',value:50,sold:true},{id:'pending',type:'legacy',system:0,name:'Pending cache',value:80,sold:false}];g.s.data=80;g.rescue();assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
  g.launch();g.s.explorationLog.push({id:'pending-2',type:'legacy',system:0,name:'Pending cache 2',value:90,sold:false});g.s.data=90;g.s.hull=0;ticks(g,.1);assert(g.s.docked);assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
@@ -120,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.8\.0'/);
+ assert.match(release,/export const RELEASE='2\.8\.1'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -136,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.8\.0/);
- assert.match(sw,/release:'2\.8\.0'/);
+ assert.match(sw,/farbound-v2\.8\.1/);
+ assert.match(sw,/release:'2\.8\.1'/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
@@ -163,7 +171,7 @@ test('Living traffic performs distinct jobs and pauses at real destinations',()=
  const start=g.traffic.map(t=>[t.x,t.y]);g.launch();ticks(g,4);assert(g.traffic.some((t,i)=>t.x!==start[i][0]||t.y!==start[i][1]));assert(g.traffic.some(t=>t.thrust>0));
  assert(g.traffic.some(t=>t.trail.length>0));
  const angles=g.traffic.map(t=>t.angle);ticks(g,.5);assert(g.traffic.some((t,i)=>Math.abs(angleDiff(t.angle,angles[i]))>0||t.pause>0||t.status!=='IN TRANSIT'));
- const miner=g.traffic.find(t=>t.job==='MINING RUN');g.enemies=[];ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
+ const miner=g.traffic.find(t=>t.job==='MINING RUN');g.enemies=[];for(const t of g.traffic)t.underAttackUntil=0;ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
  const scoop=g.traffic.find(t=>t.job==='FUEL SCOOPING');let worked=false;for(let i=0;i<1800;i++){g.update(1/30);if(scoop.status==='FUEL SCOOPING'&&scoop.thrust===0){worked=true;break;}}assert(worked);assert(Math.hypot(scoop.x-g.star.x,scoop.y-g.star.y)<g.star.r+650);
  const remote=frontier();remote.sys.hasStation=false;remote.makeSystem();assert.equal(remote.traffic.length,0);
 });

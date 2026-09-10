@@ -1,0 +1,12 @@
+{
+  "release": "2.8.1",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Spectrum SCAN on an already-analyzed world now hops to the next unanalyzed body instead of locking you into a close survey of the same planet."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
