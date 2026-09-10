@@ -1,0 +1,15 @@
+{
+  "release": "2.7.0",
+  "name": "Frontiers",
+  "date": "2026-09-09",
+  "notes": [
+    "Pulse cannon, Beam lance, and Seeker rack are distinct fire modes with capacitor and ammo tradeoffs.",
+    "Mining laser is split from combat fire; combat shots ignore rocks.",
+    "Combat hulls ship with native hardpoints; weapon modules override the hull mode.",
+    "Combat feedback adds lock brackets, hit numbers, and an incoming-fire warning."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

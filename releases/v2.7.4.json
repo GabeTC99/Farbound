@@ -1,0 +1,14 @@
+{
+  "release": "2.7.4",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Graphics setting in the flight menu: Full (default), Balanced, and Performance.",
+    "Full restores planet and station detail on all devices; Performance keeps the lighter local-space path for older phones.",
+    "Balanced softens trails, glow, and particle load without flattening planets or stations."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

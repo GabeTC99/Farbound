@@ -6,7 +6,54 @@ An original solo space sandbox for Android touchscreens and desktop browsers. In
 
 Open the hosted game in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner.
 
+## Beta builds (share with testers)
+
+Public beta builds are deployed from the `beta` branch to GitHub Pages:
+
+**https://gabetc99.github.io/Farbound/**
+
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks.
+
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
+
+## Frontiers 2.7 — combat weapons
+
+### Candidate 2.7.0
+
+- **Weapon variety (FB-014):** Pulse cannon, Beam lance, and Seeker rack are distinct fire modes. Mining laser is separate from combat fire — combat shots ignore rocks; targeting a rock (or an empty cone of rocks) mines.
+- **Loadout identity:** Combat hulls ship with native hardpoints (Jackal/Raptor pulse, Falcon/Eagle beam, Vulture missile). Fitting a weapon module overrides the hull mode. Capacitors drain while firing; seekers restock slowly and refill on dock/launch.
+- **Combat feedback:** Lock brackets on aim-assist targets, floating hit numbers, INCOMING FIRE status, and a red threat frame when you take damage.
+
+## Frontiers 2.6 — twenty-ship roster
+
+### Candidate 2.6.0
+
+- **Twenty player hulls (FB-008):** explorers, scouts, traders, miners, couriers, and combat ships from the free Wren to the Eagle battlecruiser. Each hull has its own stats, slot count, silhouette, hangar preview, and reason to buy.
+- **Hangar filters:** role chips (All / Explorer / Trader / Miner / Combat / Courier) plus a responsive card grid for browsing the yard.
+- **Save-safe expansion:** older Frontiers pilots pad empty loadouts for new hull ids instead of failing validation.
+
+## Frontiers 2.5 — atmosphere + exploration
+
+### Candidate 2.5.0
+
+- **System skies (FB-010):** clearer per-kind local-space backdrops (nebula, storm, ion, dust, deep) plus quiet sky-kind ambient beds and surface wind beds.
+- **Space anomalies (FB-001):** gravity lens, radio storm, and silent relic contacts with distinct visuals, scan holds, and Cartographics `anomaly` data packages. Uncharted discovery pulses can reveal a nearby contact.
+- **Richer surface sites:** on-foot inspect pads require a short survey dwell; some sites include a one-shot salvage cache.
+
+## Frontiers 2.4 — planetary landing + space legs
+
+### Candidate 2.4.0
+
+- **Skiff feel:** landing flare near the ground, altitude / sink readouts, clearer craft shadow, dust plume, and hard-landing flash. Soft-land, then **DISBARK**.
+- **Planetary space legs (FB-013):** after touchdown, walk a local surface site. Inspect nearby signal pads on foot to record anomalies. **BOARD SKIFF** to resume surface flight; **RETURN TO ORBIT** only after boarding. Far signals still require flying the skiff closer, landing again, and disembarking.
+- Hover-scan and beacon ping remain available while airborne.
+
+## Frontiers 2.3 — station space legs
+
+### Candidate 2.3.0
+
+- **Station space legs:** docking puts you on a top-down station deck. Walk corridors to Market, Cartographics, Contracts, Modules, Hangar, Guilds, and Factions. Interact at a desk to open the familiar service panel; close returns to the deck. Launch only from the hangar bay (or the Launch button inside a desk). Prison barges use a detention layout. Deck position saves while docked.
+- **Light planetary polish:** surface expeditions tint sky, terrain, and skiff by world kind (ocean, arid, ice, mineral). Anomaly markers are kind-specific. Out of scan range, INTERACT / SCAN pings a beacon toward the nearest unscanned signal (short cooldown).
 
 ## Frontiers 2.1 — exploration update
 
@@ -38,22 +85,25 @@ This update is prepared for review; publishing is a separate step. The preserved
 
 - **192 deterministic systems:** all systems retain their identities, with coordinates now arranged around the circular core. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. Discovery pulses award exploration data.
 - **Contract navigation:** active contracts have a Plot destination route button. Nearby destinations use a direct jump; farther destinations use a route of legal jumps. Survey routes return to the issuing station after both worlds are recorded. The chart supports search, filters, pan, pinch/wheel zoom, locate-me, overview, and route fuel estimates. Jump next executes one leg at a time.
-- **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
+- **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain tinted by world kind. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; ping a beacon when you need a bearing. Return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
+- **Station decks:** docking drops you onto a walkable top-down deck. Visit service desks on foot; closing a desk keeps you aboard. Leave through the hangar bay.
 - **Four guilds:** Trading, Miners, Freelancer, and Explorers. Join any or all at station desks. Each guild offers three sequential commissions with unique module rewards. Accept commissions before doing the work; return to a desk to claim rewards. Supply commissions consume the requested cargo.
 - **Three factions:** Orion Concord, Cinder Directorate, and Outer Freeholds. Relief and combat operations improve standing. Pledging lets friendly patrols assist nearby combat; attacking a faction worsens relations and can make its patrols hostile. Standing also affects local prices.
-- **Physical modules and owned ships:** new ships stay in the hangar. Each hull has its own loadout, condition, and fuel. At a station, remove modules to storage, switch ships, and install them; Move here transfers a module directly from another owned ship. Slot limits and category limits make loadouts a choice. Cargo stays with the pilot and capacity checks prevent losses.
+- **Physical modules and owned ships:** twenty hulls stay in the hangar when purchased. Each hull has its own loadout, condition, and fuel. At a station, remove modules to storage, switch ships, and install them; Move here transfers a module directly from another owned ship. Slot limits and category limits make loadouts a choice. Cargo stays with the pilot and capacity checks prevent losses.
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, three ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station services leave local space running, and closing them launches you back out. Player-facing version lives in `dist/release.mjs` (2.1.x, with letter suffixes for tiny fixes). This is a solo prototype with local progression, without multiplayer or on-foot play. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.7.x). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
 Touch: drag the left stick toward a direction; hold BOOST to accelerate and FIRE / MINE to shoot. Select Station, Star, Worlds, or Belt, or tap a visible object; AUTO approaches it. Dock, Scan, Scoop, or Land when within range. Open Galaxy to plot routes and jump.
 
-In surface flight, the stick moves horizontally and vertically; release it to hover. Tap SCAN SIGNAL within range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition.
+In surface flight, the stick moves horizontally and vertically; release it to hover. Soft-land for **DISBARK**, or tap SCAN SIGNAL within range / PING BEACON when airborne and out of range. BRAKE stabilizes the skiff. RETURN TO ORBIT ends the expedition (board the skiff first if you are on foot). On surface legs, walk to signal pads or the skiff pad; INTERACT inspects or boards.
 
-Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu. On a surface, A/D move sideways, W/S move vertically, and Space scans.
+On a station deck, the stick walks. Tap INTERACT at a desk to open services, or at the hangar to launch. Escape closes a desk and returns to walking; open the flight menu from the deck when no desk is open.
+
+Keyboard: W or Up thrust; A/D or Left/Right turn; Shift boost; S or Down brake; Space fire; N galaxy; E dock / interact; R world survey; H discovery pulse; P autopilot; L land/return to orbit; Escape menu or close desk. On a surface, A/D move sideways, W/S move vertically, and Space scans, pings, or disembarks when landed. On station or planetary legs, the stick or WASD walks and Space / E interacts.
 
 ## Saves and rollback
 
@@ -79,7 +129,7 @@ node tests/exploration.mjs
 node tests/offline.mjs
 ```
 
-Validation includes 9 retained classic gameplay checks, 19 Frontiers progression and migration checks, 9 exploration regression checks, and 3 offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
+Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
 
 ## Build the native Android app
 

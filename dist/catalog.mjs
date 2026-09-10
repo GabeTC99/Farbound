@@ -6,7 +6,9 @@ export const FACTIONS=[
  {id:'freeholds',name:'Outer Freeholds',color:'#a6b9f4',desc:'Independent frontier communities defending their own horizons.',rival:'concord'}
 ];
 export const MODULES=Object.fromEntries([
- ['laser','Pulse cannon','weapon',950,'+7 pulse damage per grade',{damage:7}],
+ ['laser','Pulse cannon','weapon',950,'Fast bolts · +7 damage per grade',{damage:7,weapon:'pulse'}],
+ ['beam','Beam lance','weapon',1200,'Short-range beam · energy hungry · low tick damage',{damage:4,weapon:'beam'}],
+ ['missile','Seeker rack','weapon',1450,'Homing missiles · high damage · limited ammo',{damage:10,weapon:'missile'}],
  ['shield','Shield matrix','shield',800,'+30 shield per grade',{shield:30}],
  ['engine','Vector thrusters','engine',700,'+28 m/s per grade',{speed:28}],
  ['drive','Fold drive','drive',1000,'+3 ly per grade',{range:3}],
@@ -17,8 +19,8 @@ export const MODULES=Object.fromEntries([
  ['merchant','Merchant exchange link','trade',0,'Better market prices · +6 t cargo',{buyDiscount:.06,sellBonus:.05,cargo:6},'traders'],
  ['foldrack','Folded cargo rack','freight',0,'+14 t cargo',{cargo:14},'traders'],
  ['convoy','Convoy bulkhead','armor',0,'+55 hull · +8 t cargo',{hull:55,cargo:8},'traders'],
- ['prospector','Prospector emitter','mining',0,'+1 ton per asteroid · +5 pulse damage',{miningYield:1,damage:5},'miners'],
- ['foundry','Foundry capacitor','power',0,'+40 shield · +8 pulse damage',{shield:40,damage:8},'miners'],
+ ['prospector','Prospector emitter','mining',0,'+1 ton per asteroid · +12 mining laser damage',{miningYield:1,miningDamage:12},'miners'],
+ ['foundry','Foundry capacitor','power',0,'+40 shield · +8 weapon damage',{shield:40,damage:8},'miners'],
  ['seismic','Seismic array','surface',0,'+240 m surface range · 30% faster scans',{surfaceRange:240,scanSpeed:.3},'miners'],
  ['fieldwork','Fieldwork bay','support',0,'+25 hull · +6 t cargo',{hull:25,cargo:6},'freelancers'],
  ['outrider','Outrider shield','defense',0,'+65 shield · +15 m/s',{shield:65,speed:15},'freelancers'],
@@ -31,8 +33,7 @@ export const GUILDS=[
  {id:'miners',name:'Miners Guild',color:'#cead8e',desc:'Extract resources and survey the worlds beneath them.',quests:[quest('First seam','Mine 8 tons of resources after accepting.','mined',8,'prospector',800),quest('Crystal commission','Bring 5 t of void crystals to a guild desk.',null,5,'foundry',2400,'crystal'),quest('Read the rocks','Scan 3 new geological surface anomalies.','geology',3,'seismic',2200)]},
  {id:'freelancers',name:'Freelancer Guild',color:'#aebcf5',desc:'Take the odd jobs, stand your ground, and keep moving.',quests:[quest('A dependable pilot','Complete 2 station contracts after accepting.','contracts',2,'fieldwork',1000),quest('Cut the red tape','Defeat 4 pirates after accepting.','pirates',4,'outrider',1800),quest('Friends in far places','Complete 2 faction operations.','operations',2,'wayfarer',2500)]}
 ];
-export const moduleSlots=id=>id==='mule'?7:6;
-export function moduleBonuses(s){const result={hull:0,shield:0,speed:0,damage:0,range:0,cargo:0,fuel:0,scanRange:0,scanSpeed:0,dataBonus:0,signalBonus:0,surfaceRange:0,fuelEfficiency:0,miningYield:0,buyDiscount:0,sellBonus:0};for(const uid of s.loadouts?.[s.ship]||[]){const item=s.modules?.find(m=>m.uid===uid),def=item&&MODULES[item.kind];if(def)for(const [k,v]of Object.entries(def.bonus))result[k]+=v*item.grade;}return result;}
+export function moduleBonuses(s){const result={hull:0,shield:0,speed:0,damage:0,range:0,cargo:0,fuel:0,scanRange:0,scanSpeed:0,dataBonus:0,signalBonus:0,surfaceRange:0,fuelEfficiency:0,miningYield:0,miningDamage:0,buyDiscount:0,sellBonus:0};for(const uid of s.loadouts?.[s.ship]||[]){const item=s.modules?.find(m=>m.uid===uid),def=item&&MODULES[item.kind];if(def)for(const [k,v]of Object.entries(def.bonus))result[k]+=v*item.grade;}return result;}
 export function expandGalaxy(systems,rng){
  const names='Argent,Dawnward,Aurelia,Peregrine,Halcyon,Blackwater,Iskra,New Cascadia,Mistral,Sundog,Wellspring,Amaranth,Copperline,Juniper,Eos Gate,Tempest,Arcadia,Redwater,Northstar,Bellwether,Corsair,Nightingale,Cobalt,Vesper,Hearth,Saffron,Palisade,Solstice,Dovetail,Tamarack,Bluehaven,Wildrose,Lantern,Tidebreak,Opaline,Watchfall,Auric,Estuary,Mosslight,Threshold'.split(',');
  // Preserve legacy random draws so system danger and identities do not change.
