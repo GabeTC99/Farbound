@@ -21,12 +21,15 @@ test('Arrival is outside the scoop zone near the primary; reload preserves actua
 });
 test('Pulse locates unknown worlds, resumes as unscanned after interruption, pays once and persists',()=>{
  let g=frontier();assert.equal(g.visiblePlanets.length,0);assert(!g.land());assert(g.discover());ticks(g,1);const progress=g.discoveryScan.progress;assert(!g.discover());assert.equal(g.discoveryScan.progress,progress);assert(!g.scanTarget());
- g=roundtrip(g);assert.equal(g.discoveryScan,null);assert.equal(g.visiblePlanets.length,0);assert(g.scanTarget());ticks(g,4.1);assert.equal(g.visiblePlanets.length,g.planets.length);assert(g.planets.length>=1&&g.planets.length<=5);assert.equal(g.s.data,500);assert.equal(g.s.metrics.discoveries,1);assert(!g.discover());
+ g=roundtrip(g);assert.equal(g.discoveryScan,null);assert.equal(g.visiblePlanets.length,0);assert(g.scanTarget());ticks(g,4.1);assert.equal(g.visiblePlanets.length,g.planets.length);assert(g.planets.filter(p=>p.type==='planet').length>=1&&g.planets.filter(p=>p.type==='planet').length<=5);assert.equal(g.s.data,500);assert.equal(g.s.metrics.discoveries,1);assert(!g.discover());
  g=roundtrip(g);assert.equal(g.visiblePlanets.length,g.planets.length);assert(!g.discover());assert.equal(g.s.data,500);g.s.system=0;g.makeSystem();g.player.x=g.station.x;g.player.y=g.station.y+50;const credits=g.s.credits;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,500);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,1);assert(g.sellExplorationData());assert.equal(g.s.credits,credits+500);assert.equal(g.s.data,0);assert(g.s.explorationLog.every(e=>e.sold));g.dock();assert(!g.sellExplorationData());assert.equal(g.s.credits,credits+500);
 });
 test('Discovery and world surveys cancel or reject during travel and require separate completion',()=>{
  const g=frontier();assert(g.discover());const next=SYSTEMS.find(s=>s.id!==g.s.system&&jumpDistance(g.s.system,s.id)<14).id;assert(g.jumpTo(next));assert.equal(g.discoveryScan,null);assert(!g.discover());assert(!g.scanTarget());assert(!g.scoop());assert(!g.dock());ticks(g,3.1);assert.equal(g.s.data,0);
- assert(g.discover());ticks(g,4.1);const p=g.planets[0];g.target=p;g.player.x=p.x;g.player.y=p.y+p.r+300;g.player.vx=101;assert(!g.scanTarget());g.player.vx=0;assert(g.scanTarget());ticks(g,1);const progress=g.scan.progress;assert(!g.scanTarget());assert.equal(g.scan.progress,progress);ticks(g,.1,{fire:true});assert.equal(g.scan,null);assert.equal(g.s.scanned.length,0);assert(g.scanTarget());ticks(g,3.1);assert(g.s.scanned.includes(p.id));assert.equal(g.s.scanned.length,1);assert(!g.scanTarget());assert(g.s.data>500);
+ assert(g.discover());ticks(g,4.1);const p=g.planets[0];g.target=p;g.player.x=p.x;g.player.y=p.y+p.r+300;g.player.vx=0;
+ assert(g.scanTarget());assert(g.spectrumScan);ticks(g,1);const spectProg=g.spectrumScan.progress;assert(!g.scanTarget());assert.equal(g.spectrumScan.progress,spectProg);ticks(g,.1,{fire:true});assert.equal(g.spectrumScan,null);
+ assert(g.scanTarget());ticks(g,2.6);assert((g.s.spectrumScanned||[]).includes(p.id));
+ g.player.vx=101;assert(!g.scanTarget());g.player.vx=0;assert(g.scanTarget());assert(g.scan);ticks(g,1);const progress=g.scan.progress;assert(!g.scanTarget());assert.equal(g.scan.progress,progress);ticks(g,.1,{fire:true});assert.equal(g.scan,null);assert.equal(g.s.scanned.length,0);assert(g.scanTarget());ticks(g,3.1);assert(g.s.scanned.includes(p.id));assert.equal(g.s.scanned.length,1);assert(!g.scanTarget());assert(g.s.data>500);
 });
 test('Scooping varies with distance, stops at full capacity and rejects fast flight',()=>{
  const near=frontier(),far=frontier();for(const g of [near,far])g.s.fuel=0;nearStar(near,300);nearStar(far,580);assert(near.scoop());assert(far.scoop());ticks(near,2);ticks(far,2);assert(near.s.fuel>far.s.fuel);assert(near.s.heat>far.s.heat);assert(near.scoop());assert(!near.scooping);assert.equal(near.scoopRate,0);
@@ -50,24 +53,32 @@ test('Pre-update pilots keep progress and an immutable original backup; malforme
  for(const fields of [{heat:-1},{heat:151},{heat:NaN},{systemScans:[999]},{systemScans:[1]}])assert.equal(validateSave({...boot.pilot,...fields}),null);
 });
 test('Cartographics preserves a mixed discovery manifest until an explicit one-time sale',()=>{
- const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);const world=g.planets[0];g.target=world;g.player.x=world.x;g.player.y=world.y+world.r+300;assert(g.scanTarget());ticks(g,3.1);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,2);const expected=g.s.data,credits=g.s.credits;g.player.x=g.station.x;g.player.y=g.station.y+50;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,expected);let h=roundtrip(g);assert.equal(h.s.explorationLog.filter(e=>!e.sold).length,2);assert(h.sellExplorationData());assert.equal(h.s.credits,credits+expected);assert.equal(h.s.data,0);assert(h.s.explorationLog.every(e=>e.sold));assert(!h.sellExplorationData());assert.equal(h.s.credits,credits+expected);
+ const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);const world=g.planets[0];g.target=world;g.player.x=world.x;g.player.y=world.y+world.r+300;g.player.vx=g.player.vy=0;assert(g.scanTarget());ticks(g,2.6);assert(g.scanTarget());ticks(g,3.1);assert.equal(g.s.explorationLog.filter(e=>!e.sold).length,2);const expected=g.s.data,credits=g.s.credits;g.player.x=g.station.x;g.player.y=g.station.y+50;assert(g.dock());assert.equal(g.s.credits,credits);assert.equal(g.s.data,expected);let h=roundtrip(g);assert.equal(h.s.explorationLog.filter(e=>!e.sold).length,2);assert(h.sellExplorationData());assert.equal(h.s.credits,credits+expected);assert.equal(h.s.data,0);assert(h.s.explorationLog.every(e=>e.sold));assert(!h.sellExplorationData());assert.equal(h.s.credits,credits+expected);
 });
 test('System layouts are seeded, cover multi-star and multi-world variety, and gate gas giants',()=>{
  const a=buildSystemLayout(SYSTEMS[0]),b=buildSystemLayout(SYSTEMS[0]);
- assert.equal(a.stars.length,b.stars.length);assert.equal(a.planets.length,b.planets.length);
+ assert.equal(a.stars.length,b.stars.length);assert.equal(a.planets.length,b.planets.length);assert.equal(a.moons.length,b.moons.length);
  assert.deepEqual(a.planets.map(p=>p.id),b.planets.map(p=>p.id));
- const stars=new Set(),planets=new Set(),docks=new Set(),spectra=new Set(),colors=new Set();
- let minPlanetDist=Infinity,minStationDist=Infinity;
+ const stars=new Set(),planets=new Set(),docks=new Set(),spectra=new Set(),colors=new Set(),kinds=new Set();
+ let minPlanetDist=Infinity,minStationDist=Infinity,moonSystems=0,hasGiant=false,hasLandable=false;
  for(const sys of SYSTEMS){
   const layout=buildSystemLayout(sys),meta=systemLayoutMeta(sys);
   assert.equal(layout.stars.length,meta.starCount);
   assert.equal(layout.planets.length,meta.planetCount);
-  assert.equal(surveyWorldIds(sys.id,sys).length,layout.planets.length);
+  assert.equal(surveyWorldIds(sys.id,sys).length,layout.planets.length+layout.moons.length);
+  if(layout.moons.length)moonSystems++;
   stars.add(layout.stars.length);planets.add(layout.planets.length);
   if(sys.hasStation)docks.add(layout.stations.filter(s=>s.type==='station').length);
   for(const star of layout.stars){assert(star.spectral);spectra.add(star.spectral);colors.add(star.color);}
   const primary=layout.primary;
-  for(const p of layout.planets)minPlanetDist=Math.min(minPlanetDist,Math.hypot(p.x-primary.x,p.y-primary.y));
+  for(const p of layout.planets){
+   const host=layout.stars.find(s=>s.id===p.hostStarId)||primary;
+   minPlanetDist=Math.min(minPlanetDist,Math.hypot(p.x-host.x,p.y-host.y));
+   kinds.add(p.kindId);assert(p.class);assert(Number.isFinite(p.mass));assert(Number.isFinite(p.gravity));assert(Number.isFinite(p.orbitRadius));
+   if(p.class==='giant'){hasGiant=true;assert.equal(p.landable,false);assert(!isLandablePlanet(p));}
+   else{hasLandable=true;assert(isLandablePlanet(p));}
+  }
+  for(const m of layout.moons){const parent=layout.planets.find(p=>p.id===m.parentId);assert.equal(m.type,'moon');assert(parent);assert(isLandablePlanet(m));assert(m.r<parent.r);}
   for(const s of layout.stations.filter(s=>s.type==='station'))minStationDist=Math.min(minStationDist,Math.hypot(s.x-primary.x,s.y-primary.y));
  }
  assert(stars.has(1)&&stars.has(2)&&stars.has(3));
@@ -75,12 +86,26 @@ test('System layouts are seeded, cover multi-star and multi-world variety, and g
  assert([...docks].some(n=>n>=2));
  assert(spectra.size>=4,'expected multiple spectral classes across the chart');
  assert(colors.size>=6,'expected varied star colors');
- assert(minPlanetDist>1200,'planets should sit well clear of the primary');
+ assert(kinds.size>=5,'expected expanded planet kind variety');
+ assert(hasGiant&&hasLandable);
+ assert(moonSystems>10,'expected moons on some systems');
+ assert(minPlanetDist>1200,'planets should sit well clear of their host star');
  assert(minStationDist>900,'home docks should not hug the star');
  const g=new Game();g.launch();
  const giant=g.planets.find(p=>!isLandablePlanet(p));
  if(giant){g.target=giant;g.player.x=giant.x;g.player.y=giant.y+giant.r+300;assert(!g.land());}
  const solid=g.planets.find(isLandablePlanet);assert(solid);g.target=solid;g.player.x=solid.x;g.player.y=solid.y+solid.r+300;assert(g.land());
+});
+test('Spectrum scan unlocks body dossier fields before close survey payout',()=>{
+ const g=new Game();g.launch();assert(g.discover());ticks(g,4.1);
+ const p=g.planets.find(x=>x.type==='planet')||g.planets[0];
+ g.target=p;g.player.x=p.x;g.player.y=p.y+p.r+1800;g.player.vx=g.player.vy=0;
+ assert(dist(g.player,p)>p.r+getStats(g.s).scanRange);
+ assert(g.scanTarget());assert(g.spectrumScan);ticks(g,2.6);
+ assert((g.s.spectrumScanned||[]).includes(p.id));
+ assert(p.gravity!=null&&p.composition?.length);
+ g.player.y=p.y+p.r+300;assert(g.scanTarget());ticks(g,3.1);assert(g.s.scanned.includes(p.id));
+ const h=roundtrip(g);assert(h.s.spectrumScanned.includes(p.id));
 });
 test('Recovery and destruction discard unsold discovery entries while retaining sold history',()=>{
  const g=new Game();g.s.explorationLog=[{id:'sold',type:'legacy',system:0,name:'Sold cache',value:50,sold:true},{id:'pending',type:'legacy',system:0,name:'Pending cache',value:80,sold:false}];g.s.data=80;g.rescue();assert.equal(g.s.data,0);assert.deepEqual(g.s.explorationLog.map(e=>e.id),['sold']);
@@ -95,7 +120,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.7\.0'/);
+ assert.match(release,/export const RELEASE='2\.8\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -107,9 +132,12 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/Return to deck/);
  assert.match(app,/SPRINT/);
  assert.match(app,/scan-button/);
+ assert.match(app,/body-dossier/);
+ assert.match(app,/SPECTRUM/);
+ assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.7\.0/);
- assert.match(sw,/release:'2\.7\.0'/);
+ assert.match(sw,/farbound-v2\.8\.0/);
+ assert.match(sw,/release:'2\.8\.0'/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
@@ -135,7 +163,7 @@ test('Living traffic performs distinct jobs and pauses at real destinations',()=
  const start=g.traffic.map(t=>[t.x,t.y]);g.launch();ticks(g,4);assert(g.traffic.some((t,i)=>t.x!==start[i][0]||t.y!==start[i][1]));assert(g.traffic.some(t=>t.thrust>0));
  assert(g.traffic.some(t=>t.trail.length>0));
  const angles=g.traffic.map(t=>t.angle);ticks(g,.5);assert(g.traffic.some((t,i)=>Math.abs(angleDiff(t.angle,angles[i]))>0||t.pause>0||t.status!=='IN TRANSIT'));
- const miner=g.traffic.find(t=>t.job==='MINING RUN');ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
+ const miner=g.traffic.find(t=>t.job==='MINING RUN');g.enemies=[];ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
  const scoop=g.traffic.find(t=>t.job==='FUEL SCOOPING');let worked=false;for(let i=0;i<1800;i++){g.update(1/30);if(scoop.status==='FUEL SCOOPING'&&scoop.thrust===0){worked=true;break;}}assert(worked);assert(Math.hypot(scoop.x-g.star.x,scoop.y-g.star.y)<g.star.r+650);
  const remote=frontier();remote.sys.hasStation=false;remote.makeSystem();assert.equal(remote.traffic.length,0);
 });
@@ -263,7 +291,7 @@ test('Player thrust and boost never control another ship’s exhaust',()=>{
  // Exercise the actual renderer without a browser or global game state.
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),fn=source.match(/function drawShip\([^\n]+/)[0];
  let flames=0;const ctx=new Proxy({}, {get:(_,key)=>key==='lineTo'?((x,y)=>{if(x<-24&&y===0)flames++;}):()=>{},set:()=>true});
- const sandbox={ctx,Math};vm.createContext(sandbox);vm.runInContext(fn+';this.drawShip=drawShip',sandbox);
+ const sandbox={ctx,Math};vm.createContext(sandbox);vm.runInContext('function softFX(){return false}function liteFX(){return false}'+fn+';this.drawShip=drawShip',sandbox);
  sandbox.drawShip(0,0,0,'white',19,false,0);assert.equal(flames,0);sandbox.drawShip(0,0,0,'white',19,false,1,true);assert.equal(flames,1);sandbox.drawShip(0,0,0,'white',19,false,0);assert.equal(flames,1);
 });
 test('Planets, stars and stations allow uninterrupted overflight',()=>{

@@ -1,0 +1,16 @@
+{
+  "release": "2.8.0",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Planetary Rework: physics-constrained world types (earth-like, ocean, arid, ice, metal-rich, mineral, gas giant, ice giant) with distinct Canvas visuals — landmasses on terrestrials, banding only on giants.",
+    "Moons on some worlds; rocky moons are landable and surveyable.",
+    "Spectrum Scanner: analyze bodies from long range to unlock a body dossier (gravity, atmosphere, composition, landable, moons), then approach for the detailed cartographics survey.",
+    "Gas and ice giants are labeled non-landable and cannot be entered.",
+    "Orbital groundwork fields (orbit radius/angle, mass, period) stored for a future orbital-mechanics update; bodies remain fixed in local space for 2.8."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

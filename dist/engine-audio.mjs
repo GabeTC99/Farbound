@@ -79,9 +79,9 @@ export class EngineAudio{
   let ambGain=0,ambCut=180;
   if(live&&!stationHum){
    if(surface||planetFeet){
-    const wind={ocean:.045,arid:.055,ice:.038,mineral:.048,gas:.05}[surfaceKind]||.048;
+    const wind={earthlike:.046,ocean:.045,arid:.055,ice:.038,metal:.05,mineral:.048,gas:.05,icegiant:.042}[surfaceKind]||.048;
     ambGain=bed*(planetFeet?wind*.7:wind);
-    ambCut={ocean:160,arid:240,ice:140,mineral:190,gas:210}[surfaceKind]||190;
+    ambCut={earthlike:175,ocean:160,arid:240,ice:140,metal:200,mineral:190,gas:210,icegiant:150}[surfaceKind]||190;
    }else{
     const skyBed={clear:.028,nebula:.034,storm:.05,ion:.036,dust:.032,deep:.014}[sky]||.028;
     ambGain=bed*skyBed;
