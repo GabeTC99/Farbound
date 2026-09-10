@@ -1,0 +1,12 @@
+{
+  "release": "2.8.6",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Soften ion-sky streaks into faint drifting veils so charged systems no longer look like scanline artifacts."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

@@ -499,11 +499,14 @@ function drawSkyBackdrop(){
   haze.addColorStop(0,'#0000');haze.addColorStop(.5,sky.tint+'3a');haze.addColorStop(1,'#0000');
   ctx.fillStyle=haze;ctx.fillRect(0,0,width,height);
  }
+ // Soft ion curtains — faint drifting veils, not hard scanlines.
  if(sky.kind==='ion'&&!lite){
-  ctx.strokeStyle=sky.tint+'40';ctx.lineWidth=1;
-  for(let i=0;i<8;i++){
-   const x=((i*97+clock*22+(sky.seed%40))%(width+50))-25;
-   ctx.globalAlpha=.18+.1*(i%3);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+10+i*2.5,height);ctx.stroke();
+  const n=soft?2:3;
+  for(let i=0;i<n;i++){
+   const x=((i*131+clock*7+(sky.seed%40))%(width+120))-60;
+   const veil=ctx.createLinearGradient(x-18,0,x+28,0);
+   veil.addColorStop(0,'#0000');veil.addColorStop(.5,sky.tint+'14');veil.addColorStop(1,'#0000');
+   ctx.globalAlpha=.22+.08*(i%2);ctx.fillStyle=veil;ctx.fillRect(x-24,0,52,height);
   }
   ctx.globalAlpha=1;
  }
