@@ -9,16 +9,17 @@ export function systemSky(sys){
  }else if(sys.danger>=3)kind=bucket<5?'ion':'dust';
  else if(bucket===0)kind='nebula';
  else if(bucket===1)kind='ion';
+ // Quiet Frontier palette: mint / cyan / slate — no stock-nebula purple.
  const palettes={
-  clear:{bg:'#060c16',star:'#c2e5f1',tint:'#6aa8c0',nebulaAlpha:.55,lightning:false},
-  nebula:{bg:'#0a0614',star:'#e2c4ff',tint:'#a56dff',nebulaAlpha:.92,lightning:false},
-  storm:{bg:'#070812',star:'#d7e8ff',tint:'#6f8cff',nebulaAlpha:.85,lightning:true},
-  ion:{bg:'#06141a',star:'#9ff0e0',tint:'#3fd0b8',nebulaAlpha:.7,lightning:false},
-  dust:{bg:'#120c08',star:'#ffd4a8',tint:'#d08a4a',nebulaAlpha:.62,lightning:false},
-  deep:{bg:'#04060f',star:'#8aa0c8',tint:'#4050a0',nebulaAlpha:.45,lightning:false}
+  clear:{bg:'#060c16',star:'#c2e5f1',tint:'#6aa8c0',wash:['#1a3a48','#0d2838'],nebulaAlpha:.4,lightning:false},
+  nebula:{bg:'#061018',star:'#d0f4ee',tint:'#5ec4b0',wash:['#0a3a40','#164858','#0e2a38'],nebulaAlpha:.72,lightning:false},
+  storm:{bg:'#070a14',star:'#d7e8ff',tint:'#6a8ab8',wash:['#122038','#1a2848'],nebulaAlpha:.65,lightning:true},
+  ion:{bg:'#06141a',star:'#9ff0e0',tint:'#3fd0b8',wash:['#0a3038','#124850'],nebulaAlpha:.55,lightning:false},
+  dust:{bg:'#100c0a',star:'#ffd4a8',tint:'#c48858',wash:['#2a1c14','#3a2818'],nebulaAlpha:.5,lightning:false},
+  deep:{bg:'#04060f',star:'#8aa0c8',tint:'#405070',wash:['#0a1020'],nebulaAlpha:.28,lightning:false}
  };
  const p=palettes[kind];
- return{kind,label:kind.toUpperCase(),hue:h%360,fog:0.18+(h%40)/200,...p};
+ return{kind,label:kind.toUpperCase(),seed:h,hue:h%360,fog:0.18+(h%40)/200,...p};
 }
 
 export function wantedTier(bounty=0){

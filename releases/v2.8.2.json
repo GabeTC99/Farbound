@@ -1,0 +1,13 @@
+{
+  "release": "2.8.2",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Procedural local-space sky prototype: mint/slate gas washes and a denser starfield replace the filtered nebula.webp blit in flight.",
+    "Sky kinds (clear, nebula, storm, ion, dust, deep) keep their roles but drop purple stock-nebula tints."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
