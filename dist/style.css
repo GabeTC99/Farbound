@@ -16,8 +16,28 @@
 
 /* Exploration controls share the flight HUD on touch and desktop. */
 .scanner-status{font-size:.75rem;line-height:1.4;color:var(--muted);margin-top:8px}.stat.heat .meter i{background:#88b6ea}.underbar .stat{min-width:0;flex:0 1 130px}.target-panel [hidden]{display:none!important}
-@media(max-width:650px){.underbar{gap:10px}.underbar .stat{flex:1}.stat-label{gap:4px}.stat-label b{font-size:.7rem}.scanner-status{font-size:.7rem}.target-panel #discovery-button{min-height:36px;padding:5px;font-size:.7rem}}
-@media(max-height:600px){.scanner-status{display:none}.target-panel #discovery-button{min-height:32px;padding:4px}.target-panel{padding-top:8px;padding-bottom:8px}}
+@media(max-width:650px){.underbar{gap:10px}.underbar .stat{flex:1}.stat-label{gap:4px}.stat-label b{font-size:.7rem}.scanner-status{display:none}.target-panel #discovery-button{min-height:30px;padding:4px 5px;font-size:.65rem}}
+@media(max-height:600px){.scanner-status{display:none}.target-panel #discovery-button{min-height:28px;padding:3px}.target-panel{padding-top:6px;padding-bottom:6px}}
+
+/* Phone / foldable cover: keep the nav target strip narrow so flight stays visible. */
+@media(max-width:650px){
+ .flight-top{align-items:flex-start}
+ .target-panel{width:min(112px,30vw);max-width:30vw;padding:7px 6px;border-left-width:1px;background:linear-gradient(90deg,#0d1c29c6,#0d1c2900);align-self:flex-start}
+ .target-panel .eyebrow{display:none}
+ .target-panel h3{font-size:.78rem;line-height:1.2;margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .target-meta{font-size:.62rem;margin:4px 0;gap:2px;flex-direction:column;align-items:flex-start}
+ .target-panel button{font-size:.68rem;min-height:30px;padding:4px 5px;margin-top:4px;letter-spacing:0}
+ .target-panel .target-row{gap:4px}
+ .target-panel .target-row button{min-height:28px;padding:3px 4px;font-size:.65rem}
+ .target-panel .landing-button{font-size:.62rem;min-height:28px;padding:4px}
+ .radar-wrap{right:8px;bottom:210px}
+ .radar-wrap canvas{width:72px;height:72px}
+}
+@media(max-width:390px){
+ .target-panel{width:min(98px,28vw);max-width:28vw;padding:6px 5px}
+ .target-panel h3{font-size:.72rem}
+ .target-panel button{min-height:28px;font-size:.62rem}
+}
 
 /* Station service robot (Concierge) — screen-only face */
 .robot-desk{display:grid;grid-template-columns:minmax(140px,200px) 1fr;gap:22px;align-items:start}.robot-desk-visual{background:linear-gradient(160deg,#0a1620,#12222e 55%,#0d1a24);border:1px solid #29404c;border-radius:10px;padding:14px}.robot-portrait{width:100%;height:auto;display:block}.robot-quote{margin:0 0 14px;padding:14px 16px;border-left:3px solid var(--mint);background:#81e3cd0c;border-radius:0 6px 6px 0}.robot-quote p{font-size:1rem;color:var(--ink);line-height:1.55;font-style:italic;margin:0}.robot-screen{fill:#102834}.robot-eye{transition:transform .2s,fill .2s}.robot-mouth{transition:transform .2s,fill .2s}.robot-brow{transition:transform .2s;transform-box:fill-box;transform-origin:center}

@@ -1,0 +1,14 @@
+{
+  "release": "2.7.1",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Phone and foldable cover screens: navigation target panel is much narrower so it no longer eats the flight view.",
+    "Discovery pulse label shortens on touch devices; scanner blurb hides on narrow screens.",
+    "Mobile performance: lower canvas pixel ratio, skip expensive sky filters and shot glow on phones."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
