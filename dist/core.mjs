@@ -141,7 +141,7 @@ export class Game {
  const dmg=wantMine?st.miningDamage:Math.max(1,Math.round(st.damage*(w.scale||1)));
  this.shots.push({x:p.x+Math.cos(a)*25,y:p.y+Math.sin(a)*25,vx:Math.cos(a)*w.speed+p.vx,vy:Math.sin(a)*w.speed+p.vy,life:w.life,enemy:false,playerShot:true,damage:dmg,kind:mode,color:w.color,mining:!!w.mining,seek:w.seek&&aim&&aim.type==='enemy'?aim.id:null,speed:w.speed});
 }
- burst(x,y,color,count=18){for(let i=0;i<count;i++){let a=Math.random()*6.28,v=30+Math.random()*130;this.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.3+Math.random()*.8,color});}if(this.particles.length>350)this.particles.splice(0,this.particles.length-350);}
+ burst(x,y,color,count=18){const lite=typeof matchMedia==='function'&&matchMedia('(max-width:700px), (pointer:coarse)').matches;if(lite)count=Math.max(2,Math.ceil(count*.35));for(let i=0;i<count;i++){let a=Math.random()*6.28,v=30+Math.random()*130;this.particles.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:.3+Math.random()*.8,color});}const cap=lite?70:350;if(this.particles.length>cap)this.particles.splice(0,this.particles.length-cap);}
  update(dt,input={}){
   dt=clamp(dt,0,.05);this.time+=dt;this.fireTimer-=dt;
   for(const p of this.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}this.particles=this.particles.filter(p=>p.life>0);

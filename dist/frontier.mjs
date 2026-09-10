@@ -210,10 +210,10 @@ export class Game extends FlightGame{
      ship.thrust=Math.min(1,approach/ship.speed);ship.status='IN TRANSIT';
     }
    }
-   if(ship.thrust>.08){
-    ship.trail.push({x:ship.x-Math.cos(ship.angle)*ship.size,y:ship.y-Math.sin(ship.angle)*ship.size,life:.35});
-    if(ship.trail.length>10)ship.trail.shift();
-   }
+   if(ship.thrust>.08&&!(typeof matchMedia==='function'&&matchMedia('(max-width:700px), (pointer:coarse)').matches)){
+     ship.trail.push({x:ship.x-Math.cos(ship.angle)*ship.size,y:ship.y-Math.sin(ship.angle)*ship.size,life:.35});
+     if(ship.trail.length>10)ship.trail.shift();
+    }
    for(const t of ship.trail)t.life-=dt;ship.trail=ship.trail.filter(t=>t.life>0);
   }
  }
