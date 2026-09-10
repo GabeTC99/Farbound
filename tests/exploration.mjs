@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.8\.4'/);
+ assert.match(release,/export const RELEASE='2\.8\.5'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.8\.4/);
- assert.match(sw,/release:'2\.8\.4'/);
+ assert.match(sw,/farbound-v2\.8\.5/);
+ assert.match(sw,/release:'2\.8\.5'/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
@@ -182,6 +182,9 @@ test('Traffic turns smoothly and flees when assaulted',()=>{
 });
 test('Engine volume uses the full slider and stays silent at zero',()=>{
  const source=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),'utf8');assert(source.includes('*.32'));assert(source.includes('Math.pow'));assert(!source.includes('*.24'));assert(!source.includes('*.065'));
+ assert(source.includes('setFoldCharge'));assert(source.includes('playFoldJump'));assert(source.includes('playFoldArrive'));
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert(app.includes('wasFolding'));assert(app.includes('setFoldCharge'));assert(app.includes('playFoldJump'));
 });
 test('Security responds to wanted attacks and assaults on innocent civilians',()=>{
  const g=new Game();g.launch();const civilian=g.traffic[0],wanted=g.enemies[0],patrol=g.patrols[0],remote=g.patrols[1];civilian.x=1100;civilian.y=900;wanted.x=1450;wanted.y=900;wanted.raidFire=0;patrol.x=1000;patrol.y=900;remote.x=-2500;remote.y=-2500;const before=dist(patrol,wanted);g.update(.05);assert.equal(wanted.wanted,true);assert.equal(patrol.responseTarget,wanted.id);assert.equal(patrol.status,'RESPONDING');assert.equal(remote.responseTarget,null);assert.equal(remote.status,'PATROLLING');ticks(g,1);assert(dist(patrol,wanted)<before);assert(g.shots.some(b=>b.trafficShot&&b.enemy));
