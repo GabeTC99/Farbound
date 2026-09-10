@@ -26,7 +26,7 @@ function liteFX(){return graphicsMode()==='performance';}
 function softFX(){return graphicsMode()!=='high';}
 function canvasDpr(){return Math.min(devicePixelRatio||1,2);}
 let dpr=canvasDpr(),radarTick=0;
-const nebula=new Image();nebula.src='./nebula.webp';const starRand=rng(2471),stars=Array.from({length:260},()=>({x:starRand(),y:starRand(),r:.4+starRand()*1.25,a:.15+starRand()*.65,depth:.025+starRand()*.075}));
+const starRand=rng(2471),stars=Array.from({length:340},()=>({x:starRand(),y:starRand(),r:.3+starRand()*1.35,a:.12+starRand()*.7,depth:.02+starRand()*.09,bright:starRand()>.92}));
 let audio=null;function sound(kind='click'){if(!game.s.sound||!started)return;try{audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),gain=audio.createGain(),t=audio.currentTime;const f=kind==='fire'?440:kind==='good'?700:kind==='jump'?110:330;o.type=kind==='fire'?'triangle':'sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(kind==='fire'?100:f*1.4,t+.09);gain.gain.setValueAtTime(kind==='fire'?.035:.045,t);gain.gain.exponentialRampToValueAtTime(.001,t+.14);o.connect(gain);gain.connect(audio.destination);o.start(t);o.stop(t+.16);}catch{}}
 function save(checkpoint=false){try{writePilot(localStorage,game.serialize(),{checkpoint:checkpoint===true});storageOK=true;return true;}catch{storageOK=false;if(!saveErrorShown){game.notify('Device storage is unavailable. Export your save from the flight menu.','bad');saveErrorShown=true;}return false;}}
 function resetControls(){engine.mute();keys={};touch={aim:null,thrust:0,fire:false,boost:false};stickPointer=null;const knob=$('stick-knob');if(knob)knob.style.transform='';document.querySelectorAll('.held').forEach(x=>x.classList.remove('held'));}
@@ -443,48 +443,64 @@ function drawWake(w){
  label(w.scanned?('WAKE → '+systemName(SYSTEMS[w.to],game.s)):('WAKE · '+(w.shipName||'unknown')),w.x,w.y-pulse-14,w.scanned?'#9be7ff':'#8aa7b4',11);
 }
 function drawSkyBackdrop(){
- const sky=systemSky(game.sys),lite=liteFX();
+ const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
  ctx.fillStyle=sky.bg;ctx.fillRect(0,0,width,height);
- if(!lite&&nebula.complete&&nebula.naturalWidth){
-  const k=Math.max(width/nebula.width,height/nebula.height);
-  ctx.save();
-  if(sky.kind==='nebula'){ctx.filter=`hue-rotate(${sky.hue}deg) saturate(1.55) brightness(1.05)`;}
-  else if(sky.kind==='storm'){ctx.filter=`hue-rotate(${sky.hue}deg) saturate(1.4)`;}
-  else if(sky.kind==='ion'){ctx.filter='hue-rotate(140deg) saturate(1.35) brightness(1.08)';}
-  else if(sky.kind==='dust'){ctx.filter='hue-rotate(-30deg) saturate(1.25) brightness(1.08)';}
-  else if(sky.kind==='deep'){ctx.filter='saturate(.55) brightness(.72)';}
-  const alpha=sky.kind==='nebula'?Math.min(1,sky.nebulaAlpha+0.08):sky.kind==='deep'?sky.nebulaAlpha*.85:sky.nebulaAlpha;
-  ctx.globalAlpha=alpha;ctx.drawImage(nebula,(width-nebula.width*k)/2,(height-nebula.height*k)/2,nebula.width*k,nebula.height*k);
-  ctx.restore();ctx.globalAlpha=1;
- }
- if(!lite&&(sky.kind==='nebula'||sky.kind==='storm'||sky.kind==='ion')){
-  const g=ctx.createRadialGradient(width*.7,height*.3,20,width*.55,height*.45,Math.max(width,height)*.7);
-  const tip=sky.kind==='nebula'?'88':sky.kind==='storm'?'66':'55';
-  g.addColorStop(0,sky.tint+tip);g.addColorStop(.45,sky.tint+'22');g.addColorStop(1,sky.tint+'00');
-  ctx.fillStyle=g;ctx.fillRect(0,0,width,height);
+ // Procedural gas washes — Quiet Frontier mint/slate, deterministic per system.
+ if(!lite){
+  const washes=sky.wash||[sky.tint];
+  const seed=sky.seed||0;
+  const span=Math.max(width,height);
+  for(let i=0;i<washes.length;i++){
+   const ox=((seed>>((i*7)%24))&255)/255,oy=((seed>>((i*11+3)%24))&255)/255;
+   const cx=width*(.15+ox*.7)+Math.sin(clock*.03+i)*span*.01;
+   const cy=height*(.12+oy*.65)+Math.cos(clock*.025+i*1.3)*span*.008;
+   const r0=span*(.04+i*.02),r1=span*(.42+sky.nebulaAlpha*.35-i*.06);
+   const g=ctx.createRadialGradient(cx,cy,r0,cx,cy,r1);
+   const a0=Math.floor(38+sky.nebulaAlpha*70-i*12).toString(16).padStart(2,'0');
+   const a1=Math.floor(18+sky.nebulaAlpha*30).toString(16).padStart(2,'0');
+   g.addColorStop(0,washes[i]+a0);g.addColorStop(.55,washes[i]+a1);g.addColorStop(1,washes[i]+'00');
+   ctx.fillStyle=g;ctx.fillRect(0,0,width,height);
+  }
+  // Soft secondary veil for nebula / storm density.
+  if(sky.kind==='nebula'||sky.kind==='storm'){
+   const vx=width*(.55+((seed&15)/15)*.25),vy=height*(.4+(((seed>>4)&15)/15)*.3);
+   const veil=ctx.createRadialGradient(vx,vy,span*.05,vx,vy,span*.55);
+   veil.addColorStop(0,sky.tint+(sky.kind==='nebula'?'44':'33'));
+   veil.addColorStop(.5,sky.tint+'18');veil.addColorStop(1,sky.tint+'00');
+   ctx.fillStyle=veil;ctx.fillRect(0,0,width,height);
+  }
  }
  if(!lite&&sky.kind==='dust'){
-  const haze=ctx.createLinearGradient(0,height*.25,0,height*.7);
-  haze.addColorStop(0,'#0000');haze.addColorStop(.5,sky.tint+'44');haze.addColorStop(1,'#0000');
+  const haze=ctx.createLinearGradient(0,height*.22,0,height*.72);
+  haze.addColorStop(0,'#0000');haze.addColorStop(.5,sky.tint+'3a');haze.addColorStop(1,'#0000');
   ctx.fillStyle=haze;ctx.fillRect(0,0,width,height);
  }
  if(sky.kind==='ion'&&!lite){
-  ctx.strokeStyle=sky.tint+'33';ctx.lineWidth=1;
-  for(let i=0;i<7;i++){
-   const x=((i*97+clock*18)%(width+40))-20;
-   ctx.globalAlpha=.2+.1*(i%3);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+12+i*3,height);ctx.stroke();
+  ctx.strokeStyle=sky.tint+'40';ctx.lineWidth=1;
+  for(let i=0;i<8;i++){
+   const x=((i*97+clock*22+(sky.seed%40))%(width+50))-25;
+   ctx.globalAlpha=.18+.1*(i%3);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+10+i*2.5,height);ctx.stroke();
   }
   ctx.globalAlpha=1;
  }
- const starMul=sky.kind==='deep'?.45:sky.kind==='nebula'?.55:sky.kind==='dust'?.65:1;
- const starSize=sky.kind==='storm'?1.2:sky.kind==='deep'?.75:1;
+ // Quiet horizon glow — ties sky to mint HUD without competing with ships.
+ if(!lite&&sky.kind!=='deep'){
+  const floor=ctx.createLinearGradient(0,height*.72,0,height);
+  floor.addColorStop(0,'#0000');floor.addColorStop(1,sky.tint+'14');
+  ctx.fillStyle=floor;ctx.fillRect(0,0,width,height);
+ }
+ const starMul=sky.kind==='deep'?.5:sky.kind==='nebula'?.7:sky.kind==='dust'?.7:1;
+ const starSize=sky.kind==='storm'?1.15:sky.kind==='deep'?.8:1;
  let starI=0;
  for(const s of stars){
-  if(liteFX()&&((starI++)&3))continue;else if(!liteFX()&&softFX()&&((starI++)&1))continue;
+  if(lite&&((starI++)&3))continue;else if(!lite&&soft&&((starI++)&1))continue;
   if(sky.kind==='nebula'&&(s.r<1&&(Math.floor(s.x*100)%3)))continue;
   if(sky.kind==='deep'&&(Math.floor(s.x*80+s.y*40)%4))continue;
   const x=((s.x*width-cam.x*s.depth)%width+width)%width,y=((s.y*height-cam.y*s.depth)%height+height)%height;
-  ctx.globalAlpha=s.a*starMul;ctx.fillStyle=sky.star;ctx.fillRect(x,y,s.r*starSize,s.r*starSize);
+  const tw=s.bright?(.85+.15*Math.sin(clock*2.2+s.x*20)):1;
+  ctx.globalAlpha=s.a*starMul*tw;ctx.fillStyle=s.bright?sky.tint:sky.star;
+  const sz=s.r*starSize*(s.bright?1.35:1);
+  ctx.fillRect(x,y,sz,sz);
  }
  ctx.globalAlpha=1;
  if(!lite&&sky.lightning&&((clock*(sky.kind==='storm'?2.4:1.7))%2.6)<.1){
