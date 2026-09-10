@@ -1,0 +1,12 @@
+{
+  "release": "2.8.5",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Fold drive audio: rising charge hum while charging, a jump whoosh at transit, and a soft arrival chime."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
