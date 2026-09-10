@@ -128,9 +128,9 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.8\.6'/);
+ assert.match(release,/export const RELEASE='2\.9\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
- assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
+ assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
  assert.match(app,/interactStation/);
  assert.match(app,/renderOnFoot/);
@@ -144,8 +144,9 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.8\.6/);
- assert.match(sw,/release:'2\.8\.6'/);
+ assert.match(sw,/farbound-v2\.9\.0/);
+ assert.match(sw,/release:'2\.9\.0'/);
+ assert.match(sw,/system-chart\.mjs/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
@@ -362,6 +363,16 @@ test('Wanted escalation and system skies are available for testing',()=>{
  assert.ok(!/drawImage\(nebula/.test(app));
  assert.ok(!/lineTo\(x\+10\+i\*2\.5,height\)/.test(app));
  assert(SYSTEMS.every(s=>{const sky=systemSky(s);return Array.isArray(sky.wash)&&sky.wash.length>0&&Number.isFinite(sky.galaxy)&&Number.isFinite(sky.bandAngle)&&!/#a56dff/i.test([sky.tint,sky.bg,...sky.wash].join(''));}));
+});
+test('Galaxy chart spreads display coords and system chart ships with the System nav',()=>{
+ const chart=readFileSync(new URL('../dist/galaxy-chart.mjs',import.meta.url),'utf8');
+ assert.match(chart,/GALAXY_SPREAD/);assert.match(chart,/galaxyDisplay/);assert.match(chart,/Label LOD|wantLabel|labelSize/);
+ assert.match(chart,/dense/);
+ const sys=readFileSync(new URL('../dist/system-chart.mjs',import.meta.url),'utf8');
+ assert.match(sys,/export class SystemChart/);assert.match(sys,/shipWorld/);assert.match(sys,/Locate|locate/);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/data-action="system-map"/);assert.match(app,/case 'system-map'/);assert.match(app,/drawSystemMap/);
+ assert.match(app,/galaxyDisplay/);
 });
 test('Dynamic events start, resolve, and reuse living NPCs',()=>{
  assert.equal(EVENT_IDS.length,8);assert(EVENT_CONFIG.maxActive<=2);

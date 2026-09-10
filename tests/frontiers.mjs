@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,contractsFor,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
-import {moduleView,fleetView,guildView,factionView,mapView,robotStrip} from '../dist/frontier-views.mjs';
+import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
 import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
@@ -75,6 +75,7 @@ test('Malformed saves reject duplicate modules, duplicate rewards, overloads, an
 });
 test('Panel generators cover all navigation actions and render all guilds, factions, and modules',()=>{
  const g=new Game();const guilds=guildView(g),factions=factionView(g),modules=moduleView(g),fleet=fleetView(g),combat=fleetView(g,'combat');for(const guild of GUILDS)assert(guilds.includes(guild.name));assert(factions.includes('Cinder Directorate'));assert(modules.includes('data-action="upgrade"'));assert(fleet.includes('ship-filter'));for(const ship of SHIPS)assert(fleet.includes(ship.name));assert(combat.includes('Eagle'));assert(!combat.includes('Mule'));g.setRoute(191);const chart=mapView(g,191);assert(chart.includes('Jump next')||chart.includes('Launch to jump'));assert(chart.includes('Uncharted UR-128'));assert(!chart.includes(SYSTEMS[191].name));
+ g.launch();const local=systemMapView(g);assert(local.includes('id="system-map"'));assert(local.includes('SYSTEM')||local.includes('Local chart')||local.includes('You'));
 });
 test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogue by context',()=>{
  assert.equal(STATION_ROBOT.displayName,'Nellby-9');

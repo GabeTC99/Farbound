@@ -1,3 +1,3 @@
 /** Player-facing release label. Bump on every shipped change: 2.1.1, 2.1.2, or 2.1.1b for tiny fixes. */
-export const RELEASE='2.8.6';
+export const RELEASE='2.9.0';
 export const RELEASE_NAME='Frontiers';
