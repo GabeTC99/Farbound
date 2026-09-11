@@ -1,0 +1,15 @@
+{
+  "release": "2.9.1",
+  "name": "Frontiers",
+  "date": "2026-09-11",
+  "notes": [
+    "Station contract boards regenerate after a completed set instead of emptying permanently.",
+    "Local companies post work matching the system economy; extraction favors mining and freight.",
+    "Company standing raises pay and unlocks a Priority contract at Preferred rank.",
+    "Outbound freighters leave dock instead of looping in place with a DOCKED label."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

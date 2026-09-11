@@ -80,7 +80,7 @@ export function validateSave(x){
  for(const k of ['visited','scanned','missions','completed'])if(!Array.isArray(x[k]))return null;
  if(x.visited.some(i=>!Number.isInteger(i)||!SYSTEMS[i])||x.scanned.some(id=>!/^(planet-\d+-\d+|moon-\d+-\d+-\d+)$/.test(id)))return null;
  if(x.missions.length>3||x.missions.some(m=>!m||!['delivery','survey','bounty','mining'].includes(m.type)||!SYSTEMS[m.origin]||!Number.isFinite(m.reward)||m.reward<0||!/^\d+-\d+$/.test(m.id)||typeof m.name!=='string'||(m.type==='delivery'&&(!SYSTEMS[m.destination]||!Number.isInteger(m.tons)||m.tons<1||m.tons>10))||(m.type==='survey'&&!SYSTEMS[m.destination])||(m.type==='bounty'&&!Number.isFinite(m.startKills))||(m.type==='mining'&&m.tons!==5)))return null;
- if(x.completed.some(id=>!/^\d+-[0-3]$/.test(id)))return null;
+ if(x.completed.some(id=>!/^\d+-\d+$/.test(id)))return null;
  if(x.missions.some(m=>!Number.isInteger(m.origin)||(m.destination!=null&&!Number.isInteger(m.destination))))return null;
  const stock={};for(const [key,val] of Object.entries(x.stock||{})){if(!/^\d+:(food|ore|tech|meds|crystal)$/.test(key)||!Number.isInteger(val)||val<0||val>100000)return null;stock[key]=val;}
  const s={};for(const key of Object.keys(base))s[key]=x[key]??base[key];s.stock=stock;s.sound=!!x.sound;s.docked=!!x.docked;s.position=null;s.tutorial=clamp(Number(x.tutorial)||0,0,2);

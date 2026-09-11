@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.9\.0'/);
+ assert.match(release,/export const RELEASE='2\.9\.1'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.9\.0/);
- assert.match(sw,/release:'2\.9\.0'/);
+ assert.match(sw,/farbound-v2\.9\.1/);
+ assert.match(sw,/release:'2\.9\.1'/);
  assert.match(sw,/system-chart\.mjs/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
@@ -175,6 +175,19 @@ test('Living traffic performs distinct jobs and pauses at real destinations',()=
  const miner=g.traffic.find(t=>t.job==='MINING RUN');g.enemies=[];for(const t of g.traffic)t.underAttackUntil=0;ticks(g,30);assert(['MINING RUN','IN TRANSIT','DOCKED'].includes(miner.status));
  const scoop=g.traffic.find(t=>t.job==='FUEL SCOOPING');let worked=false;for(let i=0;i<1800;i++){g.update(1/30);if(scoop.status==='FUEL SCOOPING'&&scoop.thrust===0){worked=true;break;}}assert(worked);assert(Math.hypot(scoop.x-g.star.x,scoop.y-g.star.y)<g.star.r+650);
  const remote=frontier();remote.sys.hasStation=false;remote.makeSystem();assert.equal(remote.traffic.length,0);
+});
+test('Outbound freighter leaves dock instead of looping in place',()=>{
+ const g=new Game();g.launch();
+ const ship=g.traffic.find(t=>t.hull==='freighter');
+ assert.equal(ship.job,'DEPARTING FOR JUMP POINT');
+ assert.equal(ship.status,'DOCKED');
+ const dock={x:ship.x,y:ship.y};
+ ticks(g,6);
+ assert(g.traffic.includes(ship),'Freighter should still be in-system after a short wait');
+ assert.equal(ship.status,'IN TRANSIT');
+ assert(Math.hypot(ship.x-dock.x,ship.y-dock.y)>40);
+ assert(ship.thrust>0);
+ assert.notEqual(ship.job,'ARRIVING FROM JUMP POINT');
 });
 test('Traffic turns smoothly and flees when assaulted',()=>{
  const g=new Game();g.launch();const ship=g.traffic[0],from=ship.angle;ship.pause=0;ship.target=1;ship.x=800;ship.y=800;ship.points[1]={x:200,y:1400,status:'DOCKED'};
