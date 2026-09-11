@@ -122,6 +122,7 @@ Frontiers writes **farbound-save-v2**. On first launch it copies and migrates a 
 - **Flight menu → Restore checkpoint** recovers a recent Frontiers pilot. A rolling checkpoint is updated approximately every three minutes. Reset, import, and checkpoint restoration first preserve the outgoing pilot. This is a short-term safety copy; export JSON for a permanent checkpoint.
 - Autosave runs every four seconds, after transactions, and when leaving the game. A malformed current save falls back to a valid checkpoint or the original pilot. Surface position, discovered anomalies, fitted modules, owned ships, faction progress, depleted resources, and routes are included in saves.
 - **Export save / Restore a pilot** moves progress between devices or browser/native installations. Clearing browser data removes local saves; exported files remain independent.
+- **Optional cloud sync:** when the build’s Supabase keys are filled in (`docs/CLOUD_SYNC.md`), Flight menu → Cloud sync can email-sign-in and upload/download the pilot. Local autosave still runs first; download confirms and keeps a checkpoint.
 - A complete server-side rollback can redeploy the saved original release recorded in `releases/v1.0.0.json`. The original source revision and deployment artifact remain preserved. This changes the game served at the existing URL; it does not delete local saves.
 
 When updating an installed game, open it online, wait for its offline files to update, then close and reopen or reload it. A complete release is cached before the new worker activates, including the original-game fallback. Check the menu’s offline readiness message before relying on offline play.
@@ -135,6 +136,7 @@ node --check dist/app.js
 node tests/gameplay.mjs
 node tests/frontiers.mjs
 node tests/exploration.mjs
+node tests/cloud-sync.mjs
 node tests/offline.mjs
 ```
 

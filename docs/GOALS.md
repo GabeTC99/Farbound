@@ -25,12 +25,15 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-017 | Derelict salvage | After scanning a wreck, approach to salvage cargo/credits/modules, with optional on-foot wreck boarding for deeper finds. | Ready for review |
 | FB-018 | Kind-driven surfaces | Planet kind drives surface flight feel, anomaly mixes, landmark POIs, and approach readouts that match Spectrum dossiers. | Ready for review |
 | FB-019 | Company career ladders | Company ranks unlock exclusive jobs (escort, salvage, geology), Preferred hangar discounts, and a Partner liaison module. | Ready for review |
+| FB-020 | Optional cloud sync | Opt-in email account sync (Supabase) so beta testers can upload/download pilots across devices. Local saves remain primary. | Ready for review |
 
 ## Tracking
 
 Use the stable FB identifiers when adding detail, choosing priorities, or updating progress. Suggested progression: Planned → Ready → In progress → Verification → Complete. Ready for review means implemented and tested, awaiting review and publication.
 
 ## Change history
+
+- September 11, 2026: Candidate 2.10.1 Cloud Sync adds optional Supabase email OTP / magic-link pilot upload and download (FB-020). Disabled until `cloud-config.mjs` is filled; see `docs/CLOUD_SYNC.md`.
 
 - September 11, 2026: Candidate 2.10.0 Living Frontier ships FB-015 orbital motion, FB-016 event payoffs, FB-017 derelict salvage, FB-018 kind-driven surfaces, and FB-019 company careers.
 

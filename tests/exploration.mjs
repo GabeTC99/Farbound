@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.10\.0'/);
+ assert.match(release,/export const RELEASE='2\.10\.1'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,12 +144,14 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.10\.0/);
- assert.match(sw,/release:'2\.10\.0'/);
+ assert.match(sw,/farbound-v2\.10\.1/);
+ assert.match(sw,/release:'2\.10\.1'/);
  assert.match(sw,/system-chart\.mjs/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
+ assert.match(sw,/cloud-config\.mjs/);
+ assert.match(sw,/cloud-sync\.mjs/);
  assert.match(sw,/station-robot\.mjs/);
  assert.match(sw,/system-layout\.mjs/);
  assert.match(sw,/onfoot\.mjs/);
@@ -263,7 +265,7 @@ test('Civilian destruction can yield loot, persists its bounty, and allows payme
 });
 test('Checkpoint writes preserve the outgoing pilot instead of snapshotting the new save',()=>{
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
- assert.match(source,/writePilot\(localStorage,game\.serialize\(\),\{checkpoint:checkpoint===true\}\)/);
+ assert.match(source,/data\.savedAt=Date\.now\(\);writePilot\(localStorage,data,\{checkpoint:checkpoint===true\}\)/);
  assert(!/if\(checkpoint===true\)writePilot\(localStorage,pilot\);writePilot/.test(source));
  const map=new Map(),storage={getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)};
  const first=newSave();first.credits=2400;writePilot(storage,first,{now:1});
