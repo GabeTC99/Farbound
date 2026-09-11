@@ -2,7 +2,7 @@ import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier,EVENT_IDS,EVENT_CONFIG,eventArrowTargets,surveyWorldIds,systemLayoutMeta,buildSystemLayout,isLandablePlanet} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier,EVENT_IDS,EVENT_CONFIG,eventArrowTargets,eventObjective,surveyWorldIds,systemLayoutMeta,buildSystemLayout,isLandablePlanet,applyOrbitPhase,advanceOrbits} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
 const ticks=(g,seconds,input={})=>{for(let t=0;t<seconds;t+=1/30)g.update(1/30,input);};
@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.9\.1'/);
+ assert.match(release,/export const RELEASE='2\.10\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.9\.1/);
- assert.match(sw,/release:'2\.9\.1'/);
+ assert.match(sw,/farbound-v2\.10\.0/);
+ assert.match(sw,/release:'2\.10\.0'/);
  assert.match(sw,/system-chart\.mjs/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
@@ -323,10 +323,14 @@ test('Planets, stars and stations allow uninterrupted overflight',()=>{
  for(const kind of ['planet','star','station']){
   const g=new Game();g.launch();g.enemies=[];g.traffic=[];g.patrols=[];g.asteroids=[];
   const body=kind==='planet'?g.planets[0]:g[kind];
-  g.player.x=body.x-5;g.player.y=body.y;g.player.vx=200;g.player.vy=0;
-  g.update(.05);assert(g.player.x>body.x);assert(g.player.x<body.x+10);assert.equal(g.player.y,body.y);assert(g.player.vx>180);
-  if(kind==='station')assert(g.dock());
-  if(kind==='planet'){g.player.vx=0;g.target=body;assert(g.scanTarget());}
+  // Snapshot before update — planets/moons may advance on living orbits.
+  const x0=body.x,y0=body.y,startX=x0-5;
+  g.player.x=startX;g.player.y=y0;g.player.vx=200;g.player.vy=0;
+  g.update(.05);
+  assert(g.player.x>startX);assert(g.player.vx>180);
+  assert(Math.abs(g.player.y-y0)<2);
+  if(kind==='station'){g.player.x=body.x;g.player.y=body.y;assert(g.dock());}
+  if(kind==='planet'){g.player.x=body.x;g.player.y=body.y+body.r+40;g.player.vx=0;g.target=body;assert(g.scanTarget());}
  }
 });
 test('Asteroids and every NPC class block contact, including boosted passes',()=>{
@@ -446,4 +450,68 @@ test('Operation guidance survives reload and navigates combat, delivery and repo
  g.s.system=d.destination;g.makeSystem();g.s.docked=true;assert(g.claimOperation(op.uid));assert(g.acceptOperation(faction,'relief'));op=g.s.operations[0];d=operationDetails(g.s,op);assert(d.next.includes('Acquire'));g.s.cargo[d.good]=d.total;d=operationDetails(g.s,op);assert(d.next.includes('Report success'));assert(g.routeOperation(op.uid));assert.equal(g.target,g.station);
  const html=operationCards(g);assert(html.includes(d.next));assert(html.includes('Select station'));assert(factionView(g).indexOf('Active operations')<factionView(g).indexOf('faction-grid'));assert(g.claimOperation(op.uid));assert.equal(g.s.operations.length,0);
 });
+
+test('Living Frontier interventions pay when the player assists',()=>{
+ const g=new Game();g.launch();
+ assert(g.triggerDynamicEvent('pirateAttack'));
+ const ev=g.dyn.active.find(e=>e.type==='pirateAttack');assert(ev);
+ assert(ev.objective);assert.match(ev.objective,/Defend|civilian|attack/i);
+ const pirate=g.enemies.find(e=>e.id===ev.pirateId);assert(pirate);
+ const beforeCredits=g.s.credits,before=g.s.metrics.interventions||0;
+ pirate.playerHit=true;g.onDestroyed(pirate,true);g.enemies=g.enemies.filter(e=>e!==pirate);
+ ticks(g,.2);
+ assert.equal(g.dyn.active.length,0);
+ assert(g.s.credits>beforeCredits);
+ assert.equal(g.s.metrics.interventions,before+1);
+ // Fresh distress payoff
+ const h=new Game();h.launch();
+ assert(h.triggerDynamicEvent('distressSignal'));
+ const sig=h.signals[0];assert(sig);sig.discovered=true;h.target=sig;h.player.x=sig.x;h.player.y=sig.y;h.player.vx=h.player.vy=0;
+ const c0=h.s.credits;assert(h.scanDynamic());ticks(h,.2);
+ assert(h.s.credits>c0);assert((h.s.metrics.interventions||0)>=1);
+ assert(eventObjective);assert.match(readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),/eventObjective\(/);
+});
+test('Derelict scan unlocks salvage loot and optional wreck boarding',()=>{
+ const g=new Game();g.launch();
+ assert(g.triggerDynamicEvent('derelictWreck'));
+ const d=g.derelicts[0];assert(d);assert.equal(d.salvaged,false);
+ g.target=d;g.player.x=d.x;g.player.y=d.y;g.player.vx=g.player.vy=0;
+ assert(g.scanDynamic());assert(d.scanned);assert.equal(d.salvaged,false);
+ const credits=g.s.credits,salvages=g.s.metrics.salvages||0;
+ assert(g.scanDynamic());assert(d.salvaged);assert(g.s.credits>=credits);assert.equal(g.s.metrics.salvages,salvages+1);
+ const h=new Game();h.launch();assert(h.triggerDynamicEvent('derelictWreck'));
+ const w=h.derelicts[0];w.scanned=true;h.target=w;h.player.x=w.x;h.player.y=w.y;h.player.vx=h.player.vy=0;
+ assert(h.boardWreck());assert.equal(h.onfoot.kind,'wreck');
+ const zone=(h.onfoot.zones||[]).find(z=>z.service==='cache'||z.cache);assert(zone);
+ h.onfoot.x=zone.x;h.onfoot.y=zone.y;assert(h.interactWreck());
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/BOARD WRECK/);assert.match(app,/boardWreck\(/);assert.match(app,/interactWreck\(/);
+});
+test('Kind-driven surfaces expose readout, landmarks, and landing feel',()=>{
+ const g=new Game();g.launch();
+ const landable=g.planets.find(p=>isLandablePlanet(p))||g.planets.find(p=>p.type==='planet'&&p.landable!==false);
+ assert(landable);
+ g.target=landable;g.player.x=landable.x;g.player.y=landable.y+landable.r+20;g.player.vx=g.player.vy=0;
+ assert(g.land());assert(g.surface);assert(g.surface.readout);
+ assert(g.surface.anomalies.some(a=>a.landmark));
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/surface\.readout/);
+});
+test('Living orbits advance planet and moon positions over playtime',()=>{
+ const layout=buildSystemLayout(SYSTEMS[0]);
+ assert(layout.planets.length>=1);
+ const p=layout.planets[0];assert(Number.isFinite(p.orbitRadius));assert(Number.isFinite(p.orbitAngle));assert(Number.isFinite(p.period));
+ const x0=p.x,y0=p.y;
+ applyOrbitPhase(layout,5000);
+ assert(p.x!==x0||p.y!==y0);
+ const x1=p.x;
+ advanceOrbits(layout.planets,layout.moons,layout.stars,8);
+ assert(p.x!==x1);
+ const g=new Game();g.launch();
+ const before=g.planets.filter(b=>b.type==='planet').map(b=>({id:b.id,x:b.x,y:b.y}));
+ ticks(g,6);
+ const moved=g.planets.filter(b=>b.type==='planet').some(b=>{const o=before.find(x=>x.id===b.id);return o&&(o.x!==b.x||o.y!==b.y);});
+ assert(moved);
+});
+
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name,e);}}console.log(`\n${tests.length-failed} / ${tests.length} exploration checks passed.`);if(failed)process.exitCode=1;

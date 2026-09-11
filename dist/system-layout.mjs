@@ -362,3 +362,56 @@ export function buildSystemLayout(sys,r=seedRng(sys.id)){
 
  return{stars,planets,moons,belts,asteroids,stations,enemies,primary:stars[0],homeDock:stations.find(s=>s.type==='station')||stations[0]};
 }
+
+/** Radians per second for readable orbital motion (FB-015). Presence first — ~25–60 min of playtime per revolution. */
+export function orbitRate(period){
+ const days=Math.max(40,Number(period)||120);
+ return (Math.PI*2)/Math.max(1500,days*18);
+}
+
+function hostOf(body,stars,planets){
+ if(body.type==='moon'&&body.parentId)return planets.find(p=>p.id===body.parentId)||stars[0];
+ return stars.find(s=>s.id===body.hostStarId)||stars[0];
+}
+
+/** Apply absolute playtime phase so reloads stay consistent. */
+export function applyOrbitPhase(layout,playtime=0){
+ const stars=layout.stars||[],planets=layout.planets||[],moons=layout.moons||[];
+ for(const p of planets){
+  if(!Number.isFinite(p.orbitRadius)||!Number.isFinite(p.orbitAngle))continue;
+  const host=hostOf(p,stars,planets);if(!host)continue;
+  const ang=p.orbitAngle+orbitRate(p.period)*playtime;
+  p.x=nz(host.x+Math.cos(ang)*p.orbitRadius);
+  p.y=nz(host.y+Math.sin(ang)*p.orbitRadius);
+  p.displayAngle=ang;
+ }
+ for(const m of moons){
+  if(!Number.isFinite(m.orbitRadius)||!Number.isFinite(m.orbitAngle))continue;
+  const host=hostOf(m,stars,planets);if(!host)continue;
+  const ang=m.orbitAngle+orbitRate(m.period||40)*playtime;
+  m.x=nz(host.x+Math.cos(ang)*m.orbitRadius);
+  m.y=nz(host.y+Math.sin(ang)*m.orbitRadius);
+  m.displayAngle=ang;
+ }
+ return layout;
+}
+
+/** Advance planets and moons one frame; stations stay fixed. */
+export function advanceOrbits(planets,moons,stars,dt){
+ if(!dt)return;
+ const starList=stars||[];
+ for(const p of planets||[]){
+  if(!Number.isFinite(p.orbitRadius))continue;
+  const host=hostOf(p,starList,planets);if(!host)continue;
+  p.displayAngle=(p.displayAngle??p.orbitAngle)+orbitRate(p.period)*dt;
+  p.x=host.x+Math.cos(p.displayAngle)*p.orbitRadius;
+  p.y=host.y+Math.sin(p.displayAngle)*p.orbitRadius;
+ }
+ for(const m of moons||[]){
+  if(!Number.isFinite(m.orbitRadius))continue;
+  const host=hostOf(m,starList,planets);if(!host)continue;
+  m.displayAngle=(m.displayAngle??m.orbitAngle)+orbitRate(m.period||40)*dt;
+  m.x=host.x+Math.cos(m.displayAngle)*m.orbitRadius;
+  m.y=host.y+Math.sin(m.displayAngle)*m.orbitRadius;
+ }
+}

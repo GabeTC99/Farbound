@@ -270,4 +270,39 @@ test('Station boards regenerate, follow local economies, and raise company stand
  assert.match(app,/Local companies aligned with the system faction/);
  assert.match(app,/contractorLine/);
 });
+
+test('Company careers unlock exclusive jobs, hangar discounts, and Partner liaison',()=>{
+ const g=new Game();
+ const cos=companiesFor(SYSTEMS[0]);
+ for(const c of cos)g.s.companies[c.id]={standing:20,completed:3,perk:false};
+ let board=contractsFor(g.s);
+ assert(board.some(m=>m.type==='escort'&&m.career));
+ for(const c of cos)g.s.companies[c.id]={standing:45,completed:6,perk:false};
+ board=contractsFor(g.s);
+ assert(board.length>=5);
+ const preferred=new Game();
+ for(const c of companiesFor(SYSTEMS[0]))preferred.s.companies[c.id]={standing:45,completed:6,perk:false};
+ preferred.s.docked=true;
+ const ship=SHIPS.find(s=>s.id!==preferred.s.ship&&s.price<=preferred.s.credits+50000);
+ preferred.s.credits=ship.price;
+ const before=preferred.s.credits;
+ assert(preferred.buyShip(ship.id));
+ assert(before-preferred.s.credits<ship.price);
+ const partner=new Game();
+ for(const c of companiesFor(SYSTEMS[0]))partner.s.companies[c.id]={standing:80,completed:12,perk:false};
+ board=contractsFor(partner.s);
+ assert(board.some(m=>m.type==='salvage'||m.type==='geology'));
+ const job=board.find(m=>m.type==='escort')||board.find(m=>m.career);
+ assert(partner.accept(job.id));
+ if(job.type==='escort'||job.type==='bounty')partner.s.metrics.pirates=(job.startKills||0)+(job.required||2);
+ if(job.type==='geology')partner.s.metrics.geology=(job.startGeology||0)+(job.required||2);
+ if(job.type==='salvage')partner.s.cargo[job.good||'crystal']=job.tons||3;
+ partner.claimMissions();
+ assert(Object.values(partner.s.companies).some(c=>c.perk));
+ assert(partner.s.modules.some(m=>m.kind==='liaison'));
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/m\.type==='escort'/);assert.match(app,/m\.type==='salvage'/);assert.match(app,/m\.type==='geology'/);
+ assert.match(app,/Liaison|Partner|Preferred hangar|hangar rate|career/i);
+});
+
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;
