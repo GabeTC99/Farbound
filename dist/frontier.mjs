@@ -5,9 +5,9 @@ import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
-import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan} from './dynamic-events.mjs';
+import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan,eventObjective,salvageDerelict,createWreckLayout} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState} from './station-robot.mjs';
-import {surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody} from './system-layout.mjs';
+import {surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,advanceOrbits,applyOrbitPhase} from './system-layout.mjs';
 export * from './core.mjs';
 export {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
 export {moduleSlots} from './core.mjs';
@@ -16,14 +16,14 @@ export {nearestZone,createOnFoot,updateOnFoot,onFootSave} from './onfoot.mjs';
 export {createStationLayout} from './station-layout.mjs';
 export {createPlanetLayout} from './planet-layout.mjs';
 export {systemSky,wantedTier} from './atmosphere.mjs';
-export {EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,eventArrowTargets} from './dynamic-events.mjs';
+export {EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,eventArrowTargets,eventObjective,salvageDerelict} from './dynamic-events.mjs';
 export {STATION_ROBOT,ROBOT_LINES,buildRobotContext,pickRobotLine,speakRobot,ensureRobotState} from './station-robot.mjs';
-export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,PLANET_KINDS,STAR_TYPES} from './system-layout.mjs';
+export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,PLANET_KINDS,STAR_TYPES,advanceOrbits,applyOrbitPhase} from './system-layout.mjs';
 export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};
 export function newSave(){return {...migrate(v1Save()),systemScans:[]};}
- function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],spectrumScanned:s.spectrumScanned||[],heat:25,bounty:0,detained:false,dockId:null,stationPos:null,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,companies:{},metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
+ function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],spectrumScanned:s.spectrumScanned||[],heat:25,bounty:0,detained:false,dockId:null,stationPos:null,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,companies:{},metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,interventions:0,salvages:0,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
 export function validateSave(x){
  if(!x||![1,2].includes(x.version))return null;const base=v1Validate({...x,version:1});if(!base)return null;if(x.version===1)return migrate(base);
  try{const s=migrate(base);
@@ -52,15 +52,15 @@ export function validateSave(x){
   const validId=id=>typeof id==='string'&&/^(planet-\d+-\d+|moon-\d+-\d+-\d+)-a[0-5]$/.test(id)&&!!SYSTEMS[Number(id.split('-')[1])];
   if(!Array.isArray(x.surfaceScanned)||x.surfaceScanned.length>5760||x.surfaceScanned.some(id=>!validId(id)))return null;s.surfaceScanned=[...new Set(x.surfaceScanned)];
   if(!Array.isArray(x.records)||x.records.length>5760||x.records.some(r=>!r||!validId(r.id)||!numeric(r.value)||r.value>100000||!['geology','relic','biosignature','signal'].includes(r.kind)||!s.surfaceScanned.includes(r.id)))return null;s.records=x.records.map(r=>({id:r.id,kind:r.kind,value:r.value,system:Number(r.id.split('-')[1])}));if(new Set(s.records.map(r=>r.id)).size!==s.records.length)return null;
-  for(const k of ['discoveries','anomalies','geology','deliveries','operations','pirates']){if(!numeric(x.metrics?.[k]))return null;s.metrics[k]=x.metrics[k];}for(const id of factionIds){if(!numeric(x.metrics?.factionKills?.[id]))return null;s.metrics.factionKills[id]=x.metrics.factionKills[id];}
+  for(const k of ['discoveries','anomalies','geology','deliveries','operations','pirates','interventions','salvages']){if(!numeric(x.metrics?.[k]??(k==='interventions'||k==='salvages'?0:null)))return null;s.metrics[k]=x.metrics?.[k]??0;}for(const id of factionIds){if(!numeric(x.metrics?.factionKills?.[id]))return null;s.metrics.factionKills[id]=x.metrics.factionKills[id];}
   if(!Array.isArray(x.operations)||x.operations.length>3||x.operations.some(o=>!o||!/^op-\d+$/.test(o.uid)||!factionIds.includes(o.faction)||!['relief','combat'].includes(o.type)||!Number.isInteger(o.target)||!SYSTEMS[o.target]||!Number.isInteger(o.kills)||o.kills<0||o.kills>2))return null;s.operations=x.operations.map(o=>({uid:o.uid,faction:o.faction,type:o.type,target:o.target,kills:o.kills}));if(new Set(s.operations.map(o=>o.uid)).size!==s.operations.length||new Set(s.operations.map(o=>o.faction+o.type)).size!==s.operations.length)return null;
   for(const [id,list]of Object.entries(x.cleared||{})){if(!/^\d+$/.test(id)||!SYSTEMS[+id]||!Array.isArray(list)||list.length>500||list.some(v=>typeof v!=='string'||!/^(rock|pirate|patrol|op)-[a-z0-9-]+$/.test(v)))return null;s.cleared[id]=[...new Set(list)];}
   s.companies={};
   if(x.companies!=null){
    if(typeof x.companies!=='object'||Array.isArray(x.companies)||Object.keys(x.companies).length>500)return null;
    for(const [id,c] of Object.entries(x.companies)){
-    if(!/^co-\d+-[ab]$/.test(id)||!c||!Number.isInteger(c.completed)||c.completed<0||c.completed>10000||!Number.isFinite(c.standing)||c.standing<0||c.standing>100)return null;
-    s.companies[id]={completed:c.completed,standing:c.standing};
+    if(!/^co-\d+-[ab]$/.test(id)||!c||!Number.isInteger(c.completed)||c.completed<0||c.completed>10000||!Number.isFinite(c.standing)||c.standing<0||c.standing>100||(c.perk!=null&&typeof c.perk!=='boolean'))return null;
+    s.companies[id]={completed:c.completed,standing:c.standing,perk:!!c.perk};
    }
   }
   s.allegiance=factionIds.includes(x.allegiance)?x.allegiance:null;s.engineVolume=clamp(Number.isFinite(Number(x.engineVolume))?Number(x.engineVolume):.35,0,1);s.graphics=['high','balanced','performance'].includes(x.graphics)?x.graphics:'high';s.nextModule=Math.max(1,...s.modules.map(m=>+m.uid.slice(2)+1));s.nextOperation=Math.max(1,Number.isInteger(x.nextOperation)?x.nextOperation:1,...s.operations.map(o=>+o.uid.slice(3)+1));
@@ -109,6 +109,9 @@ function makeContract(here,s,type,slot,gen,company,premium){
  if(type==='delivery'){const tons=rank.level>=3?5:rank.level>=2?4:3;return {id,type,name:`${prefix}${company.name}: Supplies for ${target.name}`,desc:`Carry ${tons} t of sealed supplies to ${target.station}, ${target.name}. ${posted}`,origin:here.id,destination:target.id,tons,reward:Math.round((1000+Math.round(dist(here,target)*65))*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level};}
  if(type==='survey')return {id,type,name:`${prefix}${company.name}: Survey ${dest.name}`,desc:`Scan ${worldWord} in ${dest.name}, then return here. ${posted}`,origin:here.id,destination:dest.id,worlds:worlds.length,reward:Math.round((1700+Math.round(dist(here,dest)*55)+worlds.length*120)*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level};
  if(type==='bounty')return {id,type,name:`${prefix}${company.name}: Clear the shipping lanes`,desc:`Destroy 2 pirates anywhere, then return here. ${posted}`,origin:here.id,required:2,startKills:s.metrics?.pirates??s.kills,reward:Math.round(2200*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level};
+ if(type==='escort')return {id,type,name:`${prefix}${company.name}: Escort charter`,desc:`Destroy 2 pirates threatening company shipping, then return here. ${posted}`,origin:here.id,required:2,startKills:s.metrics?.pirates??s.kills,reward:Math.round(2600*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level,career:true};
+ if(type==='salvage')return {id,type,name:`${prefix}${company.name}: Salvage claim`,desc:`Recover 3 t of void crystals (from wrecks or belts), then return here. ${posted}`,origin:here.id,tons:3,good:'crystal',reward:Math.round(2400*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level,career:true};
+ if(type==='geology')return {id,type,name:`${prefix}${company.name}: Geological survey`,desc:`Record 2 new geological surface anomalies after accepting, then return here. ${posted}`,origin:here.id,required:2,startGeology:s.metrics?.geology||0,reward:Math.round(2800*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level,career:true};
  return {id,type:'mining',name:`${prefix}${company.name}: Titanium quota`,desc:`Bring 5 t of titanium ore to this station. ${posted}`,origin:here.id,tons:5,reward:Math.round(1500*pay),company:company.id,companyName:company.name,faction:company.faction,factionName:faction,rankName:rank.name,rankLevel:rank.level};
 }
 export function contractsFor(s){
@@ -117,9 +120,12 @@ export function contractsFor(s){
  const companies=companiesFor(here),done=s.completed.filter(id=>id.split('-')[0]===String(here.id)).length,gen=Math.floor(done/4);
  const bag=[...(CONTRACT_BAGS[here.eco]||CONTRACT_BAGS.Frontier)];
  const best=Math.max(0,...companies.map(c=>s.companies?.[c.id]?.standing||0));
- if(companyRank(best).level>=2)bag.push(bag[0]);
+ const rank=companyRank(best);
+ if(rank.level>=1)bag.push('escort');
+ if(rank.level>=2)bag.push(bag[0]);
+ if(rank.level>=3)bag.push(here.eco==='Extraction'||here.eco==='Industrial'?'salvage':'geology');
  const taken=new Set([...(s.missions||[]).map(m=>m.id),...(s.completed||[])]);
- return bag.map((type,i)=>makeContract(here,s,type,i,gen,issuerFor(companies,type,i),i>=4)).filter(m=>!taken.has(m.id));
+ return bag.map((type,i)=>makeContract(here,s,type,i,gen,issuerFor(companies,type,i),i>=4&&type!=='escort'&&type!=='salvage'&&type!=='geology')).filter(m=>!taken.has(m.id));
 }
 const metric=(s,key)=>key==='surveys'?s.scanned.length:key==='sales'?s.trade:key==='mined'?s.mined:key==='contracts'?s.contracts:s.metrics[key]||0;
 export function guildProgress(s,id){const state=s.guilds[id],q=GUILDS.find(g=>g.id===id).quests[state.stage];if(!q)return{done:true,ready:false};const n=q.good?s.cargo[q.good]:Math.max(0,metric(s,q.metric)-state.baseline);return{done:false,quest:q,current:Math.min(n,q.count),total:q.count,ready:state.active&&n>=q.count};}
@@ -136,7 +142,7 @@ export class Game extends FlightGame{
  constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.onfoot=null;this.scooping=false;this.discoveryScan=null;this.dynScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.companies??={};this.s.stationPos??=null;this.s.systemScans??=[...this.s.visited];this.s.spectrumScanned??=[];this.s.explorationLog??=[];this.s.transit??=[];if(!Number.isFinite(this.s.engineVolume))this.s.engineVolume=.35;if(!['high','balanced','performance'].includes(this.s.graphics))this.s.graphics='high';ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;const ground=terrainAt(this.surface.x,this.surface.seed)-19;if(this.surface.y>=ground-2){this.surface.y=ground;this.surface.landed=true;}if(this.s.surface.foot&&this.surface.landed)this.onfoot=createOnFoot(createPlanetLayout(this.surface),this.s.surface.foot);}}else if(this.s.docked)this.enterStationDeck();}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
  nearestPrison(){const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);return (barges.sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0]||SYSTEMS.find(s=>s.hasStation)).id;}
- makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];this.dyn?.reset();this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}else if(this.s.dockId){const dock=this.stations.find(s=>s.id===this.s.dockId&&s.type==='station');if(dock)this.station=dock;}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction),anchor=this.station;for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:anchor.x+850+i*180,y:anchor.y+400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
+ makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];if(this.onfoot?.kind==='wreck')this.onfoot=null;this.dyn?.reset();applyOrbitPhase({stars:this.stars,planets:this.planets.filter(p=>p.type==='planet'),moons:this.planets.filter(p=>p.type==='moon')},this.s.playtime||0);this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}else if(this.s.dockId){const dock=this.stations.find(s=>s.id===this.s.dockId&&s.type==='station');if(dock)this.station=dock;}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction),anchor=this.station;for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:anchor.x+850+i*180,y:anchor.y+400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
  triggerDynamicEvent(type){if(this.s.docked)this.launch();EVENT_CONFIG.log=true;const ok=this.dyn.trigger(type);this.notify(ok?('DEV · dynamic event · '+type):('DEV · could not start '+type),ok?'good':'bad');return ok;}
  onCombatLoss(loss,{security}= {}){
   this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.responseAt=null;
@@ -397,7 +403,7 @@ export class Game extends FlightGame{
  }
  scanTarget(){if(this.surface)return this.scanSurface();if(this.discoveryScan||this.jump)return false;if(!this.visiblePlanets.length)return this.discover();if(!this.visiblePlanets.includes(this.target))this.target=this.visiblePlanets.reduce((a,b)=>dist(this.player,a)<dist(this.player,b)?a:b);return super.scanTarget();}
 
- land(){if(this.s.docked||this.jump)return false;if(!this.visiblePlanets.length){this.notify('Run a discovery scan to locate worlds first.');return false;}const candidates=this.visiblePlanets.filter(isLandableBody);if(!candidates.length){this.notify('No landable worlds here. Gas and ice giants cannot be entered.');return false;}const p=candidates.includes(this.target)?this.target:candidates[0];this.target=p;if(!isLandableBody(p)){this.notify((p.kind||'This giant')+' — not landable. Select a solid world or moon.');return false;}if(dist(this.player,p)>p.r+450){this.auto=p;this.notify('Approaching landing range. Tap LAND when you arrive.');return false;}if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s for atmospheric entry.');return false;}this.auto=null;this.scan=null;this.spectrumScan=null;this.discoveryScan=null;this.scooping=false;this.shots=[];this.onfoot=null;this.surface=createSurface(p,this.s.surfaceScanned);this.surfaceRecordsStart=this.s.records.length;this.player.vx=this.player.vy=0;this.notify('Surface flight engaged. Soft-land, then disembark to inspect nearby signals.','good');return true;}
+ land(){if(this.s.docked||this.jump)return false;if(!this.visiblePlanets.length){this.notify('Run a discovery scan to locate worlds first.');return false;}const candidates=this.visiblePlanets.filter(isLandableBody);if(!candidates.length){this.notify('No landable worlds here. Gas and ice giants cannot be entered.');return false;}const p=candidates.includes(this.target)?this.target:candidates[0];this.target=p;if(!isLandableBody(p)){this.notify((p.kind||'This giant')+' — not landable. Select a solid world or moon.');return false;}if(dist(this.player,p)>p.r+450){this.auto=p;this.notify('Approaching landing range. Tap LAND when you arrive.');return false;}if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s for atmospheric entry.');return false;}this.auto=null;this.scan=null;this.spectrumScan=null;this.discoveryScan=null;this.scooping=false;this.shots=[];this.onfoot=null;this.surface=createSurface(p,this.s.surfaceScanned);this.surfaceRecordsStart=this.s.records.length;this.player.vx=this.player.vy=0;this.notify('Surface flight · '+(this.surface.readout||p.kind)+'. Soft-land, then disembark.','good');return true;}
  takeoff(){if(!this.surface)return false;if(this.onfoot){this.notify('Board the skiff first.');return false;}const p=this.planets.find(p=>p.id===this.surface.planetId);this.surface=null;this.s.surface=null;this.onfoot=null;this.player.x=p.x;this.player.y=p.y+p.r+360;this.player.vx=this.player.vy=0;this.target=p;this.notify('Back in orbit. Dock to sell anomaly signals.');return true;}
  completeSurfaceRecord(a){
   if(!this.surface||!a)return false;
@@ -525,24 +531,60 @@ export class Game extends FlightGame{
   if(this.scooping){this.s.fuel=Math.min(getStats(this.s).fuel,this.s.fuel+this.scoopRate*dt);if(this.s.fuel>=getStats(this.s).fuel){this.scooping=false;this.scoopRate=0;this.notify('Fuel tank full. Scoop retracted.','good');}}
  }
 
- accept(id){if(!this.s.docked)return false;const m=contractsFor(this.s).find(x=>x.id===id);if(!m)return false;if(this.s.missions.length>=3){this.notify('Finish a contract first. Maximum 3 active.');return false;}if(m.type==='delivery'&&getStats(this.s).cargo-cargoUsed(this.s)<m.tons){this.notify(`Free up ${m.tons} t of cargo space first.`);return false;}const job={...m};if(job.type==='bounty')job.startKills=this.s.metrics?.pirates??this.s.kills;this.s.missions.push(job);this.notify('Contract accepted: '+m.name,'good');return true;}
+ accept(id){if(!this.s.docked)return false;const m=contractsFor(this.s).find(x=>x.id===id);if(!m)return false;if(this.s.missions.length>=3){this.notify('Finish a contract first. Maximum 3 active.');return false;}if((m.type==='delivery'||m.type==='salvage')&&getStats(this.s).cargo-cargoUsed(this.s)<(m.tons||0)){this.notify(`Free up ${m.tons} t of cargo space first.`);return false;}const job={...m};if(job.type==='bounty'||job.type==='escort')job.startKills=this.s.metrics?.pirates??this.s.kills;if(job.type==='geology')job.startGeology=this.s.metrics?.geology||0;this.s.missions.push(job);this.notify('Contract accepted: '+m.name,'good');return true;}
+ missionReady(m){
+  if(m.type==='delivery')return this.s.system===m.destination;
+  if(this.s.system!==m.origin)return false;
+  if(m.type==='survey')return surveyWorldIds(m.destination,SYSTEMS[m.destination]).every(id=>this.s.scanned.includes(id));
+  if(m.type==='bounty'||m.type==='escort')return (this.s.metrics?.pirates??this.s.kills)-m.startKills>=2;
+  if(m.type==='geology')return (this.s.metrics?.geology||0)-(m.startGeology||0)>=(m.required||2);
+  if(m.type==='salvage')return (this.s.cargo[m.good||'crystal']||0)>=(m.tons||3);
+  return this.s.cargo.ore>=m.tons;
+ }
  claimMissions(){
   const done=this.s.missions.filter(m=>this.missionReady(m));
-  super.claimMissions();
   if(!this.s.docked)return;
+  for(const m of done){
+   this.s.credits+=m.reward;this.s.contracts++;
+   if(m.type==='mining')this.s.cargo.ore-=m.tons;
+   if(m.type==='salvage')this.s.cargo[m.good||'crystal']-=m.tons;
+   this.s.completed.push(m.id);this.notify(`Contract fulfilled · +${m.reward.toLocaleString()} cr`,'good');
+  }
+  this.s.missions=this.s.missions.filter(m=>!done.includes(m));
   this.s.companies||={};
   for(const m of done){
    if(m.type==='delivery')this.s.metrics.deliveries++;
    if(m.company){
-    const rec=this.s.companies[m.company]||={standing:0,completed:0},before=companyRank(rec.standing);
+    const rec=this.s.companies[m.company]||={standing:0,completed:0,perk:false},before=companyRank(rec.standing);
     rec.completed++;rec.standing=Math.min(100,rec.standing+8);
     const rank=companyRank(rec.standing);
     if(rank.level>before.level)this.notify(`${m.companyName||'Contractor'} now ${rank.name}. Higher-paying contracts unlocked.`,'good');
+    if(rank.level>=3&&!rec.perk&&this.s.modules.length<85){
+     rec.perk=true;
+     const item={uid:'m-'+this.s.nextModule++,kind:'liaison',grade:1};
+     this.s.modules.push(item);
+     this.notify(`${m.companyName||'Company'} Partner perk: Liaison suite unlocked in Modules.`,'good');
+    }
    }
    if(m.faction&&this.s.reputation[m.faction]!=null)this.s.reputation[m.faction]=clamp(this.s.reputation[m.faction]+2,-100,100);
   }
  }
- buyShip(id){if(!this.s.docked||id===this.s.ship)return false;const b=SHIPS.find(b=>b.id===id);if(!b)return false;const owned=this.s.fleet.includes(id),cost=owned?0:b.price,st=getStats({...this.s,ship:id});if(this.s.credits<cost){this.notify('Insufficient credits.');return false;}if(cargoUsed(this.s)>st.cargo){this.notify('This ship cannot hold your cargo. Sell enough cargo to switch ships.');return false;}this.s.hangar[this.s.ship]={hull:this.s.hull,shield:this.s.shield,fuel:this.s.fuel};this.s.credits-=cost;this.s.ship=id;if(!owned)this.s.fleet.push(id);const h=this.s.hangar[id]||st;this.s.hull=clamp(h.hull,1,st.hull);this.s.shield=st.shield;this.s.fuel=clamp(h.fuel,0,st.fuel);this.player.r=shipRadius(id);this.refreshRoute();this.notify((owned?'Switched to ':'Purchased ')+b.name+'. Other ships remain in your hangar.','good');return true;}
+ buyShip(id){if(!this.s.docked||id===this.s.ship)return false;const b=SHIPS.find(b=>b.id===id);if(!b)return false;const owned=this.s.fleet.includes(id);const best=Math.max(0,...Object.values(this.s.companies||{}).map(c=>c.standing||0));const discount=companyRank(best).level>=2&&!owned?0.1:0;const cost=owned?0:Math.round(b.price*(1-discount)),st=getStats({...this.s,ship:id});if(this.s.credits<cost){this.notify('Insufficient credits.');return false;}if(cargoUsed(this.s)>st.cargo){this.notify('This ship cannot hold your cargo. Sell enough cargo to switch ships.');return false;}this.s.hangar[this.s.ship]={hull:this.s.hull,shield:this.s.shield,fuel:this.s.fuel};this.s.credits-=cost;this.s.ship=id;if(!owned)this.s.fleet.push(id);const h=this.s.hangar[id]||st;this.s.hull=clamp(h.hull,1,st.hull);this.s.shield=st.shield;this.s.fuel=clamp(h.fuel,0,st.fuel);this.player.r=shipRadius(id);this.refreshRoute();this.notify((owned?'Switched to ':'Purchased ')+b.name+(discount?` · Preferred hangar rate (−${Math.round(discount*100)}%).`:'. Other ships remain in your hangar.'),'good');return true;}
+ boardWreck(){const t=this.target;if(!t||t.type!=='derelict'||!t.scanned||t.salvaged||this.s.docked||this.surface)return false;if(dist(this.player,t)>180){this.notify('Close within 180 m to board the wreck.');return false;}this.player.vx=this.player.vy=0;this.onfoot=createOnFoot(createWreckLayout(t));this.notify('Boarded the derelict. Search the cargo bay, then return via the airlock.');return true;}
+ leaveWreck(){if(!this.onfoot||this.onfoot.kind!=='wreck')return false;this.onfoot=null;this.notify('Back in open space.');return true;}
+ interactWreck(){
+  if(!this.onfoot||this.onfoot.kind!=='wreck')return null;
+  const z=nearestZone(this.onfoot);if(!z){this.notify('Walk to the cargo bay or airlock.');return null;}
+  if(z.board){this.leaveWreck();return{leave:true};}
+  if(z.service==='cache'&&!z.looted){
+   z.looted=true;const good=z.cacheGood||'ore';const msg=(()=>{const st=getStats(this.s),free=st.cargo-cargoUsed(this.s);if(free<=0){const cr=90;this.s.credits+=cr;return`Hold full · +${cr} cr`;}this.s.cargo[good]=(this.s.cargo[good]||0)+1;return`+1 t ${good}`;})();
+   this.s.credits+=80;this.s.metrics.salvages=(this.s.metrics.salvages||0)+1;
+   const d=this.derelicts.find(x=>x.id===this.onfoot.derelictId);if(d){d.salvaged=true;d.life=Math.min(d.life||0,10);}
+   this.notify('Cargo bay stripped · '+msg+' · +80 cr','good');return{cache:true};
+  }
+  if(z.service==='inspect'){this.notify('Flight recorder confirms the ship was abandoned mid-route.');return{inspect:true};}
+  return{zone:z};
+ }
  upgrade(kind){if(!this.s.docked||!MODULES[kind]?.standard)return false;const active=this.s.loadouts[this.s.ship],m=this.s.modules.find(m=>m.kind===kind&&active.includes(m.uid)),grade=m?.grade||0,cost=MODULES[kind].price*(grade+1);if(grade>=3||this.s.credits<cost)return false;if(!m&&this.s.modules.length>=85){this.notify('Module storage is full. Upgrade an existing module.');return false;}if(!m&&active.length>=moduleSlots(this.s.ship)){this.notify('Remove a module to free a slot.');return false;}if(!m&&active.some(id=>MODULES[this.s.modules.find(x=>x.uid===id).kind].category===MODULES[kind].category)){this.notify('Remove the installed module in this category first.');return false;}this.s.credits-=cost;if(m)m.grade++;else{const item={uid:'m-'+this.s.nextModule++,kind,grade:1};this.s.modules.push(item);active.push(item.uid);}this.s.shield=getStats(this.s).shield;this.refreshRoute();this.notify(MODULES[kind].name+' fitted.','good');return true;}
  moduleLocation(uid){return shipIds.find(id=>this.s.loadouts[id].includes(uid))||null;}
  equip(uid){if(!this.s.docked)return false;const item=this.s.modules.find(m=>m.uid===uid);if(!item)return false;const a=this.s.loadouts[this.s.ship],source=this.moduleLocation(uid);if(source===this.s.ship)return false;if(a.length>=moduleSlots(this.s.ship)){this.notify('Remove a module to free a slot.');return false;}if(a.some(id=>MODULES[this.s.modules.find(m=>m.uid===id).kind].category===MODULES[item.kind].category)){this.notify('Remove the installed module in this category first.');return false;}if(source)this.s.loadouts[source]=this.s.loadouts[source].filter(id=>id!==uid);a.push(uid);this.s.shield=getStats(this.s).shield;this.refreshRoute();this.notify(MODULES[item.kind].name+' installed.','good');return true;}
@@ -558,6 +600,11 @@ export class Game extends FlightGame{
  onHostileAttack(offender,victim){this.reportSecurityIncident(offender,victim);}
  onDestroyed(t,playerCredit=true){
   this.s.cleared[this.s.system]??=[];if(!this.s.cleared[this.s.system].includes(t.id))this.s.cleared[this.s.system].push(t.id);
+  if(t.type==='enemy'&&playerCredit&&this.dyn?.active?.length){
+   for(const ev of this.dyn.active){
+    if(ev.pirateId===t.id||ev.fugitiveId===t.id||(ev.spawned||[]).includes(t.id)||(ev.pirateIds||[]).includes(t.id))ev.playerAssisted=true;
+   }
+  }
   if(t.type!=='enemy'||!playerCredit)return;
   if(t.faction){
    this.s.metrics.factionKills[t.faction]++;this.s.reputation[t.faction]=clamp(this.s.reputation[t.faction]-10,-100,100);
@@ -573,6 +620,11 @@ export class Game extends FlightGame{
  rescue(){this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.system=this.nearestPort();this.s.route=null;super.rescue();this.s.heat=25;if(this.s.docked)this.enterStationDeck();}
  update(dt,input={}){
   dt=clamp(dt,0,.05);
+  if(this.onfoot?.kind==='wreck'){
+   this.time+=dt;this.s.playtime+=dt;
+   updateOnFoot(this.onfoot,dt,input);
+   return;
+  }
   if(this.surface){
    this.time+=dt;this.s.playtime+=dt;
    if(this.onfoot&&this.onfoot.kind==='planet'){
@@ -606,10 +658,12 @@ export class Game extends FlightGame{
    for(const b of this.shots){b.previousX=b.x;b.previousY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;}
    this.resolveTrafficShots();
    for(const e of this.enemies){e.thrust=.2;e.angle+=dt*.28;e.x+=Math.cos(e.angle)*26*dt;e.y+=Math.sin(e.angle)*26*dt;}
+   advanceOrbits(this.planets.filter(p=>p.type==='planet'),this.planets.filter(p=>p.type==='moon'),this.stars,dt);
    this.updateTraffic(dt);this.updateSecurity(dt);this.dyn?.update(dt);this.shots=this.shots.filter(b=>b.life>0);
    return;
   }
   if(this.jump){this.scooping=false;this.scoopRate=0;return;}
+  advanceOrbits(this.planets.filter(p=>p.type==='planet'),this.planets.filter(p=>p.type==='moon'),this.stars,dt);
   this.updateStellar(dt);
   this.updateTraffic(dt);
   this.updateSecurity(dt);

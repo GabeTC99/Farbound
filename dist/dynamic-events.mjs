@@ -73,6 +73,48 @@ function alertCombat(g,ev,pos,message,tone='bad'){
  ev.alerted=true;
  if(message)g.notify(message,tone);
 }
+function markAssist(ev,...ships){if(ships.flat().some(e=>e&&e.playerHit))ev.playerAssisted=true;}
+function grantCargo(g,good,tons=1){
+ const st=getStats(g.s),used=cargoUsed(g.s),free=st.cargo-used;
+ if(free<=0){const cr=60+Math.floor(Math.random()*80);g.s.credits+=cr;return`hold full · +${cr} cr`;}
+ const n=Math.min(tons,free);g.s.cargo[good]=(g.s.cargo[good]||0)+n;return`+${n} t ${good}`;
+}
+function bumpFaction(g,amount=3){
+ const id=g.sys.faction;if(!id||g.s.reputation?.[id]==null)return;
+ g.s.reputation[id]=clamp(g.s.reputation[id]+amount,-100,100);
+}
+function bumpLocalCompanies(g,amount=2){
+ if(!g.s.companies)g.s.companies={};
+ const sys=g.sys;if(!sys)return;
+ for(const id of [`co-${sys.id}-a`,`co-${sys.id}-b`]){
+  const rec=g.s.companies[id]||={standing:0,completed:0};
+  rec.standing=Math.min(100,rec.standing+amount);
+ }
+}
+function payIntervention(g,ev,{credits=400,rep=3,company=2,good=null,tons=1,label='Intervention rewarded'}={}){
+ if(ev.rewarded)return;ev.rewarded=true;
+ g.s.credits+=credits;bumpFaction(g,rep);bumpLocalCompanies(g,company);
+ let extra='';if(good)extra=' · '+grantCargo(g,good,tons);
+ g.s.metrics.interventions=(g.s.metrics.interventions||0)+1;
+ g.notify(`${label} · +${credits.toLocaleString()} cr${extra}`,'good');
+}
+function payEventIfEarned(g,ev){
+ if(ev.rewarded)return;
+ const r=ev.resolveReason;
+ if(ev.type==='pirateAttack'&&r==='pirate-down'&&ev.playerAssisted)payIntervention(g,ev,{credits:520,label:'Civilian defended',good:'food'});
+ else if(ev.type==='freighterAmbush'&&(r==='pirates-cleared')&&ev.playerAssisted)payIntervention(g,ev,{credits:680,label:'Ambush broken',good:'tech',rep:4});
+ else if(ev.type==='freighterAmbush'&&r==='freighter-escaped'&&ev.playerAssisted)payIntervention(g,ev,{credits:420,label:'Freighter escorted clear',good:'ore'});
+ else if(ev.type==='miningIncident'&&r==='raid-ended'&&ev.playerAssisted)payIntervention(g,ev,{credits:480,label:'Claim jumper driven off',good:'ore'});
+ else if(ev.type==='miningIncident'&&r==='accident-resolved'&&ev.playerAssisted)payIntervention(g,ev,{credits:360,label:'Miner assisted',good:'meds'});
+ else if(ev.type==='distressSignal'&&r==='scanned')payIntervention(g,ev,{credits:380,label:'Distress answered',good:'meds',rep:4});
+ else if(ev.type==='securityPursuit'&&r==='captured-or-killed'&&ev.playerAssisted)payIntervention(g,ev,{credits:550,label:'Fugitive stopped',rep:5,company:1});
+ else if(ev.type==='factionSkirmish'&&(r==='skirmish-ended'||r==='timeout')&&ev.playerAssisted)payIntervention(g,ev,{credits:450,label:'Skirmish decided',rep:2});
+}
+/** One-line objective for the most urgent active event. */
+export function eventObjective(game){
+ const ev=(game.dyn?.active||[]).find(e=>e.state==='active'&&e.objective);
+ return ev?{text:ev.objective,type:ev.type,id:ev.id}:null;
+}
 
 /** Known dynamic-event beacons for off-screen direction arrows (max 3). */
 export function eventArrowTargets(game){
@@ -109,16 +151,18 @@ export const EVENT_DEFS={
    }else{pirate.x=victim.x+Math.cos(victim.angle+2)*420;pirate.y=victim.y+Math.sin(victim.angle+2)*420;}
    pirate.wanted=true;pirate.lastCrime=g.time;pirate.crimeX=victim.x;pirate.crimeY=victim.y;pirate.raidFire=0;pirate.eventFocus=victim.id;
    victim.underAttackUntil=g.time+14;ev.pirateId=pirate.id;ev.victimId=victim.id;ev.spawned=[pirate.id];
-   alertCombat(g,ev,victim,'Weapons fire detected.');
+   ev.objective='Defend the civilian under attack';
+   alertCombat(g,ev,victim,'Weapons fire detected. Intercept to earn a reward.');
    log('start pirateAttack',pirate.id,'→',victim.id);return true;
   },
   update(g,ev){
    const pirate=g.enemies.find(e=>e.id===ev.pirateId),victim=g.traffic.find(t=>t.id===ev.victimId);
+   markAssist(ev,pirate);
    if(!pirate||pirate.hp<=0){resolve(ev,'pirate-down');return;}
    if(!victim){resolve(ev,'victim-lost');return;}
    if(ev.age>55){resolve(ev,'timeout');return;}
    pirate.eventFocus=victim.id;victim.underAttackUntil=Math.max(victim.underAttackUntil||0,g.time+4);
-   alertCombat(g,ev,victim,'Weapons fire detected.');
+   alertCombat(g,ev,victim,'Weapons fire detected. Intercept to earn a reward.');
    if(victim.canJump&&victim.job==='DEPARTING FOR JUMP POINT'&&dist(victim,g.jumpAnchor())<80){g.departJump(victim);resolve(ev,'victim-jumped');}
   },
   cleanup(g,ev){/* keep ambient pirates; only remove unused eventOwned if event failed early */}
@@ -134,15 +178,15 @@ export const EVENT_DEFS={
    if(victim){x=victim.x;y=victim.y;victim.hp=Math.max(8,victim.hp*.35);victim.underAttackUntil=g.time+6;cause=victim.job?.includes('MINING')?'mining-accident':'damaged';ev.victimId=victim.id;}
    else{const at=awayFrom(g,g.belt||g.star,900);x=at.x;y=at.y;cause='stranded';}
    const sig=spawnSignal(g,{x,y,kind:'distress',name:'Distress signal',life:100,payload:{cause}});
-   ev.signalId=sig.id;ev.spawned=[];
-   if(nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Distress signal detected.');}
+   ev.signalId=sig.id;ev.spawned=[];ev.objective='Locate and resolve the distress signal';
+   if(nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Distress signal detected. Resolve it for a reward.');}
    log('start distressSignal',cause);return true;
   },
   update(g,ev){
    const sig=g.signals.find(s=>s.id===ev.signalId);
    if(!sig){resolve(ev,'gone');return;}
-   if(!sig.discovered&&nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Distress signal detected.');}
-   if(sig.scanned){resolve(ev,'scanned');return;}
+   if(!sig.discovered&&nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Distress signal detected. Resolve it for a reward.');}
+   if(sig.scanned){ev.playerAssisted=true;resolve(ev,'scanned');return;}
    if(ev.age>sig.life){resolve(ev,'expired');}
   },
   cleanup(g,ev){g.signals=g.signals.filter(s=>s.id!==ev.signalId);if(g.target?.id===ev.signalId)g.target=g.station||g.star;}
@@ -157,20 +201,21 @@ export const EVENT_DEFS={
    if(!fugitive){const at=awayFrom(g,g.station,700);fugitive=spawnPirate(g,at,{name:'Wanted runner',hp:95,bounty:520});if(!fugitive)return false;ev.spawned=[fugitive.id];}
    else ev.spawned=[];
    fugitive.wanted=true;fugitive.lastCrime=g.time;fugitive.crimeX=fugitive.x;fugitive.crimeY=fugitive.y;fugitive.fleeJump=true;fugitive.eventOwned=fugitive.eventOwned||false;
-   ev.fugitiveId=fugitive.id;
+   ev.fugitiveId=fugitive.id;ev.objective='Stop the fugitive before they jump';
    const patrol=g.patrols[0];if(patrol){patrol.status='RESPONDING';patrol.responseTarget=fugitive.id;}
-   alertCombat(g,ev,fugitive,'Security pursuit underway.','info');
+   alertCombat(g,ev,fugitive,'Security pursuit underway. Intercept for a reward.','info');
    log('start securityPursuit',fugitive.id);return true;
   },
   update(g,ev,dt){
    const f=g.enemies.find(e=>e.id===ev.fugitiveId);
+   markAssist(ev,f);
    if(!f||f.hp<=0){resolve(ev,'captured-or-killed');return;}
    if(ev.age>70){resolve(ev,'timeout');return;}
    const jump=g.jumpAnchor((Math.random()-.5)*40);
    const a=Math.atan2(jump.y-f.y,jump.x-f.x),d=dist(f,jump);
    f.angle=a;f.thrust=.9;f.x+=Math.cos(a)*145*dt;f.y+=Math.sin(a)*145*dt;
    f.eventFlee=true;
-   alertCombat(g,ev,f,'Security pursuit underway.','info');
+   alertCombat(g,ev,f,'Security pursuit underway. Intercept for a reward.','info');
    if(d<70){
     const to=pickTradeDestination(g.s.system,SYSTEMS,jumpDistance)??1;
     const wake={id:uid('wake'),type:'wake',name:(f.name||'Fugitive')+' wake',x:f.x,y:f.y,r:30,from:g.s.system,to,shipName:f.name||'Fugitive',hull:'courier',color:'#ee918b',size:12,uid:uid('fug'),scanned:false,life:90};
@@ -200,17 +245,19 @@ export const EVENT_DEFS={
    }
    if(!pirates.length)return false;
    freighter.underAttackUntil=g.time+16;ev.victimId=freighter.id;ev.pirateIds=pirates;ev.spawned=pirates;
-   alertCombat(g,ev,freighter,'Weapons fire detected.');
+   ev.objective='Clear the ambush before the freighter jumps';
+   alertCombat(g,ev,freighter,'Weapons fire detected. Break the ambush for a reward.');
    log('start freighterAmbush',freighter.id,pirates);return true;
   },
   update(g,ev){
    const freighter=g.traffic.find(t=>t.id===ev.victimId);
    const pirates=(ev.pirateIds||[]).map(id=>g.enemies.find(e=>e.id===id)).filter(Boolean);
+   markAssist(ev,...pirates);
    if(!freighter){resolve(ev,pirates.length?'freighter-lost':'done');return;}
    if(!pirates.length){resolve(ev,'pirates-cleared');return;}
    if(ev.age>60){resolve(ev,'timeout');return;}
    freighter.underAttackUntil=Math.max(freighter.underAttackUntil||0,g.time+3);
-   alertCombat(g,ev,freighter,'Weapons fire detected.');
+   alertCombat(g,ev,freighter,'Weapons fire detected. Break the ambush for a reward.');
    if(freighter.canJump&&dist(freighter,g.jumpAnchor())<90){g.departJump(freighter);resolve(ev,'freighter-escaped');}
   },
   cleanup(g,ev){
@@ -235,12 +282,13 @@ export const EVENT_DEFS={
     if(!p)return false;
     p.wanted=true;p.lastCrime=g.time;p.crimeX=miner.x;p.crimeY=miner.y;p.raidFire=0;p.eventFocus=miner.id;
     miner.underAttackUntil=g.time+12;ev.mode='raid';ev.pirateId=p.id;ev.spawned=[p.id];
-    alertCombat(g,ev,miner,'Weapons fire detected near the mineral field.');
+    ev.objective='Drive off the claim jumper';
+    alertCombat(g,ev,miner,'Weapons fire near the belt. Assist the prospector for a reward.');
    }else{
     miner.hp=Math.max(10,miner.hp*.4);miner.underAttackUntil=g.time+8;ev.mode='accident';ev.spawned=[];
     const sig=spawnSignal(g,{x:miner.x,y:miner.y,kind:'distress',name:'Mining distress',life:70,payload:{cause:'mining-accident'}});
-    ev.signalId=sig.id;
-    if(nearbyPlayer(g,miner)){sig.discovered=true;g.notify('Distress signal detected.');}
+    ev.signalId=sig.id;ev.objective='Resolve the mining distress signal';
+    if(nearbyPlayer(g,miner)){sig.discovered=true;g.notify('Distress signal detected. Resolve it for a reward.');}
    }
    ev.victimId=miner.id;log('start miningIncident',ev.mode);return true;
   },
@@ -248,13 +296,14 @@ export const EVENT_DEFS={
    const miner=g.traffic.find(t=>t.id===ev.victimId);
    if(!miner){resolve(ev,'miner-lost');return;}
    if(ev.mode==='raid'){
-    const p=g.enemies.find(e=>e.id===ev.pirateId);if(!p||p.hp<=0){resolve(ev,'raid-ended');return;}
+    const p=g.enemies.find(e=>e.id===ev.pirateId);markAssist(ev,p);if(!p||p.hp<=0){resolve(ev,'raid-ended');return;}
     miner.underAttackUntil=Math.max(miner.underAttackUntil||0,g.time+3);
-    alertCombat(g,ev,miner,'Weapons fire detected near the mineral field.');
+    alertCombat(g,ev,miner,'Weapons fire near the belt. Assist the prospector for a reward.');
    }else{
     const sig=ev.signalId&&g.signals.find(s=>s.id===ev.signalId);
-    if(sig&&!sig.discovered&&nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Distress signal detected.');}
-    if(sig?.scanned||ev.age>50)resolve(ev,'accident-resolved');
+    if(sig&&!sig.discovered&&nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Distress signal detected. Resolve it for a reward.');}
+    if(sig?.scanned){ev.playerAssisted=true;resolve(ev,'accident-resolved');}
+    else if(ev.age>50)resolve(ev,'accident-resolved');
    }
    if(ev.age>55)resolve(ev,'timeout');
   },
@@ -277,16 +326,17 @@ export const EVENT_DEFS={
    const n=2+(g.sys.danger>=3?1:0);
    for(let i=0;i<n;i++)mk(home,i,0);for(let i=0;i<n;i++)mk(rival,i,1);
    if(spawned.length>EVENT_CONFIG.maxEventShips){while(spawned.length>EVENT_CONFIG.maxEventShips){const id=spawned.pop();g.enemies=g.enemies.filter(e=>e.id!==id);}}
-   ev.spawned=spawned;ev.timer=0;ev.beacon={x:anchor.x,y:anchor.y};
-   alertCombat(g,ev,anchor,'Weapons fire detected.');
+   ev.spawned=spawned;ev.timer=0;ev.beacon={x:anchor.x,y:anchor.y};ev.objective='Engage the faction skirmish';
+   alertCombat(g,ev,anchor,'Weapons fire detected. Intervene for standing.');
    log('start factionSkirmish',home.id,'vs',rival.id,spawned.length);return true;
   },
   update(g,ev,dt){
    const ships=g.enemies.filter(e=>ev.spawned?.includes(e.id));
+   markAssist(ev,...ships);
    if(ships.length<2){resolve(ev,'skirmish-ended');return;}
    if(ev.age>75){resolve(ev,'timeout');return;}
    const cx=ships.reduce((s,e)=>s+e.x,0)/ships.length,cy=ships.reduce((s,e)=>s+e.y,0)/ships.length;
-   alertCombat(g,ev,{x:cx,y:cy},'Weapons fire detected.');
+   alertCombat(g,ev,{x:cx,y:cy},'Weapons fire detected. Intervene for standing.');
    for(const e of ships){
     const foe=ships.filter(o=>o.skirmishSide!==e.skirmishSide).sort((a,b)=>dist(e,a)-dist(e,b))[0];
     if(!foe)continue;
@@ -314,8 +364,8 @@ export const EVENT_DEFS={
   canStart:g=>g.derelicts.length<2,
   start(g,ev){
    const at=awayFrom(g,g.star||{x:0,y:0},1400+(Math.random()*600));
-   const d={id:uid('derelict'),type:'derelict',name:'Derelict hull',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,scanned:false,discovered:false,life:180,lootChance:.35,eventOwned:true};
-   g.derelicts.push(d);ev.derelictId=d.id;ev.spawned=[];
+   const d={id:uid('derelict'),type:'derelict',name:'Derelict hull',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,scanned:false,discovered:false,life:180,lootChance:.55+Math.random()*.35,salvaged:false,eventOwned:true};
+   g.derelicts.push(d);ev.derelictId=d.id;ev.spawned=[];ev.objective='Scan and salvage the derelict wreck';
    if(Math.random()<.4){const p=spawnPirate(g,awayFrom(g,d,520),{name:'Wreck scavenger',hp:70,bounty:300});if(p){ev.spawned=[p.id];ev.pirateId=p.id;}}
    if(nearbyPlayer(g,d,EVENT_CONFIG.signalRange+200)){d.discovered=true;g.notify('Unidentified contact detected.');}
    log('start derelictWreck',d.id);return true;
@@ -324,15 +374,15 @@ export const EVENT_DEFS={
    const d=g.derelicts.find(x=>x.id===ev.derelictId);
    if(!d){resolve(ev,'gone');return;}
    if(!d.discovered&&nearbyPlayer(g,d,EVENT_CONFIG.signalRange+200)){d.discovered=true;g.notify('Unidentified contact detected.');}
-   if(d.scanned){resolve(ev,'scanned');return;}
-   if(ev.age>d.life)resolve(ev,'expired');
+   if(d.salvaged){ev.playerAssisted=true;resolve(ev,'salvaged');return;}
+   if(d.scanned&&ev.age>d.life)resolve(ev,'expired');
+   else if(!d.scanned&&ev.age>d.life)resolve(ev,'expired');
   },
   cleanup(g,ev){
-   g.derelicts=g.derelicts.filter(d=>d.id!==ev.derelictId||(ev.resolveReason==='scanned'&&d.scanned));
-   // Keep scanned derelict briefly then remove
-   const d=g.derelicts.find(x=>x.id===ev.derelictId);if(d&&d.scanned)d.life=Math.min(d.life||0,12);
+   g.derelicts=g.derelicts.filter(d=>d.id!==ev.derelictId||((ev.resolveReason==='scanned'||ev.resolveReason==='salvaged')&&d.scanned));
+   const d=g.derelicts.find(x=>x.id===ev.derelictId);if(d&&d.salvaged)d.life=Math.min(d.life||0,8);else if(d&&d.scanned)d.life=Math.min(d.life||0,40);
    for(const id of ev.spawned||[]){const e=g.enemies.find(x=>x.id===id);if(e&&e.eventOwned&&!e.playerHit&&ev.resolveReason==='expired')g.enemies=g.enemies.filter(x=>x!==e);}
-   if(g.target?.id===ev.derelictId)g.target=g.station||g.star;
+   if(g.target?.id===ev.derelictId&&(!d||d.salvaged))g.target=g.station||g.star;
   }
  },
 
@@ -351,7 +401,7 @@ export const EVENT_DEFS={
    ev.spawned=[];
    if(ev.anomalyKind==='silentRelic'){
     const id=uid('relic');
-    const d={id,type:'derelict',name:'Silent relic',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,life:130,scanned:false,discovered:false,anomalyKind:'silentRelic',lootChance:.4};
+    const d={id,type:'derelict',name:'Silent relic',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,life:130,scanned:false,discovered:false,anomalyKind:'silentRelic',lootChance:.55,salvaged:false};
     g.derelicts.push(d);ev.derelictId=d.id;
     if(nearbyPlayer(g,d,EVENT_CONFIG.signalRange)){d.discovered=true;g.notify('Silent relic on sensors.');}
    }else{
@@ -406,6 +456,7 @@ export class DynamicEventManager{
  finish(ev,reason){
   if(ev.state==='resolved'||ev.state==='expired'){/* already */}
   else{ev.state=reason==='system-reset'?'expired':'resolved';ev.resolveReason=reason;}
+  try{payEventIfEarned(this.game,ev);}catch(err){console.warn('[dyn] reward',err);}
   try{EVENT_DEFS[ev.type]?.cleanup?.(this.game,ev);}catch(err){console.warn('[dyn] cleanup',err);}
   log('resolved',ev.type,ev.resolveReason||reason);
   this.active=this.active.filter(e=>e!==ev);
@@ -483,19 +534,69 @@ export function scanDynamicTarget(game){
   return true;
  }
  if(t.type==='derelict'){
+  if(t.scanned&&!t.salvaged)return salvageDerelict(game);
   if(dist(game.player,t)>260){game.notify('Approach the derelict to scan it.');return false;}
   if(Math.hypot(game.player.vx,game.player.vy)>120){game.notify('Slow below 120 m/s to scan the wreck.');return false;}
-  t.scanned=true;
+  t.scanned=true;t.life=Math.max(t.life||0,45);
   if(t.anomalyKind==='silentRelic'){
    completeAnomalyScan(game,t);
+   game.notify('Relic surveyed. Approach again to salvage the hold.','good');
    return true;
   }
   const value=Math.round(180+Math.random()*320);game.s.data+=value;
   game.logExploration?.({id:t.id,type:'legacy',system:game.s.system,name:'Derelict survey',value});
-  game.notify(`Derelict surveyed · +${value} cr data`+(t.lootChance?'. Salvage systems pending.':''),'good');
+  game.notify(`Derelict surveyed · +${value} cr data. Approach again to salvage.`,'good');
   return true;
  }
  return false;
+}
+
+/** Salvage a scanned derelict for cargo, credits, or a rare module fragment. */
+export function salvageDerelict(game){
+ const t=game.target;if(!t||t.type!=='derelict'||!t.scanned||t.salvaged)return false;
+ if(dist(game.player,t)>200){game.notify('Close to within 200 m to salvage the wreck.');return false;}
+ if(Math.hypot(game.player.vx,game.player.vy)>90){game.notify('Slow below 90 m/s to salvage.');return false;}
+ t.salvaged=true;t.life=Math.min(t.life||0,12);
+ game.s.metrics.salvages=(game.s.metrics.salvages||0)+1;
+ const roll=Math.random(),parts=[];
+ const goods=['ore','tech','crystal','meds'];
+ const good=goods[Math.floor(Math.random()*goods.length)];
+ const tons=1+(roll>.55?1:0)+(t.lootChance>.6&&roll>.8?1:0);
+ parts.push(grantCargo(game,good,tons));
+ const credits=140+Math.floor(Math.random()*220*(t.lootChance||.4));
+ game.s.credits+=credits;parts.push('+'+credits+' cr');
+ if((t.lootChance||0)>.5&&Math.random()<.28&&game.s.modules.length<85){
+  const pool=['laser','shield','engine','cargo','drive'].filter(id=>!game.s.modules.some(m=>m.kind===id&&m.grade>=1)||true);
+  const kind=pool[Math.floor(Math.random()*pool.length)];
+  const item={uid:'m-'+game.s.nextModule++,kind,grade:1};
+  game.s.modules.push(item);
+  parts.push(kind+' module recovered');
+ }
+ // Contested salvage: chance to spawn a scavenger if none nearby.
+ if(Math.random()<(t.lootChance||.4)*.45){
+  const near=game.enemies.some(e=>!e.response&&dist(e,t)<700);
+  if(!near){const p=spawnPirate(game,awayFrom(game,t,380),{name:'Wreck scavenger',hp:72,bounty:320});if(p){p.wanted=true;game.notify('Scavengers closing on the wreck.','bad');}}
+ }
+ bumpFaction(game,2);bumpLocalCompanies(game,1);
+ game.notify('Salvage secured · '+parts.join(' · '),'good');
+ return true;
+}
+
+/** Compact wreck interior pocket for deeper salvage. */
+export function createWreckLayout(derelict){
+ const W=720,H=520,cx=W/2,cy=H*.58;
+ const zones=[
+  {id:'airlock',label:'Airlock',service:'board',x:90,y:cy,r:48,icon:'ship',board:true},
+  {id:'cache',label:'Cargo bay',service:'cache',x:cx+40,y:cy-30,r:46,icon:'market',cacheGood:['ore','tech','crystal','meds'][Math.floor(Math.random()*4)],wreckLoot:true},
+  {id:'console',label:'Flight recorder',service:'inspect',x:cx+160,y:cy+70,r:40,icon:'data',anomalyId:derelict.id+'-log',anomalyKind:'signal'}
+ ];
+ return{
+  kind:'wreck',title:derelict.name||'Derelict interior',role:'wreck',accent:'#a8b4be',floor:'#1a2228',
+  width:W,height:H,hull:null,
+  walls:[{x:200,y:80,w:40,h:140},{x:420,y:260,w:120,h:36},{x:300,y:120,w:50,h:90}],
+  windows:[],signs:[],zones,npcs:[],
+  spawn:{x:110,y:cy,facing:0},derelictId:derelict.id
+ };
 }
 
 function completeAnomalyScan(game,t){
