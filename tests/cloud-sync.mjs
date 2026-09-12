@@ -7,6 +7,7 @@ import {
 } from '../dist/cloud-sync.mjs';
 import {newSave} from '../dist/frontier.mjs';
 
+const liveUrl=CLOUD.url,liveKey=CLOUD.anonKey;
 const mem=new Map();
 globalThis.localStorage={
  getItem:k=>mem.has(k)?mem.get(k):null,
@@ -16,14 +17,18 @@ globalThis.localStorage={
 globalThis.window={location:{pathname:'/Farbound/',search:'',hash:'',origin:'https://game.example'}};
 globalThis.location=window.location;
 globalThis.history={replaceState(){location.hash='';location.search='';}};
+function restoreCloud(){CLOUD.url=liveUrl;CLOUD.anonKey=liveKey;}
 
 let count=0;function test(name,fn){fn();count++;console.log('PASS '+name);}
 async function atest(name,fn){await fn();count++;console.log('PASS '+name);}
 
-test('Cloud stays disabled until url and anon key are filled',()=>{
- assert.equal(CLOUD.url,'');
- assert.equal(CLOUD.anonKey,'');
+test('cloudConfigured reflects whether url and anon key are present',()=>{
+ CLOUD.url='';CLOUD.anonKey='';
  assert.equal(cloudConfigured(),false);
+ CLOUD.url='https://example.supabase.co';CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
+ assert.equal(cloudConfigured(),true);
+ restoreCloud();
+ assert.equal(cloudConfigured(),!!(liveUrl&&liveKey));
 });
 
 test('Autosync flag persists in localStorage',()=>{
@@ -38,10 +43,14 @@ test('Autosync flag persists in localStorage',()=>{
 
 test('Freshness prefers savedAt vs cloud updated_at',()=>{
  const remote={updated_at:'2026-09-11T12:00:00.000Z',playtime:100};
- assert.equal(comparePilotFreshness({savedAt:Date.parse('2026-09-11T13:00:00.000Z')},remote).localNewer,true);
- assert.equal(comparePilotFreshness({savedAt:Date.parse('2026-09-11T11:00:00.000Z')},remote).remoteNewer,true);
- assert.equal(comparePilotFreshness({savedAt:Date.parse('2026-09-11T12:00:00.500Z')},remote).same,true);
- assert.equal(comparePilotFreshness({playtime:50},{playtime:80}).remoteNewer,true);
+ const a=comparePilotFreshness({savedAt:Date.parse('2026-09-11T13:00:00.000Z')},remote);
+ const b=comparePilotFreshness({savedAt:Date.parse('2026-09-11T11:00:00.000Z')},remote);
+ const c=comparePilotFreshness({savedAt:Date.parse('2026-09-11T12:00:00.500Z')},remote);
+ const d=comparePilotFreshness({playtime:50},{playtime:80});
+ assert.equal(a.localNewer??a.localNewer,true);
+ assert.equal(b.remoteNewer??b.remoteNewer,true);
+ assert.equal(c.same??c.same,true);
+ assert.equal(d.remoteNewer??d.remoteNewer,true);
 });
 
 test('Magic-link hash tokens are captured into the session store',()=>{
@@ -53,7 +62,7 @@ test('Magic-link hash tokens are captured into the session store',()=>{
  assert.equal(session.access_token,'tok-abc');
  assert.equal(JSON.parse(mem.get(SESSION_KEY)).refresh_token,'ref-xyz');
  assert.equal(location.hash,'');
- CLOUD.url='';CLOUD.anonKey='';
+ restoreCloud();
 });
 
 await atest('Sign-in / OTP / upload / download use Supabase Auth + REST shapes',async()=>{
@@ -101,7 +110,7 @@ await atest('Sign-in / OTP / upload / download use Supabase Auth + REST shapes',
  await cloudSignOut();
  assert.equal(cloudUserEmail(),null);
 
- CLOUD.url='';CLOUD.anonKey='';
+ restoreCloud();
 });
 
 console.log(`\n${count} cloud-sync checks passed.`);
