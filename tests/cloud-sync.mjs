@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {cloudConfigured,CLOUD} from '../dist/cloud-config.mjs';
 import {
  comparePilotFreshness,cloudAutosyncEnabled,setCloudAutosync,AUTOSYNC_KEY,SESSION_KEY,AUTH_REDIRECT,
- consumeAuthRedirect,requestCloudSignIn,verifyCloudOtp,uploadCloudPilot,downloadCloudPilot,
+ consumeAuthRedirect,requestCloudSignIn,cloudSignUp,cloudSignIn,uploadCloudPilot,downloadCloudPilot,
  fetchCloudPilotMeta,cloudSignOut,cloudUserEmail
 } from '../dist/cloud-sync.mjs';
 import {newSave} from '../dist/frontier.mjs';
@@ -59,7 +59,54 @@ test('Freshness prefers savedAt vs cloud updated_at',()=>{
  assert.equal(comparePilotFreshness({playtime:50},{playtime:80}).remoteNewer,true);
 });
 
-await atest('Sign-in request uses PKCE and the Pages redirect URL',async()=>{
+await atest('Password sign-up posts to /auth/v1/signup and stores session',async()=>{
+ mem.clear();
+ const calls=[];
+ CLOUD.url='https://example.supabase.co';
+ CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
+ globalThis.fetch=async(url,opts={})=>{
+  calls.push({url:String(url),method:opts.method||'GET',body:opts.body?JSON.parse(opts.body):null});
+  if(String(url).includes('/auth/v1/signup'))return {ok:true,json:async()=>({access_token:'a1',refresh_token:'r1',expires_in:3600,user:{id:'user-1',email:'pilot@example.com'}})};
+  return {ok:false,json:async()=>({msg:'unexpected '+url})};
+ };
+ const session=await cloudSignUp('Pilot@Example.com','secret99');
+ assert.equal(session.access_token,'a1');
+ assert.equal(cloudUserEmail(),'pilot@example.com');
+ const signup=calls.find(c=>c.url.includes('/auth/v1/signup'));
+ assert.ok(signup);
+ assert.equal(signup.body.email,'pilot@example.com');
+ assert.equal(signup.body.password,'secret99');
+ restoreCloud();
+});
+
+await atest('Password sign-in uses grant_type=password',async()=>{
+ mem.clear();
+ const calls=[];
+ CLOUD.url='https://example.supabase.co';
+ CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
+ globalThis.fetch=async(url,opts={})=>{
+  calls.push({url:String(url),method:opts.method||'GET',body:opts.body?JSON.parse(opts.body):null});
+  if(String(url).includes('/auth/v1/token')&&String(url).includes('grant_type=password')){
+   return {ok:true,json:async()=>({access_token:'a2',refresh_token:'r2',expires_in:3600,user:{id:'user-1',email:'pilot@example.com'}})};
+  }
+  return {ok:false,json:async()=>({msg:'unexpected '+url})};
+ };
+ await cloudSignIn('pilot@example.com','secret99');
+ assert.equal(cloudUserEmail(),'pilot@example.com');
+ assert.ok(calls.some(c=>c.url.includes('grant_type=password')&&c.body.password==='secret99'));
+ restoreCloud();
+});
+
+await atest('Password helpers reject short passwords',async()=>{
+ mem.clear();
+ CLOUD.url='https://example.supabase.co';
+ CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
+ await assert.rejects(()=>cloudSignIn('pilot@example.com','123'),/6 characters/);
+ await assert.rejects(()=>cloudSignUp('pilot@example.com','abc'),/6 characters/);
+ restoreCloud();
+});
+
+await atest('Deprecated magic-link request still uses PKCE + Pages redirect',async()=>{
  mem.clear();
  const calls=[];
  CLOUD.url='https://example.supabase.co';
@@ -101,7 +148,7 @@ await atest('PKCE redirect code is exchanged for a session',async()=>{
  restoreCloud();
 });
 
-await atest('OTP verify / upload / download shapes still work',async()=>{
+await atest('Password session upload / download shapes still work',async()=>{
  mem.clear();
  const calls=[];
  const pilot=newSave();
@@ -110,7 +157,9 @@ await atest('OTP verify / upload / download shapes still work',async()=>{
  CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
  globalThis.fetch=async(url,opts={})=>{
   calls.push({url:String(url),method:opts.method||'GET',body:opts.body?JSON.parse(opts.body):null});
-  if(String(url).includes('/auth/v1/verify'))return {ok:true,json:async()=>({access_token:'a1',refresh_token:'r1',expires_in:3600,user:{id:'user-1',email:'pilot@example.com'}})};
+  if(String(url).includes('/auth/v1/token')&&String(url).includes('grant_type=password')){
+   return {ok:true,json:async()=>({access_token:'a1',refresh_token:'r1',expires_in:3600,user:{id:'user-1',email:'pilot@example.com'}})};
+  }
   if(String(url).includes('/auth/v1/user'))return {ok:true,json:async()=>({id:'user-1',email:'pilot@example.com'})};
   if(String(url).includes('/auth/v1/logout'))return {ok:true,json:async()=>({})};
   if(String(url).includes('/rest/v1/pilots')&&(opts.method||'GET')==='GET'){
@@ -122,7 +171,7 @@ await atest('OTP verify / upload / download shapes still work',async()=>{
   }
   return {ok:false,json:async()=>({msg:'unexpected '+url})};
  };
- await verifyCloudOtp('pilot@example.com','12345678');
+ await cloudSignIn('pilot@example.com','secret99');
  assert.equal(cloudUserEmail(),'pilot@example.com');
  const meta=await fetchCloudPilotMeta();
  assert.equal(meta.credits,1234);
@@ -132,6 +181,7 @@ await atest('OTP verify / upload / download shapes still work',async()=>{
  assert.equal(down.pilot.credits,1234);
  await cloudSignOut();
  assert.equal(cloudUserEmail(),null);
+ assert.ok(!mem.has(SESSION_KEY)||!mem.get(SESSION_KEY));
  restoreCloud();
 });
 

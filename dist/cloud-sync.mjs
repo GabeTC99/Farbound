@@ -130,11 +130,60 @@ export async function ensureCloudSession(){
  return await refreshIfNeeded();
 }
 
-/** Send a magic-link email (PKCE) that returns to the Pages game URL. */
-export async function requestCloudSignIn(email,{redirectTo=AUTH_REDIRECT}={}){
- if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
+function cleanEmail(email){
  const clean=String(email||'').trim().toLowerCase();
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean))throw Error('Enter a valid email address.');
+ return clean;
+}
+function cleanPassword(password){
+ const pass=String(password||'');
+ if(pass.length<6)throw Error('Password must be at least 6 characters.');
+ return pass;
+}
+function sessionFromAuth(data){
+ const session={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+(data.expires_in||3600),user:data.user||null};
+ saveSession(session);return session;
+}
+
+/** Create a cloud account with email + password (stays inside the PWA). */
+export async function cloudSignUp(email,password){
+ if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
+ const clean=cleanEmail(email),pass=cleanPassword(password);
+ const res=await fetch(`${CLOUD.url}/auth/v1/signup`,{
+  method:'POST',headers:jsonHeaders(),
+  body:JSON.stringify({email:clean,password:pass})
+ });
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok){
+  const msg=data.msg||data.error_description||data.error||'Could not create account.';
+  if(/already|registered|exists/i.test(msg))throw Error('That email already has an account. Use Sign in.');
+  throw Error(msg);
+ }
+ if(!data.access_token)throw Error('Account created, but sign-in did not complete. Try Sign in.');
+ return sessionFromAuth(data);
+}
+
+/** Sign in with email + password (stays inside the PWA). */
+export async function cloudSignIn(email,password){
+ if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
+ const clean=cleanEmail(email),pass=cleanPassword(password);
+ const res=await fetch(`${CLOUD.url}/auth/v1/token?grant_type=password`,{
+  method:'POST',headers:jsonHeaders(),
+  body:JSON.stringify({email:clean,password:pass})
+ });
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok){
+  const msg=data.msg||data.error_description||data.error||'Sign-in failed.';
+  if(/invalid.*credentials|invalid login/i.test(msg))throw Error('Wrong email or password. If you only used the old email link, create an account with a password instead.');
+  throw Error(msg);
+ }
+ return sessionFromAuth(data);
+}
+
+/** @deprecated Prefer cloudSignIn / cloudSignUp — magic links leave the installed PWA. */
+export async function requestCloudSignIn(email,{redirectTo=AUTH_REDIRECT}={}){
+ if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
+ const clean=cleanEmail(email);
  const verifier=randomVerifier();
  const challenge=await challengeS256(verifier);
  try{sessionStorage.setItem(PKCE_KEY,verifier);}catch{}
@@ -155,12 +204,12 @@ export async function requestCloudSignIn(email,{redirectTo=AUTH_REDIRECT}={}){
  return {email:clean};
 }
 
-/** Verify an email OTP when the message includes a numeric code. */
+/** @deprecated Prefer cloudSignIn / cloudSignUp. */
 export async function verifyCloudOtp(email,token){
  if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
- const clean=String(email||'').trim().toLowerCase();
+ const clean=cleanEmail(email);
  const code=String(token||'').trim();
- if(!clean||!code)throw Error('Email and code are required.');
+ if(!code)throw Error('Email and code are required.');
  const res=await fetch(`${CLOUD.url}/auth/v1/verify`,{
   method:'POST',headers:jsonHeaders(),
   body:JSON.stringify({type:'email',email:clean,token:code})
@@ -169,9 +218,7 @@ export async function verifyCloudOtp(email,token){
   const err=await res.json().catch(()=>({}));
   throw Error(err.msg||err.error_description||'That code was not accepted.');
  }
- const data=await res.json();
- const session={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+(data.expires_in||3600),user:data.user};
- saveSession(session);return session;
+ return sessionFromAuth(await res.json());
 }
 
 export async function cloudSignOut(){
