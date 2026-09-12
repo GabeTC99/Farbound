@@ -41,10 +41,46 @@ let cloudAutosyncTimer=null;
 function queueCloudAutosync(){clearTimeout(cloudAutosyncTimer);cloudAutosyncTimer=setTimeout(async()=>{if(cloudBusy||!cloudAutosyncEnabled()||!cloudUserEmail()||!game.s.docked)return;cloudBusy=true;try{const data=game.serialize();data.savedAt=Date.now();const row=await uploadCloudPilot(data,{allowDowngrade:false});cloudMeta={updated_at:row.updated_at,playtime:row.playtime,credits:row.credits,system:row.system,ship:row.ship};try{localStorage.setItem('farbound-cloud-pushed-at',row.updated_at||new Date().toISOString());}catch{};}catch(err){if(err?.code!=='cloud_downgrade')console.warn('[cloud]',err.message||err);}cloudBusy=false;},2500);}
 function resetControls(){engine.mute();keys={};touch={aim:null,thrust:0,fire:false,boost:false};stickPointer=null;const knob=$('stick-knob');if(knob)knob.style.transform='';document.querySelectorAll('.held').forEach(x=>x.classList.remove('held'));}
 let padBoost=false,padFire=false;
-function panelFocusables(){const root=$('panel-layer');if(!root)return[];return [...root.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')].filter(x=>x.offsetParent!==null);}
+function panelFocusables(){
+ const body=$('panel-layer')?.querySelector('.modal-body');
+ const root=body||$('panel-layer');
+ if(!root)return[];
+ return [...root.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')].filter(x=>x.offsetParent!==null);
+}
 function welcomeFocusables(){const root=$('welcome-layer');if(!root)return[];return [...root.querySelectorAll('button:not(:disabled),a[href]')].filter(x=>x.offsetParent!==null);}
 function uiFocusables(){return started?(panel?panelFocusables():[]):welcomeFocusables();}
-function shiftUiFocus(dir){const items=uiFocusables();if(!items.length)return;const i=items.indexOf(document.activeElement);let n;if(i<0)n=dir>0?0:items.length-1;else n=(i+dir+items.length)%items.length;items[n].focus();try{items[n].scrollIntoView({block:'nearest',behavior:'smooth'});}catch{}}
+function panelScroller(){return $('panel-layer')?.querySelector('.modal-body')||null;}
+function scrollPanelBy(dy){const sc=panelScroller();if(!sc||!dy)return;sc.scrollTop+=dy;}
+function revealInPanel(el){
+ if(!el)return;
+ const sc=el.closest?.('.modal-body')||panelScroller();
+ if(sc){
+  const er=el.getBoundingClientRect(),sr=sc.getBoundingClientRect(),pad=28;
+  if(er.top<sr.top+pad)sc.scrollTop-=(sr.top+pad)-er.top;
+  else if(er.bottom>sr.bottom-pad)sc.scrollTop+=er.bottom-(sr.bottom-pad);
+ }else{
+  try{el.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'});}catch{}
+ }
+}
+function shiftUiFocus(dir){
+ const items=uiFocusables();
+ if(!items.length){if(panel)scrollPanelBy(dir*160);return;}
+ const i=items.indexOf(document.activeElement);
+ if(i<0){
+  const pick=items[dir>0?0:items.length-1];
+  pick.focus({preventScroll:true});
+  revealInPanel(pick);
+  return;
+ }
+ const n=i+dir;
+ if(n<0||n>=items.length){
+  // At the end of focusables — keep scrolling the menu instead of wrapping to the top.
+  scrollPanelBy(dir*150);
+  return;
+ }
+ items[n].focus({preventScroll:true});
+ revealInPanel(items[n]);
+}
 function activateFocused(){
  const items=uiFocusables();
  if(!items.length)return false;
@@ -56,7 +92,7 @@ function activateFocused(){
  }
  if(panel==='confirm'){action('confirm');return true;}
  const primary=items.find(b=>b.classList.contains('primary'))||items[0];
- primary?.focus();primary?.click();
+ primary?.focus({preventScroll:true});revealInPanel(primary);primary?.click();
  return !!primary;
 }
 function padSurfaceOrFootConfirm(){
@@ -773,7 +809,7 @@ function render(dt=1/60){
 }
 function drawRadar(){if(softFX()){radarTick++;if(radarTick%4)return;}else radarTick=0;const c=$('radar');if(!c)return;const r=c.getContext('2d');r.clearRect(0,0,268,268);r.fillStyle='#0b1c2577';r.strokeStyle='#44697388';r.lineWidth=1.5;r.beginPath();r.arc(134,134,123,0,6.28);r.fill();r.stroke();r.beginPath();r.arc(134,134,64,0,6.28);r.strokeStyle='#38525e99';r.stroke();r.beginPath();r.moveTo(12,134);r.lineTo(256,134);r.moveTo(134,12);r.lineTo(134,256);r.stroke();r.save();r.beginPath();r.arc(134,134,121,0,6.28);r.clip();const p=game.player;const docks=(game.stations||[]).filter(s=>s.type==='station');for(const o of [...docks,...(game.stars||[game.star]),...game.wakes,...game.signals,...game.derelicts,...game.patrols,...game.traffic,...game.visiblePlanets,...(softFX()?[]:game.asteroids),...game.enemies]){const x=134+(o.x-p.x)*.054,y=134+(o.y-p.y)*.054;r.fillStyle=o.type==='enemy'?'#ee8d87':o.type==='wake'?'#9be7ff':o.type==='signal'?'#efa778':o.type==='derelict'?'#a8b4be':o.type==='planet'?'#85b8cf':o.type==='asteroid'?'#797b76':o.type==='traffic'?'#8aa3b5':o.type==='star'?'#e8c18a':'#91efd9';r.fillRect(x-2,y-2,o.type==='station'||o.type==='star'?7:4,o.type==='station'||o.type==='star'?7:4);}r.restore();r.save();r.translate(134,134);r.rotate(p.angle);r.fillStyle='#a7f0df';r.beginPath();r.moveTo(9,0);r.lineTo(-5,5);r.lineTo(-5,-5);r.closePath();r.fill();r.restore();}
 let last=performance.now(),lastFireSound=0;
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!document.hidden){clock+=dt;const pad=pollGamepad();padActive=pad.active;padBoost=!!(pad.active&&pad.boost);padFire=!!(pad.active&&pad.fire);if(pad.active&&pad.fresh&&!padSeenToast){padSeenToast=true;padHintShown=true;const label=pad.xbox?'Xbox controller':'Controller';game.notify(label+" ready — press Menu for the flight menu, or open Controls for the full map.",'good');}handlePadEdges(pad.edges||[]);const uiOpen=!started||!!panel;if(uiOpen&&pad.active&&(pad.uiX||pad.uiY)){const now=performance.now();if(now>=padNavAt){if(Math.abs(pad.uiY)>=Math.abs(pad.uiX)&&pad.uiY)shiftUiFocus(pad.uiY>0?1:-1);else if(pad.uiX)shiftUiFocus(pad.uiX>0?1:-1);padNavAt=now+190;} }else if(uiOpen){padNavAt=0;}if(pad.active&&stickPointer==null){const knob=$('stick-knob');if(knob){const max=28,mag=pad.mag||0;knob.style.transform=mag>.08?`translate(${(pad.lx||0)*max}px,${(pad.ly||0)*max}px)`:'';}}else if(!pad.active&&stickPointer==null){const knob=$('stick-knob');if(knob&&touch.aim==null)knob.style.transform='';}const padChip=$('pad-chip');if(padChip){padChip.hidden=!padActive;padChip.textContent=pad.xbox?'Xbox':'Pad';}const fireBtn=$('fire'),boostBtn=$('boost');if(fireBtn)fireBtn.classList.toggle('held',!panel&&(touch.fire||padFire));if(boostBtn)boostBtn.classList.toggle('held',!panel&&(touch.boost||padBoost||!!keys.shift));if(started&&!simPaused()){const wasDocked=game.s.docked;const wasFolding=!!game.jump;const canWalk=!panel;const keyTurn=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);const input={aim:canWalk?(touch.aim!=null?touch.aim:(pad.active?pad.aim:null)):null,thrust:canWalk?Math.max(touch.thrust,keys.w||keys.arrowup?1:0,pad.active?pad.thrust:0):0,turn:canWalk?(keyTurn||(pad.active?pad.turn:0)):0,fire:!panel&&(touch.fire||keys[' ']||padFire),boost:canWalk&&(touch.boost||keys.shift||padBoost),brake:canWalk&&(keys.s||keys.arrowdown||(pad.active&&pad.brake))};game.update(dt,input);if(input.fire&&!game.surface&&!game.onfoot&&!game.s.docked&&now-lastFireSound>240){sound('fire');lastFireSound=now;}if(!wasFolding&&game.jump){try{engine.unlock();}catch{}}if(wasFolding&&!game.jump&&game.s.sound){const vol=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35;try{engine.playFoldJump(vol);engine.playFoldArrive(vol);}catch{}}if(!wasDocked&&game.s.docked){try{engine.unlock();}catch{}}else if(wasDocked&&!game.s.docked)closePanel();}render(dt);if(panel==='system-map')drawSystemMap();const onDeck=!!(game.onfoot&&game.s.docked);const planetFeet=!!(game.onfoot&&game.surface);const p=game.onfoot||game.surface||game.player;const ambience=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35;const sky=systemSky(game.sys).kind;engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral'});try{engine.setFoldCharge(started&&game.jump&&!simPaused()?game.jump.progress/3:0,ambience,!!game.s.sound&&started&&!document.hidden);}catch{}if(now-lastHUD>120){updateHUD();drainEvents();lastHUD=now;}if(started&&now-lastStore>4000){save();lastStore=now;}}else{engine.muteAll();}requestAnimationFrame(loop);}
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(!document.hidden){clock+=dt;const pad=pollGamepad();padActive=pad.active;padBoost=!!(pad.active&&pad.boost);padFire=!!(pad.active&&pad.fire);if(pad.active&&pad.fresh&&!padSeenToast){padSeenToast=true;padHintShown=true;const label=pad.xbox?'Xbox controller':'Controller';game.notify(label+" ready — press Menu for the flight menu, or open Controls for the full map.",'good');}handlePadEdges(pad.edges||[]);const uiOpen=!started||!!panel;if(uiOpen&&pad.active){if(Math.abs(pad.ry||0)>.25)scrollPanelBy((pad.ry||0)*22);if(pad.uiX||pad.uiY){const now=performance.now();if(now>=padNavAt){if(Math.abs(pad.uiY)>=Math.abs(pad.uiX)&&pad.uiY)shiftUiFocus(pad.uiY>0?1:-1);else if(pad.uiX)shiftUiFocus(pad.uiX>0?1:-1);padNavAt=now+170;} }else padNavAt=0;}else if(uiOpen){padNavAt=0;}if(pad.active&&stickPointer==null){const knob=$('stick-knob');if(knob){const max=28,mag=pad.mag||0;knob.style.transform=mag>.08?`translate(${(pad.lx||0)*max}px,${(pad.ly||0)*max}px)`:'';}}else if(!pad.active&&stickPointer==null){const knob=$('stick-knob');if(knob&&touch.aim==null)knob.style.transform='';}const padChip=$('pad-chip');if(padChip){padChip.hidden=!padActive;padChip.textContent=pad.xbox?'Xbox':'Pad';}const fireBtn=$('fire'),boostBtn=$('boost');if(fireBtn)fireBtn.classList.toggle('held',!panel&&(touch.fire||padFire));if(boostBtn)boostBtn.classList.toggle('held',!panel&&(touch.boost||padBoost||!!keys.shift));if(started&&!simPaused()){const wasDocked=game.s.docked;const wasFolding=!!game.jump;const canWalk=!panel;const keyTurn=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);const input={aim:canWalk?(touch.aim!=null?touch.aim:(pad.active?pad.aim:null)):null,thrust:canWalk?Math.max(touch.thrust,keys.w||keys.arrowup?1:0,pad.active?pad.thrust:0):0,turn:canWalk?(keyTurn||(pad.active?pad.turn:0)):0,fire:!panel&&(touch.fire||keys[' ']||padFire),boost:canWalk&&(touch.boost||keys.shift||padBoost),brake:canWalk&&(keys.s||keys.arrowdown||(pad.active&&pad.brake))};game.update(dt,input);if(input.fire&&!game.surface&&!game.onfoot&&!game.s.docked&&now-lastFireSound>240){sound('fire');lastFireSound=now;}if(!wasFolding&&game.jump){try{engine.unlock();}catch{}}if(wasFolding&&!game.jump&&game.s.sound){const vol=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35;try{engine.playFoldJump(vol);engine.playFoldArrive(vol);}catch{}}if(!wasDocked&&game.s.docked){try{engine.unlock();}catch{}}else if(wasDocked&&!game.s.docked)closePanel();}render(dt);if(panel==='system-map')drawSystemMap();const onDeck=!!(game.onfoot&&game.s.docked);const planetFeet=!!(game.onfoot&&game.surface);const p=game.onfoot||game.surface||game.player;const ambience=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35;const sky=systemSky(game.sys).kind;engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral'});try{engine.setFoldCharge(started&&game.jump&&!simPaused()?game.jump.progress/3:0,ambience,!!game.s.sound&&started&&!document.hidden);}catch{}if(now-lastHUD>120){updateHUD();drainEvents();lastHUD=now;}if(started&&now-lastStore>4000){save();lastStore=now;}}else{engine.muteAll();}requestAnimationFrame(loop);}
 if(!ctx){document.body.innerHTML='<div class="canvas-fallback">Farbound needs an Android browser with Canvas support. Please open it in an updated Chrome browser.</div>';}else{buildHUD();showWelcome();resize();bindGamepadListeners({onConnect(){padActive=true;if(started&&!padHintShown){padHintShown=true;game.notify('Xbox controller connected. Open Controls for the button map.','good');}},onDisconnect(){padActive=false;padBoost=false;padFire=false;}});requestAnimationFrame(loop);}
 if('serviceWorker'in navigator&&location.protocol==='https:'&&location.hostname!=='appassets.androidplatform.net'){
  const checkOffline=async()=>{const reg=await navigator.serviceWorker.ready,worker=reg.active;if(worker){const ch=new MessageChannel();ch.port1.onmessage=e=>{offlineReady=e.data?.ready===true;if(panel==='menu')renderPanel();};worker.postMessage({type:'CACHE_STATUS'},[ch.port2]);}};

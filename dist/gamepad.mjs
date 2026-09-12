@@ -156,6 +156,6 @@ export function xboxHelpRow(){
 <p class="detail-text">On PC (Chrome/Edge): plug in or pair the pad, then press any button once so the browser wakes it.</p>
 <p>${xbIcon('LS')} aim &amp; thrust · ${xbIcon('A')} / ${xbIcon('RT')} fire · ${xbIcon('RB')} / ${xbIcon('LT')} boost · ${xbIcon('B')} brake</p>
 <p>${xbIcon('X')} dock / interact · ${xbIcon('Y')} scan · ${xbIcon('LB')} discovery pulse · ${xbIcon('VIEW')} galaxy · ${xbIcon('MENU')} flight menu</p>
-<p>${xbIcon('RB')} contracts · ${xbIcon('RS')} ship · ${xbIcon('UP')}${xbIcon('DOWN')}${xbIcon('LEFT')}${xbIcon('RIGHT')} / ${xbIcon('LS')} move menu focus · ${xbIcon('A')} confirm · ${xbIcon('B')} back</p>
+<p>${xbIcon('RB')} contracts · click ${xbIcon('RS')} ship · ${xbIcon('UP')}${xbIcon('DOWN')}${xbIcon('LEFT')}${xbIcon('RIGHT')} / ${xbIcon('LS')} move menu focus · right ${xbIcon('RS')} scroll menus · ${xbIcon('A')} confirm · ${xbIcon('B')} back</p>
 <p>${xbIcon('UP')} autopilot (in flight) · ${xbIcon('DOWN')} land / launch (in flight)</p></div>`;
 }
