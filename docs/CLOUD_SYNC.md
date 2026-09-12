@@ -7,11 +7,12 @@ When `dist/cloud-config.mjs` has empty `url` / `anonKey`, the Flight menu shows 
 ## 1. Create a Supabase project
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **Authentication → Providers → Email**: enable Email. Prefer **OTP / magic link** (passwordless).
-3. **Authentication → URL configuration**:
+2. **Authentication → Providers → Email**: enable Email with **password** sign-in (Farbound uses email + password so auth stays inside the installed PWA — no magic link that opens Chrome/Gmail outside the app).
+3. Optional but recommended for beta: turn on **Confirm email** off / autoconfirm so Create account signs in immediately without sending mail (avoids free-tier email rate limits).
+4. **Authentication → URL configuration**:
    - Site URL: your Pages origin, e.g. `https://gabetc99.github.io/Farbound/`
-   - Redirect URLs: same origin (and `http://localhost:…` if you test locally).
-4. Copy **Project URL** and the public **anon** key (Settings → API).
+   - Redirect URLs: same origin (and `http://localhost:…` if you test locally). Magicked-link redirects are unused by the password flow but keep them correct for any leftover sessions.
+5. Copy **Project URL** and the public **anon** key (Settings → API).
 
 ## 2. Database table + RLS
 
@@ -66,15 +67,18 @@ Commit that file only if you are comfortable publishing the public anon key (nor
 
 ## 4. Player flow
 
-1. Flight menu → **Cloud sync** → enter email → **Email sign-in link**.
-2. Open the link on the same device, or enter the email OTP code.
+1. Flight menu → **Cloud sync** → email + password (6+ characters).
+2. **Create account** once, or **Sign in** on another device. No email link — stays in the installed app.
 3. **Upload pilot** / **Download pilot**. Download always confirms and writes a local checkpoint first.
 4. Optional: **Auto-upload when docking** (signed-in only).
+
+If you previously used a magic-link-only account (no password), **Create account** with a new email, or set a password in the Supabase dashboard / Auth users UI. Sign-in with a passwordless user will fail with a clear wrong-credentials hint.
 
 Conflict hint compares local `savedAt` to the cloud `updated_at`. Newest wins only when the pilot chooses Upload or Download; nothing overwrites silently.
 
 ## 5. Ops notes
 
 - No custom Node backend; Auth + REST only (`dist/cloud-sync.mjs`).
+- Password auth avoids free-tier **email rate exceeded** (built-in SMTP is tiny) and keeps the session inside the PWA.
 - Clearing site data removes the local session and save; the cloud row remains until the user deletes the Supabase account/row.
 - Service worker caches `cloud-config.mjs` / `cloud-sync.mjs` with the release; bump `release.mjs` / `sw.js` after config changes so testers pick up the new keys.
