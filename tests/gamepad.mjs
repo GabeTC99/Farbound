@@ -84,6 +84,16 @@ assert.match(help, /help-pad/);
 assert.match(help, /Xbox controller/);
 assert.match(help, /xb-a/);
 assert.match(help, /aim/);
+buttons[XB.X] = {pressed:false, value:0};
+buttons[XB.UP] = {pressed:false, value:0};
+pollGamepad();
+buttons[XB.UP] = {pressed:true, value:1};
+state = pollGamepad();
+assert.ok(state.edges.includes('focus-up'));
+assert.equal(state.uiY, -1);
+assert.equal(state.xbox, true);
+assert.match(help, /press any button once/i);
+
 
 const app = await readFile(path.join(root, 'app.js'), 'utf8');
 assert.match(app, /pollGamepad\(\)/);
@@ -93,10 +103,10 @@ assert.equal(/Install on Android/.test(app), false);
 assert.match(app, /TOUCH \+ KEYBOARD \+ CONTROLLER/);
 
 const release = await readFile(path.join(root, 'release.mjs'), 'utf8');
-assert.match(release, /export const RELEASE='2\.10\.2'/);
+assert.match(release, /export const RELEASE='2\.10\.2b'/);
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 assert.match(sw, /gamepad\.mjs/);
-assert.match(sw, /farbound-v2\.10\.2/);
+assert.match(sw, /farbound-v2\.10\.2b'/);
 
 console.log('PASS Xbox gamepad polling, icons, help row, install copy, and release wiring');

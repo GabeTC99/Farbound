@@ -81,3 +81,6 @@
 .help-pad{margin:18px 0 10px;padding:14px 16px;border:1px solid #2a414c;border-radius:8px;background:#0e1a24}
 .help-pad h3{margin:0 0 8px;font-size:1rem;color:#c9e7e0}
 .help-pad p{margin:6px 0;font-size:.875rem;color:var(--muted);line-height:1.55}
+
+.pad-chip{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;margin-right:6px;border:1px solid #3d8f7a;border-radius:999px;background:#12352f;color:#9eebd8;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.pad-chip[hidden]{display:none!important}
