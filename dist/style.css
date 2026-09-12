@@ -66,3 +66,21 @@
 @media(max-width:650px){.desk-cover{padding:8px}.desk-terminal{max-height:82dvh;border-radius:12px}.desk-banner{padding:10px 12px}}
 
 .setting-row .section-actions{margin:0;justify-content:flex-end}
+
+/* Xbox controller prompt chips */
+.xb{display:inline-flex;align-items:center;justify-content:center;min-width:1.35em;height:1.35em;padding:0 .35em;margin:0 .12em;border-radius:4px;font-size:.72em;font-weight:700;font-style:normal;vertical-align:middle;line-height:1;letter-spacing:.02em;box-shadow:inset 0 -1px 0 #0004}
+.xb i{font-style:normal;font-weight:700}
+.xb-a{background:#3fa34a;color:#041208}
+.xb-b{background:#c94b4b;color:#1a0505}
+.xb-x{background:#3a6db5;color:#040810}
+.xb-y{background:#d4a017;color:#1a1200}
+.xb-bump,.xb-trig{background:#2a3844;color:#d7e6ec;border:1px solid #4d6570;border-radius:3px;font-size:.66em;min-width:1.7em}
+.xb-sys{background:#1c2830;color:#9eb6c0;border:1px solid #3d5360;font-size:.62em;letter-spacing:.04em;text-transform:uppercase;min-width:2.2em}
+.xb-stick{background:#243440;color:#c5dde6;border:1px solid #45606c;border-radius:50%;min-width:1.5em;height:1.5em}
+.xb-dpad{background:#243440;color:#d0e4ec;border:1px solid #45606c;min-width:1.4em}
+.help-pad{margin:18px 0 10px;padding:14px 16px;border:1px solid #2a414c;border-radius:8px;background:#0e1a24}
+.help-pad h3{margin:0 0 8px;font-size:1rem;color:#c9e7e0}
+.help-pad p{margin:6px 0;font-size:.875rem;color:var(--muted);line-height:1.55}
+
+.pad-chip{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;margin-right:6px;border:1px solid #3d8f7a;border-radius:999px;background:#12352f;color:#9eebd8;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.pad-chip[hidden]{display:none!important}
