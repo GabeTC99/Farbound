@@ -103,10 +103,13 @@ assert.equal(/Install on Android/.test(app), false);
 assert.match(app, /TOUCH \+ KEYBOARD \+ CONTROLLER/);
 
 const release = await readFile(path.join(root, 'release.mjs'), 'utf8');
-assert.match(release, /export const RELEASE='2\.10\.2b'/);
+assert.match(release, /export const RELEASE='2\.10\.2c'/);
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 assert.match(sw, /gamepad\.mjs/);
-assert.match(sw, /farbound-v2\.10\.2b'/);
+assert.match(sw, /farbound-v2\.10\.2c'/);
 
+assert.match(app, /function scrollPanelBy/);
+assert.match(app, /function revealInPanel/);
+assert.match(help, /scroll menus/);
 console.log('PASS Xbox gamepad polling, icons, help row, install copy, and release wiring');
