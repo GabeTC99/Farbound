@@ -20,7 +20,12 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-012 | Station space legs | Replace utilitarian station tab dump with a top-down walkable deck. Dock enters on-foot mode; walk to service desks to open existing panels; launch only from the hangar bay. Prison barges use a detention layout. | Ready for review |
 | FB-013 | Planetary space legs | After landing the skiff, disembark into shared on-foot mode to inspect surface POIs. Reuses the FB-012 hub layer. Full surface settlements and activities remain later scope. | Ready for review |
 | FB-014 | Better combat | Weapon variety (Pulse / Beam / Seeker + mining laser split), loadout identity (hull and module fire modes), and combat feedback (hit confirm, threat warning, lock UI). Energy/ammo tradeoffs on capacitors and seekers. | Ready for review |
-| FB-015 | Orbital mechanics | Move planets and moons along Keplerian orbits using stored orbit radius, angle, mass, and period. 2.8 stores the static fields; motion and period gameplay remain for a later update. | Planned |
+| FB-015 | Orbital mechanics | Move planets and moons along Keplerian orbits using stored orbit radius, angle, mass, and period. 2.8 stores the static fields; motion and period gameplay remain for a later update. | Ready for review |
+| FB-016 | Event intervention payoffs | Ambient drama pays when the player helps: clear objectives, credits/cargo/standing rewards, and HUD objective text for active events. | Ready for review |
+| FB-017 | Derelict salvage | After scanning a wreck, approach to salvage cargo/credits/modules, with optional on-foot wreck boarding for deeper finds. | Ready for review |
+| FB-018 | Kind-driven surfaces | Planet kind drives surface flight feel, anomaly mixes, landmark POIs, and approach readouts that match Spectrum dossiers. | Ready for review |
+| FB-019 | Company career ladders | Company ranks unlock exclusive jobs (escort, salvage, geology), Preferred hangar discounts, and a Partner liaison module. | Ready for review |
+| FB-020 | Optional cloud sync | Opt-in email account sync (Supabase) so beta testers can upload/download pilots across devices. Local saves remain primary. | Ready for review |
 
 ## Tracking
 
@@ -28,7 +33,11 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
-- September 10, 2026: Candidate 2.8.0 Planetary Rework completes FB-003 appearance consistency: expanded kinds, landmasses vs giant banding, moons, Spectrum Scanner dossiers, non-landable giants, and orbital groundwork fields (FB-015 Planned).
+- September 11, 2026: Candidate 2.10.1 Cloud Sync adds optional Supabase email OTP / magic-link pilot upload and download (FB-020). Disabled until `cloud-config.mjs` is filled; see `docs/CLOUD_SYNC.md`.
+
+- September 11, 2026: Candidate 2.10.0 Living Frontier ships FB-015 orbital motion, FB-016 event payoffs, FB-017 derelict salvage, FB-018 kind-driven surfaces, and FB-019 company careers.
+
+- September 10, 2026: Candidate 2.8.0 Planetary Rework completes FB-003 appearance consistency: expanded kinds, landmasses vs giant banding, moons, Spectrum Scanner dossiers, non-landable giants, and orbital groundwork fields (FB-015 later completed in 2.10.0).
 
 - September 8, 2026: Created the initial log from Gabe’s requested goals. No game changes requested or performed as part of logging these plans.
 

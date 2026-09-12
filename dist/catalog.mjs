@@ -24,7 +24,8 @@ export const MODULES=Object.fromEntries([
  ['seismic','Seismic array','surface',0,'+240 m surface range · 30% faster scans',{surfaceRange:240,scanSpeed:.3},'miners'],
  ['fieldwork','Fieldwork bay','support',0,'+25 hull · +6 t cargo',{hull:25,cargo:6},'freelancers'],
  ['outrider','Outrider shield','defense',0,'+65 shield · +15 m/s',{shield:65,speed:15},'freelancers'],
- ['wayfarer','Wayfarer thrusters','expedition',0,'+55 m/s · +2 ly range',{speed:55,range:2},'freelancers']
+ ['wayfarer','Wayfarer thrusters','expedition',0,'+55 m/s · +2 ly range',{speed:55,range:2},'freelancers'],
+ ['liaison','Company liaison suite','career',0,'Partner perk · better sell prices · +4 t cargo',{sellBonus:.08,cargo:4}]
 ].map(([id,name,category,price,desc,bonus,guild])=>[id,{id,name,category,price,desc,bonus,guild,standard:price>0}]));
 const quest=(name,desc,metric,count,reward,credits,good)=>({name,desc,metric,count,reward,credits,good});
 export const GUILDS=[
