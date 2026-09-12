@@ -69,16 +69,17 @@ Commit that file only if you are comfortable publishing the public anon key (nor
 
 1. Flight menu → **Cloud sync** → email + password (6+ characters).
 2. **Create account** once, or **Sign in** on another device. No email link — stays in the installed app.
-3. **Upload pilot** / **Download pilot**. Download always confirms and writes a local checkpoint first.
-4. Optional: **Auto-upload when docking** (signed-in only).
+3. **Upload pilot** / **Download pilot**. Download always confirms and writes a local checkpoint first. Confirm text includes module count and faction standing so you can verify the cloud copy before replacing local.
+4. Optional: **Auto-upload when docking** (signed-in only). Autosync **will not** overwrite a cloud pilot that has more modules, faction reputation, or company standing than the local save — use manual **Upload pilot** if you really intend to replace it.
 
 If you previously used a magic-link-only account (no password), **Create account** with a new email, or set a password in the Supabase dashboard / Auth users UI. Sign-in with a passwordless user will fail with a clear wrong-credentials hint.
 
-Conflict hint compares local `savedAt` to the cloud `updated_at`. Newest wins only when the pilot chooses Upload or Download; nothing overwrites silently.
+Conflict hint compares local `savedAt` to the cloud `updated_at`. Newest wins only when the pilot chooses Upload or Download; autosync also refuses a “thinner” overwrite.
 
 ## 5. Ops notes
 
 - No custom Node backend; Auth + REST only (`dist/cloud-sync.mjs`).
 - Password auth avoids free-tier **email rate exceeded** (built-in SMTP is tiny) and keeps the session inside the PWA.
+- Upload/download run the full save through `validateSave` and abort if modules, loadouts, companies, or reputation would be stripped.
 - Clearing site data removes the local session and save; the cloud row remains until the user deletes the Supabase account/row.
 - Service worker caches `cloud-config.mjs` / `cloud-sync.mjs` with the release; bump `release.mjs` / `sw.js` after config changes so testers pick up the new keys.

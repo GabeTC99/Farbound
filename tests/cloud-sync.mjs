@@ -3,7 +3,7 @@ import {cloudConfigured,CLOUD} from '../dist/cloud-config.mjs';
 import {
  comparePilotFreshness,cloudAutosyncEnabled,setCloudAutosync,AUTOSYNC_KEY,SESSION_KEY,AUTH_REDIRECT,
  consumeAuthRedirect,requestCloudSignIn,cloudSignUp,cloudSignIn,uploadCloudPilot,downloadCloudPilot,
- fetchCloudPilotMeta,cloudSignOut,cloudUserEmail
+ fetchCloudPilotMeta,cloudSignOut,cloudUserEmail,pilotProgress,pilotProgressSummary,wouldDowngradeCloud
 } from '../dist/cloud-sync.mjs';
 import {newSave} from '../dist/frontier.mjs';
 
@@ -153,6 +153,10 @@ await atest('Password session upload / download shapes still work',async()=>{
  const calls=[];
  const pilot=newSave();
  pilot.credits=1234;pilot.playtime=42;pilot.system=0;pilot.ship='wren';
+ pilot.modules=[{uid:'m-1',kind:'laser',grade:1}];
+ pilot.loadouts={...pilot.loadouts,wren:['m-1']};
+ pilot.reputation={...pilot.reputation,concord:12};
+ pilot.companies={'co-0-a':{standing:24,completed:3,perk:false}};
  CLOUD.url='https://example.supabase.co';
  CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
  globalThis.fetch=async(url,opts={})=>{
@@ -177,11 +181,66 @@ await atest('Password session upload / download shapes still work',async()=>{
  assert.equal(meta.credits,1234);
  const up=await uploadCloudPilot(pilot);
  assert.equal(up.user_id,'user-1');
+ assert.match(up.summary,/1 module/);
+ assert.match(up.summary,/Concord \+12/);
  const down=await downloadCloudPilot();
  assert.equal(down.pilot.credits,1234);
+ assert.equal(down.pilot.modules.length,1);
+ assert.equal(down.pilot.reputation.concord,12);
+ assert.equal(down.pilot.companies['co-0-a'].standing,24);
+ assert.match(down.summary,/1 module/);
  await cloudSignOut();
  assert.equal(cloudUserEmail(),null);
  assert.ok(!mem.has(SESSION_KEY)||!mem.get(SESSION_KEY));
+ restoreCloud();
+});
+
+test('Pilot progress helpers detect a thinner save that would wipe modules or reputation',()=>{
+ const rich=newSave();
+ rich.modules=[{uid:'m-1',kind:'laser',grade:2},{uid:'m-2',kind:'shield',grade:1}];
+ rich.loadouts={...rich.loadouts,wren:['m-1','m-2']};
+ rich.reputation={...rich.reputation,concord:40,directorate:-5};
+ rich.companies={'co-0-a':{standing:48,completed:6,perk:false}};
+ rich.playtime=9000;
+ const thin=newSave();
+ thin.playtime=120;
+ assert.equal(wouldDowngradeCloud(thin,rich),true);
+ assert.equal(wouldDowngradeCloud(rich,thin),false);
+ assert.match(pilotProgressSummary(rich),/2 modules/);
+ assert.match(pilotProgressSummary(rich),/Concord \+40/);
+ assert.deepEqual(pilotProgress(rich).modules,2);
+ assert.equal(pilotProgress(rich).standing,48);
+});
+
+await atest('Autosync-style upload refuses to overwrite a richer cloud pilot',async()=>{
+ mem.clear();
+ const rich=newSave();
+ rich.modules=[{uid:'m-1',kind:'laser',grade:1}];
+ rich.loadouts={...rich.loadouts,wren:['m-1']};
+ rich.reputation={...rich.reputation,concord:30};
+ rich.companies={'co-0-a':{standing:40,completed:5,perk:false}};
+ rich.playtime=8000;rich.credits=50000;
+ const thin=newSave();
+ thin.playtime=200;thin.credits=2400;
+ CLOUD.url='https://example.supabase.co';
+ CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
+ let posts=0;
+ globalThis.fetch=async(url,opts={})=>{
+  if(String(url).includes('/auth/v1/token')&&String(url).includes('grant_type=password')){
+   return {ok:true,json:async()=>({access_token:'a1',refresh_token:'r1',expires_in:3600,user:{id:'user-1',email:'pilot@example.com'}})};
+  }
+  if(String(url).includes('/rest/v1/pilots')&&(opts.method||'GET')==='GET'&&String(url).includes('select=pilot')){
+   return {ok:true,json:async()=>[{pilot:rich,updated_at:'2026-09-11T12:00:00.000Z'}]};
+  }
+  if(String(url).includes('/rest/v1/pilots')&&opts.method==='POST'){posts++;return {ok:true,json:async()=>[{user_id:'user-1'}]};}
+  return {ok:false,json:async()=>({msg:'unexpected '+url})};
+ };
+ await cloudSignIn('pilot@example.com','secret99');
+ await assert.rejects(()=>uploadCloudPilot(thin,{allowDowngrade:false}),/Autosync skipped/);
+ assert.equal(posts,0);
+ const forced=await uploadCloudPilot(thin,{allowDowngrade:true});
+ assert.equal(posts,1);
+ assert.ok(forced);
  restoreCloud();
 });
 
