@@ -7,6 +7,9 @@ import {validateSave} from './frontier.mjs';
 
 export const SESSION_KEY='farbound-cloud-session';
 export const AUTOSYNC_KEY='farbound-cloud-autosync';
+const PKCE_KEY='farbound-cloud-pkce';
+/** Always return testers to the Pages game path — never the bare github.io host. */
+export const AUTH_REDIRECT='https://gabetc99.github.io/Farbound/';
 
 const jsonHeaders=()=>({
  'Content-Type':'application/json',
@@ -28,23 +31,71 @@ function saveSession(session){
 }
 export function cloudAutosyncEnabled(){return localStorage.getItem(AUTOSYNC_KEY)==='1';}
 export function setCloudAutosync(on){localStorage.setItem(AUTOSYNC_KEY,on?'1':'0');}
-
 export function getCloudSession(){return loadSession();}
 export function cloudUserEmail(){return loadSession()?.user?.email||null;}
 
-/** Capture magic-link tokens from the URL hash/query after redirect. */
-export function consumeAuthRedirect(location=window.location){
+function b64url(bytes){
+ let s='';for(const b of bytes)s+=String.fromCharCode(b);
+ return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function randomVerifier(){
+ const bytes=new Uint8Array(32);
+ crypto.getRandomValues(bytes);
+ return b64url(bytes);
+}
+async function challengeS256(verifier){
+ const data=new TextEncoder().encode(verifier);
+ const dig=await crypto.subtle.digest('SHA-256',data);
+ return b64url(new Uint8Array(dig));
+}
+
+function clearUrlAuth(location){
+ try{
+  const url=new URL(location.href);
+  ['code','access_token','refresh_token','expires_at','expires_in','token_type','type','error','error_description'].forEach(k=>url.searchParams.delete(k));
+  url.hash='';
+  history.replaceState({},'',url.pathname+url.search);
+ }catch{}
+}
+
+/** Capture magic-link / PKCE redirect tokens from the URL. */
+export async function consumeAuthRedirect(location=window.location){
  if(!cloudConfigured())return null;
  const hash=new URLSearchParams((location.hash||'').replace(/^#/,''));
  const query=new URLSearchParams(location.search||'');
+ if(hash.get('error')||query.get('error')){
+  const msg=hash.get('error_description')||query.get('error_description')||hash.get('error')||query.get('error');
+  clearUrlAuth(location);
+  throw Error(msg||'Sign-in link failed.');
+ }
  const access=hash.get('access_token')||query.get('access_token');
  const refresh=hash.get('refresh_token')||query.get('refresh_token');
- if(!access)return null;
- const session={access_token:access,refresh_token:refresh,expires_at:Number(hash.get('expires_at')||query.get('expires_at')||0),user:null};
+ if(access){
+  const session={access_token:access,refresh_token:refresh,expires_at:Number(hash.get('expires_at')||query.get('expires_at')||0),user:null};
+  saveSession(session);
+  clearUrlAuth(location);
+  const user=await fetchUser(access);if(user){session.user=user;saveSession(session);}
+  return session;
+ }
+ const code=query.get('code');
+ if(!code)return null;
+ let verifier=null;
+ try{verifier=sessionStorage.getItem(PKCE_KEY);}catch{}
+ if(!verifier)throw Error('Sign-in link opened in a different browser. Request a new email and open the link in Chrome where Farbound is running.');
+ const res=await fetch(`${CLOUD.url}/auth/v1/token?grant_type=pkce`,{
+  method:'POST',headers:jsonHeaders(),
+  body:JSON.stringify({auth_code:code,code_verifier:verifier,code})
+ });
+ try{sessionStorage.removeItem(PKCE_KEY);}catch{}
+ clearUrlAuth(location);
+ if(!res.ok){
+  const err=await res.json().catch(()=>({}));
+  throw Error(err.msg||err.error_description||'Could not finish sign-in from the email link.');
+ }
+ const data=await res.json();
+ const session={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+(data.expires_in||3600),user:data.user||null};
  saveSession(session);
- try{
-  history.replaceState({},'',location.pathname+(location.search&&!query.get('access_token')?location.search:'')+(location.hash&&!hash.get('access_token')?location.hash:''));
- }catch{}
+ if(!session.user){const user=await fetchUser(session.access_token);if(user){session.user=user;saveSession(session);}}
  return session;
 }
 
@@ -62,7 +113,6 @@ async function refreshIfNeeded(){
    saveSession(next);return next;
   }
  }
- // Probe user with current token
  const user=await fetchUser(session.access_token);
  if(user){session.user=user;saveSession(session);return session;}
  saveSession(null);return null;
@@ -76,18 +126,27 @@ async function fetchUser(token){
 
 export async function ensureCloudSession(){
  if(!cloudConfigured())return null;
- consumeAuthRedirect();
+ await consumeAuthRedirect();
  return await refreshIfNeeded();
 }
 
-/** Send a magic-link / OTP email. */
-export async function requestCloudSignIn(email,{redirectTo=typeof location!=='undefined'?location.origin+location.pathname:''}={}){
+/** Send a magic-link email (PKCE) that returns to the Pages game URL. */
+export async function requestCloudSignIn(email,{redirectTo=AUTH_REDIRECT}={}){
  if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
  const clean=String(email||'').trim().toLowerCase();
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean))throw Error('Enter a valid email address.');
+ const verifier=randomVerifier();
+ const challenge=await challengeS256(verifier);
+ try{sessionStorage.setItem(PKCE_KEY,verifier);}catch{}
  const res=await fetch(`${CLOUD.url}/auth/v1/otp`,{
   method:'POST',headers:jsonHeaders(),
-  body:JSON.stringify({email:clean,create_user:true,options:{email_redirect_to:redirectTo}})
+  body:JSON.stringify({
+   email:clean,
+   create_user:true,
+   code_challenge:challenge,
+   code_challenge_method:'s256',
+   options:{email_redirect_to:redirectTo}
+  })
  });
  if(!res.ok){
   const err=await res.json().catch(()=>({}));
@@ -96,7 +155,7 @@ export async function requestCloudSignIn(email,{redirectTo=typeof location!=='un
  return {email:clean};
 }
 
-/** Verify a 6–8 digit email OTP from the message body. */
+/** Verify an email OTP when the message includes a numeric code. */
 export async function verifyCloudOtp(email,token){
  if(!cloudConfigured())throw Error('Cloud sync is not configured on this build.');
  const clean=String(email||'').trim().toLowerCase();
@@ -121,6 +180,7 @@ export async function cloudSignOut(){
   try{await fetch(`${CLOUD.url}/auth/v1/logout`,{method:'POST',headers:authHeaders(session.access_token)});}catch{}
  }
  saveSession(null);
+ try{sessionStorage.removeItem(PKCE_KEY);}catch{}
 }
 
 export async function fetchCloudPilotMeta(){
@@ -183,3 +243,4 @@ export function comparePilotFreshness(localPilot,remoteMeta){
  const remotePlay=Number(remoteMeta?.playtime)||0;
  return {localNewer:localPlay>remotePlay,remoteNewer:remotePlay>localPlay,same:localPlay===remotePlay,remotePlay,localAt:localPlay};
 }
+
