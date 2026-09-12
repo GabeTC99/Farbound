@@ -240,6 +240,54 @@ export async function fetchCloudPilotMeta(){
  return rows[0]||null;
 }
 
+/** Summarize progress that players notice when a cloud restore goes wrong. */
+export function pilotProgress(pilot){
+ const modules=Array.isArray(pilot?.modules)?pilot.modules.length:0;
+ const fitted=pilot?.loadouts?Object.values(pilot.loadouts).reduce((n,a)=>n+(Array.isArray(a)?a.length:0),0):0;
+ const companies=pilot?.companies&&typeof pilot.companies==='object'?Object.keys(pilot.companies).length:0;
+ const standing=pilot?.companies?Object.values(pilot.companies).reduce((n,c)=>n+(Number(c?.standing)||0),0):0;
+ const repAbs=pilot?.reputation?Object.values(pilot.reputation).reduce((n,v)=>n+Math.abs(Number(v)||0),0):0;
+ const playtime=Number(pilot?.playtime)||0;
+ const credits=Number(pilot?.credits)||0;
+ return {modules,fitted,companies,standing,repAbs,playtime,credits};
+}
+
+/** Short status line: "3 modules · Concord +12 · 2 companies". */
+export function pilotProgressSummary(pilot){
+ const p=pilotProgress(pilot);
+ const reps=pilot?.reputation&&typeof pilot.reputation==='object'
+  ?Object.entries(pilot.reputation).filter(([,v])=>Number(v)).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]))
+  :[];
+ const top=reps[0]?`${reps[0][0][0].toUpperCase()+reps[0][0].slice(1)} ${Number(reps[0][1])>0?'+':''}${Math.round(Number(reps[0][1]))}`:null;
+ const bits=[`${p.modules} module${p.modules===1?'':'s'}`];
+ if(top)bits.push(top);
+ if(p.companies)bits.push(`${p.companies} compan${p.companies===1?'y':'ies'}`);
+ return bits.join(' · ');
+}
+
+/**
+ * True when uploading `local` would replace a richer cloud pilot
+ * (modules / faction rep / company standing) without clearly more playtime.
+ */
+export function wouldDowngradeCloud(local,remote){
+ if(!remote)return false;
+ const L=pilotProgress(local),R=pilotProgress(remote);
+ const playOk=L.playtime>=R.playtime-30;
+ if(R.modules>L.modules&&!playOk)return true;
+ if(R.modules>L.modules&&R.modules>=L.modules+1&&L.playtime<=R.playtime+60)return true;
+ if(R.repAbs>L.repAbs+0.5&&L.playtime<=R.playtime+60)return true;
+ if(R.standing>L.standing+0.5&&L.playtime<=R.playtime+60)return true;
+ if(R.fitted>L.fitted&&R.modules>=L.modules&&L.playtime<=R.playtime+60)return true;
+ return false;
+}
+
+function assertProgressPreserved(raw,valid){
+ const before=pilotProgress(raw),after=pilotProgress(valid);
+ if(before.modules>after.modules||before.fitted>after.fitted||before.companies>after.companies||before.standing>after.standing+0.01||before.repAbs>after.repAbs+0.01){
+  throw Error('Cloud validation would strip modules or reputation. Upload aborted — export a local backup.');
+ }
+}
+
 export async function downloadCloudPilot(){
  const session=await ensureCloudSession();if(!session?.user?.id)throw Error('Sign in to download a cloud pilot.');
  const res=await fetch(`${CLOUD.url}/rest/v1/pilots?select=pilot,updated_at&user_id=eq.${session.user.id}`,{
@@ -248,14 +296,32 @@ export async function downloadCloudPilot(){
  if(!res.ok)throw Error('Could not download cloud pilot.');
  const rows=await res.json();
  if(!rows.length)return null;
- const pilot=validateSave(rows[0].pilot);
+ const raw=rows[0].pilot;
+ const pilot=validateSave(raw);
  if(!pilot)throw Error('Cloud pilot failed validation.');
- return {pilot,updatedAt:rows[0].updated_at};
+ try{assertProgressPreserved(raw,pilot);}catch{
+  throw Error('Cloud pilot failed validation (modules or reputation did not survive).');
+ }
+ return {pilot,updatedAt:rows[0].updated_at,summary:pilotProgressSummary(pilot)};
 }
 
-export async function uploadCloudPilot(pilot){
+/**
+ * Upload a pilot. Pass `{allowDowngrade:false}` for autosync so a thinner
+ * phone save cannot overwrite a richer PC copy.
+ */
+export async function uploadCloudPilot(pilot,{allowDowngrade=true}={}){
  const session=await ensureCloudSession();if(!session?.user?.id)throw Error('Sign in to upload your pilot.');
  const valid=validateSave(pilot);if(!valid)throw Error('Local pilot is not valid to upload.');
+ assertProgressPreserved(pilot,valid);
+ if(!allowDowngrade){
+  const remote=await downloadCloudPilot().catch(()=>null);
+  if(remote&&wouldDowngradeCloud(valid,remote.pilot)){
+   const err=Error('Autosync skipped — the cloud pilot has more modules or reputation. Use Upload pilot to replace it.');
+   err.code='cloud_downgrade';
+   err.remote=remote;
+   throw err;
+  }
+ }
  const body={
   user_id:session.user.id,
   email:session.user.email||null,
@@ -276,7 +342,7 @@ export async function uploadCloudPilot(pilot){
   throw Error(err.message||err.msg||'Upload failed.');
  }
  const rows=await res.json();
- return rows[0]||body;
+ return {...(rows[0]||body),summary:pilotProgressSummary(valid)};
 }
 
 /** Compare local vs cloud timestamps for conflict UI. */
