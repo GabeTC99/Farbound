@@ -1,4 +1,4 @@
-import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius,moduleSlots} from './core.mjs';
+import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,jumpCost,price,dist,clamp,angleDiff,rng,shipRadius,moduleSlots} from './core.mjs';
 import {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface,terrainAt} from './surface.mjs';
 import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
@@ -85,6 +85,47 @@ export function validateSave(x){
 }
 export function systemName(sys,s){return sys.uncharted&&!s.visited.includes(sys.id)?'Uncharted '+sys.catalog:sys.name;}
 export function findRoute(from,to,range){if(!SYSTEMS[from]||!SYSTEMS[to]||!Number.isFinite(range)||range<=0)return null;if(from===to)return[];const costs=SYSTEMS.map(()=>Infinity),previous=SYSTEMS.map(()=>-1),seen=new Set();costs[from]=0;for(let n=0;n<SYSTEMS.length;n++){let current=-1;for(let i=0;i<costs.length;i++)if(!seen.has(i)&&(current<0||costs[i]<costs[current]))current=i;if(current<0||!Number.isFinite(costs[current])||current===to)break;seen.add(current);for(const sys of SYSTEMS){if(seen.has(sys.id)||sys.id===current)continue;const d=jumpDistance(current,sys.id),c=costs[current]+1+d*.0001;if(d<=range&&c<costs[sys.id]){costs[sys.id]=c;previous[sys.id]=current;}}}if(previous[to]<0)return null;let cur=to;const path=[];while(cur!==from){path.unshift(cur);cur=previous[cur];if(cur<0)return null;}return path;}
+/** Charted stations (and visited uncharted docks) the player can price against. */
+export function knownMarkets(save){
+ return SYSTEMS.filter(sys=>sys.hasStation&&(!sys.uncharted||(save?.visited||[]).includes(sys.id)));
+}
+/** Best legal sale of `good` from `fromId`. haveCargo compares destination sell vs local sell; otherwise vs local buy. */
+export function tradeHop(fromId,good,save,opts={}){
+ const from=SYSTEMS[fromId];if(!from?.hasStation||!GOODS.some(g=>g.id===good)||!save)return null;
+ const haveCargo=!!opts.haveCargo,range=getStats(save).range,buyHere=price(from,good,true,save),sellHere=price(from,good,false,save);
+ let best=null;
+ for(const sys of knownMarkets(save)){
+  if(sys.id===fromId)continue;
+  const path=findRoute(fromId,sys.id,range);if(!path)continue;
+  const sell=price(sys,good,false,save),profit=haveCargo?sell-sellHere:sell-buyHere;
+  if(profit<=0)continue;
+  const fuel=path.reduce((sum,id,i)=>sum+jumpCost(i?path[i-1]:fromId,id,save),0);
+  if(!best||profit>best.profit||(profit===best.profit&&(path.length<best.jumps||(path.length===best.jumps&&fuel<best.fuel)))){
+   best={good,fromId,to:sys.id,sell,buyHere,sellHere,profit,jumps:path.length,fuel,path};
+  }
+ }
+ return best;
+}
+export function bestExport(fromId,save){
+ let best=null;
+ for(const g of GOODS){
+  const hop=tradeHop(fromId,g.id,save,{haveCargo:false});
+  if(hop&&(!best||hop.profit>best.profit))best=hop;
+ }
+ return best;
+}
+export function systemPresence(sys,save){
+ const faction=FACTIONS.find(f=>f.id===sys.faction);
+ if(!faction)return{label:'Unclaimed',status:'Unclaimed',tone:'',color:'#8493ae',faction:null};
+ const rep=save?.reputation?.[faction.id]||0,op=(save?.operations||[]).some(o=>o.target===sys.id);
+ let status='Held';
+ if((sys.danger||0)>=3)status='Lawless';
+ else if(op||(sys.danger||0)>=2)status='Contested';
+ else if(rep>=20)status='Friendly';
+ else if(rep<=-20)status='Hostile';
+ else status=['Secure','Patrolled'][sys.danger]||'Held';
+ return{label:faction.name+' · '+status,status,tone:rep<=-20?'danger':rep>=20?'safe':'',color:faction.color,faction:faction.id};
+}
 export function missionDestination(s,m){return m.type==='delivery'?m.destination:m.type==='survey'&&!surveyWorldIds(m.destination,SYSTEMS[m.destination]).every(id=>s.scanned.includes(id))?m.destination:m.origin;}
 const COMPANY_POOL={
  Agricultural:[{name:'Harvest Circle',focus:'delivery'},{name:'Greenhold Provisions',focus:'survey'},{name:'Seedwright Co-op',focus:'mining'}],

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,marketBulletin,ECONOMY_SPECIALTY,pursuitObjective,contractsFor,companiesFor,companyRank,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,FACTIONS,getStats,cargoUsed,jumpDistance,jumpCost,price,marketBulletin,ECONOMY_SPECIALTY,pursuitObjective,contractsFor,companiesFor,companyRank,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds,tradeHop,bestExport,systemPresence} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
 import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
@@ -108,6 +108,41 @@ test('Market bulletins are deterministic, named, and shown on the galaxy chart',
  assert.match(app,/TRAFFIC BOARD/);
  assert.match(app,/ECONOMY_SPECIALTY/);
 });
+test('Trade hops pick a higher-paying dock, keep buy above sell, and plot from Market and Galaxy',()=>{
+ const g=new Game();
+ const hop=bestExport(0,g.s);
+ assert(hop,'Agricultural Solace should have a profitable export');
+ assert.equal(hop.fromId,0);
+ assert.notEqual(hop.to,0);
+ assert(hop.profit>0);
+ assert(hop.jumps>=1);
+ assert(price(SYSTEMS[hop.to],hop.good,false,g.s)>price(SYSTEMS[0],hop.good,true,g.s));
+ const food=tradeHop(0,'food',g.s,{haveCargo:false});
+ if(food){
+  assert(food.profit>0);
+  assert(price(SYSTEMS[food.to],'food',true,g.s)>price(SYSTEMS[food.to],'food',false,g.s));
+ }
+ g.s.cargo.food=5;
+ const sale=tradeHop(0,'food',g.s,{haveCargo:true});
+ if(sale)assert(sale.sell>price(SYSTEMS[0],'food',false,g.s));
+ const home=mapView(g,0);
+ assert(home.includes('Best export'));
+ assert(home.includes('data-action="plot-trade"'));
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/case 'plot-trade'/);
+ assert.match(app,/trade-hop/);
+ assert.match(app,/radar-mode/);
+ assert.match(app,/flightModeLabel/);
+ for(const sys of SYSTEMS.filter(s=>s.hasStation).slice(0,16)){
+  const p=systemPresence(sys,g.s);
+  assert(p.label);
+  if(sys.faction)assert(p.label.includes(FACTIONS.find(f=>f.id===sys.faction).name));
+ }
+ g.s.reputation.concord=40;
+ const friendly=systemPresence(SYSTEMS[0],g.s);
+ assert.equal(SYSTEMS[0].faction,'concord');
+ assert.match(friendly.label,/Friendly/);
+});
 test('First dock briefs Market refuel/repair; prospecting is optional extra yield',()=>{
  const g=new Game();
  assert.equal(g.s.briefed,false);
@@ -186,6 +221,10 @@ test('Panel generators cover all navigation actions and render all guilds, facti
 });
 test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogue by context',()=>{
  assert.equal(STATION_ROBOT.displayName,'Nellby-9');
+ assert.equal(STATION_ROBOT.nameFor(SYSTEMS[0]),'Nellby-9');
+ const names=new Set(SYSTEMS.filter(s=>s.hasStation).slice(0,24).map(s=>STATION_ROBOT.nameFor(s)));
+ assert(names.size>=3,'station robots should not all share one name');
+ assert.equal(STATION_ROBOT.nameFor(SYSTEMS[7]),STATION_ROBOT.nameFor(SYSTEMS[7]));
  assert.equal(STATION_ROBOT.roleLabel,'Station Service Unit');
  assert(ROBOT_LINES.greeting.length>=3);
  assert(ROBOT_LINES.wanted.length>=2);

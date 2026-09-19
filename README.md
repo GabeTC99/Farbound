@@ -12,9 +12,20 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Farbound/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.11.0 lands, the welcome chip should read **Frontier Presence 2.11.0**.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.12.0 lands, the welcome chip should read **Frontier Instruments 2.12.0**.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
+
+## Frontiers 2.12 — Frontier Instruments
+
+### Candidate 2.12.0
+
+Godot-shell cohesion on the GitHub Pages beta (same loops, tighter instruments):
+
+- **Heading-up radar:** the mint chevron is your nose. A gold ring marks the current lock. The chip under the dish reads CRUISE / COMBAT / SCOOP / AUTO / FOLD / HEAT / HOLD.
+- **Plot a sale:** Market commodities and the Galaxy **Best export** row plot a jump route to the highest legal payout on your charts. Buy stays above sell.
+- **Faction presence:** visited and charted systems tint to Concord / Directorate / Freeholds. The side panel shows Friendly / Hostile / Contested / Lawless from standing and danger.
+- **Station voices:** Solace keeps Nellby-9. Other docks get a seeded concierge name and faction-flavored asides.
 
 ## Frontiers 2.11 — Frontier Presence
 
@@ -111,7 +122,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.11.0). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.12.0). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

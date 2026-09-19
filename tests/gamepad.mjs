@@ -103,11 +103,11 @@ assert.equal(/Install on Android/.test(app), false);
 assert.match(app, /TOUCH \+ KEYBOARD \+ CONTROLLER/);
 
 const release = await readFile(path.join(root, 'release.mjs'), 'utf8');
-assert.match(release, /export const RELEASE='2\.11\.0'/);
+assert.match(release, /export const RELEASE='2\.12\.0'/);
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 assert.match(sw, /gamepad\.mjs/);
-assert.match(sw, /farbound-v2\.11\.0'/);
+assert.match(sw, /farbound-v2\.12\.0'/);
 
 assert.match(app, /function scrollPanelBy/);
 assert.match(app, /function revealInPanel/);
