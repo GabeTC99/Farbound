@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,contractsFor,companiesFor,companyRank,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,getStats,cargoUsed,jumpDistance,jumpCost,price,marketBulletin,ECONOMY_SPECIALTY,pursuitObjective,contractsFor,companiesFor,companyRank,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
 import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
@@ -65,7 +65,114 @@ test('Neutral patrols can be engaged and friendly pledged patrols assist nearby 
  const g=new Game();g.pledge('concord');g.launch();const p=g.patrols[0],e=g.enemies[0];e.x=p.x+100;e.y=p.y;p.fire=0;g.update(1/30);assert(g.shots.some(s=>s.ally));assert(g.engageFaction(p));assert.equal(g.s.reputation.concord,-12);assert(g.enemies.includes(p));assert(!g.patrols.includes(p));assert(!g.engageFaction(p));g.s.reputation.concord=-25;g.update(1/30);assert.equal(g.patrols.length,0);roundtrip(g);
 });
 test('Market bonuses never create a profitable buy-and-sell loop at the same station',()=>{
- const g=new Game();fit(g,'merchant');for(const sys of SYSTEMS)for(const rep of [-100,0,100]){if(sys.faction)g.s.reputation[sys.faction]=rep;for(const good of GOODS)assert(price(sys,good.id,true,g.s)>price(sys,good.id,false,g.s));}
+ const g=new Game();fit(g,'merchant');
+ for(const play of [0,1200,4800]){
+  g.s.playtime=play;
+  for(const sys of SYSTEMS)for(const rep of [-100,0,100]){if(sys.faction)g.s.reputation[sys.faction]=rep;for(const good of GOODS)assert(price(sys,good.id,true,g.s)>price(sys,good.id,false,g.s),sys.name+' '+good.id+' @'+play);}
+ }
+});
+test('Market bulletins are deterministic, named, and shown on the galaxy chart',()=>{
+ let posted=0;
+ for(const sys of SYSTEMS.filter(s=>s.hasStation).slice(0,32)){
+  for(const play of [0,1200,2400,7200]){
+   const note=marketBulletin(sys,play);
+   assert.deepEqual(note,marketBulletin(sys,play+10));
+   if(note){
+    posted++;
+    assert(GOODS.some(g=>g.id===note.good));
+    assert(['shortage','surplus'].includes(note.kind));
+    assert(note.headline.includes(sys.name));
+    assert(note.headline.includes(note.name.toLowerCase())||note.headline.includes(note.name));
+   }
+  }
+ }
+ assert(posted>8,'expected some traffic-board postings');
+ for(const eco of Object.keys(ECONOMY_SPECIALTY))assert(GOODS.some(g=>g.id===ECONOMY_SPECIALTY[eco].good));
+ const g=new Game();
+ let hit=null,sysId=0,play=0;
+ for(const sys of SYSTEMS){
+  for(const p of [0,1200,2400,3600,4800,6000,7200,8400]){
+   const note=marketBulletin(sys,p);
+   if(note){hit=note;sysId=sys.id;play=p;break;}
+  }
+  if(hit)break;
+ }
+ assert(hit);
+ g.s.playtime=play;
+ if(!g.s.visited.includes(sysId))g.s.visited.push(sysId);
+ const chart=mapView(g,sysId);
+ assert(chart.includes('Bulletin'));
+ assert(chart.includes(hit.name));
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/bulletin-callout/);
+ assert.match(app,/TRAFFIC BOARD/);
+ assert.match(app,/ECONOMY_SPECIALTY/);
+});
+test('First dock briefs Market refuel/repair; prospecting is optional extra yield',()=>{
+ const g=new Game();
+ assert.equal(g.s.briefed,false);
+ g.launch();g.player.x=g.station.x;g.player.y=g.station.y+50;
+ assert(g.dock());
+ assert.equal(g.s.briefed,true);
+ assert(g.s.tutorial>=3);
+ assert(g.events.some(e=>/Market/i.test(e.text)));
+ const saved=validateSave(JSON.parse(JSON.stringify(g.serialize())));
+ assert.equal(saved.briefed,true);
+ const miner=new Game();miner.launch();miner.enemies=[];
+ const plain=miner.asteroids[0];miner.asteroids=[plain];plain.hp=1;
+ miner.player.x=plain.x-110;miner.player.y=plain.y;miner.player.angle=0;miner.target=plain;
+ ticks(miner,2,{fire:true});assert.equal(miner.s.mined,1);
+ const rich=new Game();rich.launch();rich.enemies=[];
+ const rock=rich.asteroids[0];rich.asteroids=[rock];
+ rich.player.x=rock.x-80;rich.player.y=rock.y;rich.player.vx=rich.player.vy=0;rich.target=rock;
+ assert(rich.prospectRock());assert.equal(rock.prospected,true);
+ rock.hp=1;rich.player.x=rock.x-110;rich.player.angle=0;
+ ticks(rich,2,{fire:true});assert.equal(rich.s.mined,2);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/PROSPECT ROCK/);
+ assert.match(app,/prospectRock/);
+});
+test('Wake pursuit persists, realizes after jump, and pays once on scan',()=>{
+ const g=new Game();g.launch();
+ const freighter=g.traffic.find(t=>t.job==='DEPARTING FOR JUMP POINT');
+ assert(freighter?.canJump);
+ freighter.x=g.jumpAnchor().x;freighter.y=g.jumpAnchor().y;freighter.pause=0;freighter.target=0;
+ g.departJump(freighter);
+ const wake=g.wakes[0],dest=wake.to;
+ g.target=wake;assert(g.scanWake());assert(g.followWake());
+ assert.equal(g.s.pursuit.uid,wake.uid);
+ assert.equal(g.s.pursuit.to,dest);
+ assert(['trader','fugitive'].includes(g.s.pursuit.kind));
+ g.s.pursuit.kind='trader';
+ const obj=pursuitObjective(g);
+ assert(obj&&obj.text.includes(g.s.pursuit.name));
+ const snap=validateSave(JSON.parse(JSON.stringify(g.serialize())));
+ assert.equal(snap.pursuit.uid,wake.uid);
+ const bad={...g.serialize(),pursuit:{...g.s.pursuit,kind:'wizard'}};
+ assert.equal(validateSave(bad),null);
+ g.teleportTo(dest,{docked:false});
+ const ship=g.traffic.find(t=>t.uid===wake.uid||t.pursued);
+ assert(ship);assert.equal(ship.pursued,true);
+ g.player.x=ship.x;g.player.y=ship.y+40;g.player.vx=g.player.vy=0;g.target=ship;
+ const credits=g.s.credits,cargo=cargoUsed(g.s);
+ assert(g.scanPursuit());
+ assert.equal(g.s.metrics.pursuits,1);
+ assert.equal(g.s.credits,credits+180);
+ assert.equal(g.s.pursuit,null);
+ assert(cargoUsed(g.s)>=cargo);
+ const h=roundtrip(g);
+ assert.equal(h.s.metrics.pursuits,1);
+ assert.equal(h.s.pursuit,null);
+ g.s.playtime=0;
+ const late=new Game();late.launch();
+ late.s.pursuit={uid:'gone',name:'Ghost Runner',hull:'courier',color:'#7ec8d8',size:12,from:0,to:1,kind:'trader',until:-1};
+ late.s.playtime=10;
+ assert.equal(late.realizePursuit(),false);
+ assert.equal(late.s.pursuit,null);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/FOLLOW WAKE/);
+ assert.match(app,/SCAN CONTACT/);
+ assert.match(app,/pursuitObjective/);
 });
 test('Migration preserves the original save byte-for-byte; checkpoints recover damaged v2 saves',()=>{
  const storage=new MemoryStorage(),original=JSON.stringify(new ClassicGame().serialize());storage.setItem(ORIGINAL_KEY,original);const boot=readPilot(storage);assert(boot.migrated);writePilot(storage,boot.pilot,{now:1000});assert.equal(storage.getItem(ORIGINAL_KEY),original);const next=structuredClone(boot.pilot);next.credits+=100;writePilot(storage,next,{now:2000});assert.equal(readCheckpoint(storage).pilot.credits,2400);storage.setItem(SAVE_KEY,'corrupted');const recovered=readPilot(storage);assert(recovered.recovered);assert.equal(recovered.pilot.credits,2400);assert.equal(storage.getItem(ORIGINAL_KEY),original);writePilot(storage,next,{now:3000});const final=structuredClone(next);final.credits+=500;writePilot(storage,final,{checkpoint:true,now:4000});assert.equal(readCheckpoint(storage).pilot.credits,2500);assert.equal(readPilot(storage).pilot.credits,3000);assert(storage.getItem(BACKUP_KEY));
@@ -98,9 +205,13 @@ test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogu
  g.player.x=g.station.x;g.player.y=g.station.y+50;
  assert(g.dock());
  assert(g.s.robotMet);
+ assert.equal(g.s.briefed,true);
  assert(g.robotState?.lastText);
- assert(ROBOT_LINES.greeting.some(([t])=>t===g.robotState.lastText));
+ assert(g.robotState.lastText.includes('Market'));
+ assert(g.robotState.lastText.includes('first two buttons')||g.robotState.lastText.includes('Refuel'));
  assert(robotStrip(g).includes(g.robotState.lastText));
+ const greet=g.talkRobot('greeting');
+ assert(ROBOT_LINES.greeting.some(([t])=>t===greet.text));
  const line=g.talkRobot();
  assert(line?.text);
  assert(['neutral','happy','confused','annoyed','alert'].includes(line.expression));
@@ -137,6 +248,7 @@ test('Station space legs: dock enters deck, desks open services, hangar launches
  assert(g.onfoot);
  assert(g.onfoot.zones.some(z=>z.service==='market'));
  const market=g.onfoot.zones.find(z=>z.service==='market');
+ assert.match(market.label,/Refuel/);
  g.onfoot.x=market.x;g.onfoot.y=market.y;
  const open=g.interactStation();
  assert.equal(open.service,'market');
@@ -153,6 +265,7 @@ test('Station space legs: dock enters deck, desks open services, hangar launches
  h.teleportTo(prison.id,{docked:true});
  h.s.detained=true;h.s.bounty=800;h.s.stationPos=null;h.enterStationDeck();
  assert(h.onfoot.zones.some(z=>z.service==='detention'));
+ assert(h.onfoot.zones.some(z=>z.service==='market'&&/Refuel/.test(z.label)));
  assert(!h.onfoot.zones.some(z=>z.service==='contracts'));
  const bay=h.onfoot.zones.find(z=>z.launch);
  h.onfoot.x=bay.x;h.onfoot.y=bay.y;

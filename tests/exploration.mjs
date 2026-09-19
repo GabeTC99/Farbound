@@ -128,7 +128,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.10\.2c'/);
+ assert.match(release,/export const RELEASE='2\.11\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,8 +144,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawLandmasses/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.10\.2c/);
- assert.match(sw,/release:'2\.10\.2c'/);
+ assert.match(sw,/farbound-v2\.11\.0/);
+ assert.match(sw,/release:'2\.11\.0'/);
  assert.match(sw,/system-chart\.mjs/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
@@ -367,7 +367,9 @@ test('Jump traffic leaves wakes that can be scanned and followed across systems'
  freighter.x=g.jumpAnchor().x;freighter.y=g.jumpAnchor().y;freighter.pause=0;freighter.target=0;g.departJump(freighter);
  assert.equal(g.traffic.includes(freighter),false);assert.equal(g.wakes.length,1);assert.equal(g.s.transit.length,1);
  const wake=g.wakes[0],dest=wake.to;g.target=wake;assert(g.scanWake());assert(wake.scanned);assert(g.followWake());assert.equal(g.s.route.destination,dest);
+ assert(g.s.pursuit);assert.equal(g.s.pursuit.to,dest);assert.equal(g.s.pursuit.uid,wake.uid);
  g.s.transit[0].eta=g.s.playtime;g.teleportTo(dest,{docked:false});assert(g.traffic.some(t=>t.uid===wake.uid||t.job==='ARRIVING FROM JUMP POINT'));
+ assert(g.traffic.some(t=>t.pursued||t.uid===wake.uid));
 });
 test('Wanted escalation and system skies are available for testing',()=>{
  assert.equal(wantedTier(0).label,'CLEAN');assert.equal(wantedTier(600).label,'WANTED');assert.equal(wantedTier(3000).label,'EXTREME');

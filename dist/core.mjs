@@ -12,6 +12,42 @@ export const ECONOMIES = {
  Agricultural:[.6,1.12,1.4,.9,1.05], Extraction:[1.42,.62,1.26,1.3,.72],
  Industrial:[1.15,1.45,.84,1.04,1.22], Research:[1.18,.95,.62,.72,1.52], Frontier:[1.38,1.12,1.48,1.46,1.1]
 };
+export const ECONOMY_SPECIALTY={
+ Agricultural:{good:'food',label:'Food cultures',blurb:'Garden worlds dump cheap food. Load it for industrial docks.'},
+ Extraction:{good:'ore',label:'Titanium ore',blurb:'Belt titanium is cheap to load. Industrial systems pay more.'},
+ Industrial:{good:'tech',label:'Microprocessors',blurb:'Local processors are cheap. Incoming ore sells at a premium.'},
+ Research:{good:'crystal',label:'Void crystals',blurb:'Labs pay extra for crystals and survey data.'},
+ Frontier:{good:'meds',label:'Med supplies',blurb:'Remote stations pay extra for medical supplies.'}
+};
+/** Rotating shortage/surplus for a system. Period is ~20 minutes of playtime. */
+export function marketBulletin(system,playtime=0){
+ if(!system)return null;
+ const period=Math.floor(Math.max(0,playtime)/1200);
+ const r=rng(system.id*913+period*47+11);
+ const roll=r();
+ if(roll<.42)return null;
+ const good=GOODS[Math.floor(r()*GOODS.length)];
+ const shortage=roll<.74;
+ const mag=0.16+r()*0.22;
+ return{
+  kind:shortage?'shortage':'surplus',
+  good:good.id,
+  name:good.name,
+  magnitude:mag,
+  period,
+  headline:shortage?`${system.name} ${good.name.toLowerCase()} shortage — sellers are paid well`:`${system.name} ${good.name.toLowerCase()} surplus — cheap to load`
+ };
+}
+function quotedPrice(system,good,buy,save){
+ const m=save?moduleBonuses(save):{},rep=save?.reputation?.[system.faction]||0,standing=rep>=20?.025:rep<=-20?-.08:0,factor=buy?Math.max(1.01,1.08-(m.buyDiscount||0)-standing):Math.min(.99,.92+(m.sellBonus||0)+standing);
+ let p=buy?Math.ceil(basePrice(system,good)*factor):Math.floor(basePrice(system,good)*factor);
+ const note=marketBulletin(system,save?.playtime||0);
+ if(note&&note.good===good){
+  if(note.kind==='shortage')p=buy?Math.ceil(p*(1+note.magnitude)):Math.max(1,Math.floor(p*(1+note.magnitude*.82)));
+  else p=buy?Math.max(1,Math.floor(p*(1-note.magnitude*.65))):Math.max(1,Math.floor(p*(1-note.magnitude)));
+ }
+ return p;
+}
 export const SHIPS = [
  {id:'wren',name:'Wren',class:'explorer',role:'Light explorer',price:0,hull:100,shield:80,cargo:18,fuel:100,range:14,speed:235,turn:3.5,damage:18,slots:6,size:18,radius:16,color:'#b7f0e4',accent:'#7ad9c8',desc:'Light on the stick. A little ship with a long horizon.'},
  {id:'sparrow',name:'Sparrow',class:'scout',role:'Fleet scout',price:4200,hull:85,shield:70,cargo:12,fuel:90,range:13,speed:270,turn:4.2,damage:16,slots:5,size:16,radius:14,color:'#c8e8a8',accent:'#9bc978',desc:'A dart for short hops. Tiny hold, eager engines.'},
@@ -66,7 +102,11 @@ export const SYSTEMS=NAMES.map((name,i)=>{const r=rng(i*771+523);return {id:i,na
  ][i%5]};});
 expandGalaxy(SYSTEMS,rng);
 export function basePrice(system,good){const idx=GOODS.findIndex(g=>g.id===good);return Math.round(GOODS[idx].base*ECONOMIES[system.eco][idx]*(.9+rng(system.id*97+idx*117+53)()*.2));}
-export function price(system,good,buy=true,save=null){const m=save?moduleBonuses(save):{},rep=save?.reputation?.[system.faction]||0,standing=rep>=20?.025:rep<=-20?-.08:0,factor=buy?Math.max(1.01,1.08-(m.buyDiscount||0)-standing):Math.min(.99,.92+(m.sellBonus||0)+standing);return buy?Math.ceil(basePrice(system,good)*factor):Math.floor(basePrice(system,good)*factor);}
+export function price(system,good,buy=true,save=null){
+ const buyP=quotedPrice(system,good,true,save);
+ if(buy)return buyP;
+ return Math.max(1,Math.min(quotedPrice(system,good,false,save),buyP-1));
+}
 export function getStats(s){const b=SHIPS.find(x=>x.id===s.ship)||SHIPS[0],u=s.upgrades,m=moduleBonuses(s),fit=fittedWeaponDef(s),weapon=fit?.bonus?.weapon||b.weapon||'pulse',w=WEAPONS[weapon]||WEAPONS.pulse;return {...b,hull:b.hull+m.hull,damage:b.damage+u.laser*7+m.damage,shield:b.shield+u.shield*30+m.shield,speed:b.speed+u.engine*28+m.speed,range:b.range+u.drive*3+m.range,cargo:b.cargo+u.cargo*6+m.cargo,fuel:b.fuel+m.fuel,scanRange:650+m.scanRange,spectrumRange:4200+m.scanRange,scanSpeed:m.scanSpeed,dataMultiplier:1+m.dataBonus,signalMultiplier:1+m.signalBonus,surfaceRange:m.surfaceRange,fuelEfficiency:Math.min(.5,m.fuelEfficiency),miningYield:1+m.miningYield,miningDamage:(b.miningDamage||20)+m.miningDamage,weapon,weaponName:fit?.name||w.name,weaponColor:w.color,energyMax:100,missileMax:weapon==='missile'?6+(b.class==='combat'?2:0):0};}
 export const cargoUsed=s=>Object.values(s.cargo).reduce((a,b)=>a+b,0)+s.missions.filter(m=>m.type==='delivery').reduce((a,m)=>a+m.tons,0);
 export const jumpDistance=(a,b)=>dist(SYSTEMS[a],SYSTEMS[b]);
@@ -83,7 +123,7 @@ export function validateSave(x){
  if(x.completed.some(id=>!/^\d+-\d+$/.test(id)))return null;
  if(x.missions.some(m=>!Number.isInteger(m.origin)||(m.destination!=null&&!Number.isInteger(m.destination))))return null;
  const stock={};for(const [key,val] of Object.entries(x.stock||{})){if(!/^\d+:(food|ore|tech|meds|crystal)$/.test(key)||!Number.isInteger(val)||val<0||val>100000)return null;stock[key]=val;}
- const s={};for(const key of Object.keys(base))s[key]=x[key]??base[key];s.stock=stock;s.sound=!!x.sound;s.docked=!!x.docked;s.position=null;s.tutorial=clamp(Number(x.tutorial)||0,0,2);
+ const s={};for(const key of Object.keys(base))s[key]=x[key]??base[key];s.stock=stock;s.sound=!!x.sound;s.docked=!!x.docked;s.position=null;s.tutorial=clamp(Number(x.tutorial)||0,0,5);
  if(x.position&&['x','y','angle'].every(k=>Number.isFinite(x.position[k]))&&Math.abs(x.position.x)<1e7&&Math.abs(x.position.y)<1e7)s.position={x:x.position.x,y:x.position.y,angle:x.position.angle};
  s.hull=clamp(s.hull,1,getStats(s).hull);s.shield=Math.min(s.shield,getStats(s).shield);s.fuel=Math.min(s.fuel,getStats(s).fuel);return s;
 }
@@ -175,7 +215,7 @@ export class Game {
   if(this.spectrumScan){const t=this.planets.find(b=>b.id===this.spectrumScan.id);if(!t||dist(p,t)>t.r+st.spectrumRange+80||input.fire){this.spectrumScan=null;this.notify('Spectrum scan interrupted.');}else{this.spectrumScan.progress+=dt*(1+st.scanSpeed);if(this.spectrumScan.progress>=2.5){this.s.spectrumScanned??=[];if(!this.s.spectrumScanned.includes(t.id))this.s.spectrumScanned.push(t.id);this.effects.push({x:t.x,y:t.y,r:t.r,color:'#9bc8ff',life:1.6});this.spectrumScan=null;this.notify(`${t.name} analyzed · ${t.kind}. Approach for detailed survey.`,'good');}}}
   if(this.scan){const t=this.planets.find(b=>b.id===this.scan.id);if(!t||dist(p,t)>t.r+st.scanRange+50||Math.hypot(p.vx,p.vy)>100||input.fire){this.scan=null;this.notify('Scan interrupted. Stay within range, below 100 m/s, and hold fire.');}else{this.scan.progress+=dt*(1+st.scanSpeed);if(this.scan.progress>=3){this.s.scanned.push(t.id);const boosted=(this.s.spectrumScanned||[]).includes(t.id)?1.15:1;const surveyValue=Math.round(t.value*st.dataMultiplier*boosted);this.s.data+=surveyValue;this.effects.push({x:t.x,y:t.y,r:t.r,color:'#84f3db',life:2});this.scan=null;this.s.tutorial=Math.max(this.s.tutorial,2);this.notify(`Survey complete · ${surveyValue.toLocaleString()} cr in data. Sell by docking.`,'good');}}}
   for(const e of this.enemies){if(e.response||e.eventFlee||e.skirmishSide!=null)continue;const d=dist(p,e);const safe=this.sys.hasStation!==false&&dist(p,this.station)<470;if(d<950&&!safe){e.angle=Math.atan2(p.y-e.y,p.x-e.x);const speed=d>210?100+this.sys.danger*10:d<150?-65:15;e.thrust=speed>0?.45:0;e.x+=Math.cos(e.angle)*speed*dt;e.y+=Math.sin(e.angle)*speed*dt;e.fire-=dt;if(e.fire<0&&d<600){e.fire=1.1+Math.random()*.6;this.shots.push({x:e.x,y:e.y,vx:Math.cos(e.angle)*330,vy:Math.sin(e.angle)*330,life:2,enemy:true,damage:9+this.sys.danger*2});this.onHostileAttack?.(e,p);}}else{e.thrust=.2;e.angle+=dt*.28;e.x+=Math.cos(e.angle)*26*dt;e.y+=Math.sin(e.angle)*26*dt;}}
-  for(const b of this.shots){const from={x:b.x,y:b.y};if(b.seek){const tgt=this.enemies.find(e=>e.id===b.seek&&e.hp>0);if(tgt){const desired=Math.atan2(tgt.y-b.y,tgt.x-b.x),cur=Math.atan2(b.vy,b.vx),turn=angleDiff(desired,cur),maxTurn=2.8*dt,adj=Math.max(-maxTurn,Math.min(maxTurn,turn)),spd=b.speed||310,na=cur+adj;b.vx=Math.cos(na)*spd;b.vy=Math.sin(na)*spd;}}b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.trafficShot)continue;if(b.enemy){if(segmentDistance(p,from,b)<p.r+7){let dam=b.damage,absorb=Math.min(this.s.shield,dam);this.s.shield-=absorb;this.s.hull-=dam-absorb;this.lastDamage=this.time;this.lastHitSecurity=!!b.security;b.life=0;this.threat=1.6;this.burst(p.x,p.y,'#ef8b7f',6);}}else{const targets=b.playerShot?(b.mining?this.asteroids:this.enemies):this.enemies;for(const t of targets){if(t.hp>0&&segmentDistance(t,from,b)<t.r+5){if(t.type==='enemy'&&b.playerShot)t.playerHit=true;t.hp-=b.damage;b.life=0;if(b.playerShot)this.hitMarks.push({x:t.x,y:t.y-t.r-8,life:.55,text:String(Math.round(b.damage)),color:b.color||'#a4fff0'});this.burst(b.x,b.y,t.type==='enemy'?'#f8a77f':'#8dddcc',5);if(t.hp<=0){const playerCredit=t.type==='enemy'&&!!t.playerHit;this.burst(t.x,t.y,'#ffd297',24);this.onDestroyed?.(t,playerCredit);if(t.type==='enemy'){if(playerCredit){this.s.kills++;this.s.credits+=t.bounty;this.notify(`Bounty confirmed · +${t.bounty} cr`,'good');}}else if(b.playerShot){if(cargoUsed(this.s)<st.cargo){const amount=Math.min(st.miningYield,st.cargo-cargoUsed(this.s));this.s.cargo[t.ore]+=amount;this.s.mined+=amount;this.notify(`${t.ore==='ore'?'Titanium ore':'Void crystal'} collected · ${amount} t`,'good');}else this.notify('Hold full. Dock to sell your cargo.');}if(this.target?.id===t.id)this.target=this.belt;}break;}}}}
+  for(const b of this.shots){const from={x:b.x,y:b.y};if(b.seek){const tgt=this.enemies.find(e=>e.id===b.seek&&e.hp>0);if(tgt){const desired=Math.atan2(tgt.y-b.y,tgt.x-b.x),cur=Math.atan2(b.vy,b.vx),turn=angleDiff(desired,cur),maxTurn=2.8*dt,adj=Math.max(-maxTurn,Math.min(maxTurn,turn)),spd=b.speed||310,na=cur+adj;b.vx=Math.cos(na)*spd;b.vy=Math.sin(na)*spd;}}b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.trafficShot)continue;if(b.enemy){if(segmentDistance(p,from,b)<p.r+7){let dam=b.damage,absorb=Math.min(this.s.shield,dam);this.s.shield-=absorb;this.s.hull-=dam-absorb;this.lastDamage=this.time;this.lastHitSecurity=!!b.security;b.life=0;this.threat=1.6;this.burst(p.x,p.y,'#ef8b7f',6);}}else{const targets=b.playerShot?(b.mining?this.asteroids:this.enemies):this.enemies;for(const t of targets){if(t.hp>0&&segmentDistance(t,from,b)<t.r+5){if(t.type==='enemy'&&b.playerShot)t.playerHit=true;t.hp-=b.damage;b.life=0;if(b.playerShot)this.hitMarks.push({x:t.x,y:t.y-t.r-8,life:.55,text:String(Math.round(b.damage)),color:b.color||'#a4fff0'});this.burst(b.x,b.y,t.type==='enemy'?'#f8a77f':'#8dddcc',5);if(t.hp<=0){const playerCredit=t.type==='enemy'&&!!t.playerHit;this.burst(t.x,t.y,'#ffd297',24);this.onDestroyed?.(t,playerCredit);if(t.type==='enemy'){if(playerCredit){this.s.kills++;this.s.credits+=t.bounty;this.notify(`Bounty confirmed · +${t.bounty} cr`,'good');}}else if(b.playerShot){if(cargoUsed(this.s)<st.cargo){const yieldAmt=Math.max(1,(st.miningYield||1)+(t.prospected?1:0));const amount=Math.min(yieldAmt,st.cargo-cargoUsed(this.s));this.s.cargo[t.ore]+=amount;this.s.mined+=amount;this.notify(`${t.ore==='ore'?'Titanium ore':'Void crystal'} collected · ${amount} t${t.prospected?' · prospected':''}`,'good');}else this.notify('Hold full. Dock to sell your cargo.');}if(this.target?.id===t.id)this.target=this.belt;}break;}}}}
   this.shots=this.shots.filter(b=>b.life>0);this.enemies=this.enemies.filter(e=>e.hp>0);this.asteroids=this.asteroids.filter(e=>e.hp>0);
   if(this.s.hull<=0){const loss=Math.ceil(this.s.credits*.12);this.s.credits=Math.max(0,this.s.credits-loss);for(const g of GOODS)this.s.cargo[g.id]=0;this.s.data=0;this.s.missions=this.s.missions.filter(m=>m.type!=='delivery');this.s.hull=st.hull;this.s.shield=st.shield;this.s.fuel=st.fuel;this.s.docked=true;if(this.onCombatLoss?.(loss,{security:!!this.lastHitSecurity})){this.lastHitSecurity=false;return;}this.makeSystem();this.notify(`Escape pod recovered. Lost cargo and ${loss.toLocaleString()} cr.`,'bad');this.lastHitSecurity=false;}
  }

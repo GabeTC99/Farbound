@@ -84,3 +84,12 @@
 
 .pad-chip{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;margin-right:6px;border:1px solid #3d8f7a;border-radius:999px;background:#12352f;color:#9eebd8;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .pad-chip[hidden]{display:none!important}
+
+/* 2.11 Frontier Presence — traffic board + market callout */
+.bulletin{margin:10px 0 16px;padding:12px 14px;border:1px solid #33565b;border-left:3px solid var(--mint);border-radius:6px;background:#81e3cd0c}
+.bulletin.shortage{border-color:#5e5143;border-left-color:var(--orange);background:#eeab6c0c}
+.bulletin .eyebrow{margin-bottom:6px}
+.bulletin p{font-size:.875rem;color:var(--ink);line-height:1.5;margin:0}
+.bulletin-callout{font-size:.8rem;color:var(--mint);margin:0 0 14px;line-height:1.45}
+.market tr.hot-good td{background:#81e3cd0a}
+.market tr.hot-good .good-name .tag{margin-left:6px;vertical-align:middle}

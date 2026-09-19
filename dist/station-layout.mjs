@@ -56,7 +56,7 @@ function normalZones(hull){
  const hub=(ang,t)=>polar(hull.cx,hull.cy,ang,hull.hubR*t);
  return[
   zone('hangar','Hangar bay','shipyard',tips[0].x,tips[0].y,52,'launch',{launch:true}),
-  zone('market','Market','market',tips[1].x,tips[1].y,46,'market'),
+  zone('market','Market · Refuel','market',tips[1].x,tips[1].y,46,'market'),
   zone('cartographics','Cartographics','data',tips[2].x,tips[2].y,46,'data'),
   zone('contracts','Contracts','contracts',tips[3].x,tips[3].y,46,'contracts'),
   zone('modules','Modules','outfitting',tips[4].x,tips[4].y,46,'modules'),
@@ -71,7 +71,7 @@ function prisonZones(hull){
  return[
   zone('hangar','Release bay','shipyard',tips[0].x,tips[0].y,52,'launch',{launch:true}),
   zone('detention','Detention','detention',tips[3].x,tips[3].y,50,'detention'),
-  zone('commissary','Commissary','market',tips[1].x,tips[1].y,46,'market'),
+  zone('commissary','Commissary · Refuel','market',tips[1].x,tips[1].y,46,'market'),
   zone('cartographics','Cartographics','data',tips[2].x,tips[2].y,46,'data'),
   zone('modules','Modules','outfitting',tips[4].x,tips[4].y,46,'modules'),
   zone('shipyard','Impound','shipyard',tips[5].x,tips[5].y,46,'ship')

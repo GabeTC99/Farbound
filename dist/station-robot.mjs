@@ -15,11 +15,11 @@ export const STATION_ROBOT={
 /** Tagged line pools. Each entry: [text, expression]. Expand freely. */
 export const ROBOT_LINES={
  greeting:[
-  ['Welcome to the station. Please refrain from venting the atmosphere.','happy'],
-  ['Docking complete. Catastrophe has been postponed.','happy'],
+  ['Welcome. Market is the arm with Refuel and Repair at the top of the counter. Start there.','happy'],
+  ['Docking complete. Catastrophe has been postponed. Market still sells fuel.','happy'],
   ['Another ship safely docked. My faith in pilots has risen marginally.','neutral'],
   ['Welcome aboard. Try not to scratch the paint. It’s older than both of us.','happy'],
-  ['Docking successful. Exploding afterward is still discouraged.','annoyed']
+  ['Docking successful. Exploding afterward is still discouraged. Walk to Market if you are leaking.','annoyed']
  ],
  general:[
   ['I am required to appear helpful. Fortunately, I am excellent at it.','happy'],
@@ -76,16 +76,17 @@ export const ROBOT_LINES={
  tips:[
   ['Slow below 100 m/s before scanning a world or scooping fuel. Fast pilots miss the interesting parts.','happy'],
   ['Discovery Pulse catalogs a system. Approach a world and Scan for the detailed survey payout.','happy'],
-  ['Buy where goods are produced, sell where demand is high. The Galaxy chart shows economies.','neutral'],
+  ['Buy where goods are produced, sell where demand is high. The Galaxy chart and Market traffic board show economies.','neutral'],
   ['Stars refill fuel for free. Closer means faster scooping and more heat — move away before you cook.','alert'],
-  ['Station services keep local space running. Closing the desk launches you. Other menus pause flight.','confused'],
+  ['Station services keep local space running. Closing the desk returns you to the deck. Launch from the hangar.','confused'],
   ['Assaulting civilians adds bounty and summons security. Prison barges are not always in-system.','annoyed'],
-  ['Hyperspace wakes can be scanned and followed. Slow down near one before resolving the signature.','happy'],
+  ['Hyperspace wakes can be scanned and followed. Jump after the contact — they drop in at the destination.','happy'],
   ['Cartographics sells exploration data in one package. Recovery and destruction discard unsold entries.','neutral'],
-  ['Mineral belts pay in titanium. Hold FIRE while pointed at rocks. Pirates also enjoy this advice.','confused'],
+  ['Prospect a rock before you mine it. SCAN at close range; prospected seams yield extra tons.','confused'],
   ['Plot routes from the Galaxy chart, then Jump next. Fuel is spent on jumps, not local flight.','happy'],
   ['Guild commissions need acceptance before progress counts. Claim unique modules at any station desk.','neutral'],
-  ['If heat hits 100%, your hull pays the bill. Scooping at 95% retracts itself. Listen to the thermometer.','alert']
+  ['If heat hits 100%, your hull pays the bill. Scooping at 95% retracts itself. Listen to the thermometer.','alert'],
+  ['Market Refuel and Repair are the first two buttons. I mention this because pilots keep asking.','annoyed']
  ],
  faction:[]
 };
@@ -129,6 +130,14 @@ export function pickRobotLine(game,mode='talk'){
  const ctx=buildRobotContext(game);
  const avoid=game.robotState?.lastText||'';
  if(mode==='greeting'){
+  if(!game.s.robotMet){
+   const st=getStats(game.s);
+   const leak=game.s.fuel<st.fuel*.92||game.s.hull<st.hull*.95;
+   const text=leak
+    ?`Welcome to ${game.sys?.station||'the station'}. You are leaking fuel or hull. Market is the Refuel / Repair arm — first two buttons on the counter.`
+    :`Welcome to ${game.sys?.station||'the station'}. Walk to Market for fuel and repairs — first two buttons — then Contracts if you want work.`;
+   return{text,expression:'happy',tag:'greeting'};
+  }
   const greet=poolFor('greeting')||ROBOT_LINES.general;
   const line=pickFrom(greet,avoid);
   return{...line,tag:'greeting'};
