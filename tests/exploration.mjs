@@ -278,8 +278,10 @@ test('Checkpoint writes preserve the outgoing pilot instead of snapshotting the 
 test('Tutorial tip keeps its Got it button across HUD refreshes',()=>{
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(source,/tut\.dataset\.tip!==tipKey/);
- assert.match(source,/if\(tipVisible&&tut\.dataset\.tip!==tipKey\)/);
+ assert.match(source,/if\(tipKey&&tut\.dataset\.tip!==tipKey\)/);
  assert(!/if\(showTutorial&&started&&!panel\)\{tut\.innerHTML=/.test(source));
+ assert.match(source,/dismiss-tip/);
+ assert.match(source,/Walk to the <b>Market<\/b> desk/);
 });
 test('Player ships have distinct silhouettes, colors, and collision radii',async()=>{
  const {HULL_DEFS,getHullDef,hullPreviewSvg}=await import('../dist/hull-defs.mjs');
