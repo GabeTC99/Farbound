@@ -1,5 +1,5 @@
 import {GALAXY_CORE} from './catalog.mjs';
-import {SYSTEMS,getStats,jumpDistance,systemName} from './frontier.mjs';
+import {SYSTEMS,getStats,jumpDistance,systemName,FACTIONS} from './frontier.mjs';
 /** Display-only spacing — gameplay jumpDistance stays on raw SYSTEM coords. */
 export const GALAXY_SPREAD=1.55;
 const links=[];for(let i=0;i<SYSTEMS.length;i++)for(let j=i+1;j<SYSTEMS.length;j++)if(jumpDistance(i,j)<12.5)links.push([i,j]);
@@ -96,8 +96,9 @@ export class GalaxyChart{
   };
   for(const p of this.points){
    const sys=SYSTEMS[p.id],isVisited=visited.has(p.id),sel=p.id===this.selected,here=p.id===s.system;
-   ctx.strokeStyle=sel?'#f1b879':here?'#91efda':isVisited?'#91efda':sys.uncharted?'#8493ae':'#b5c8d3';
-   ctx.fillStyle=isVisited||here?'#91efda':'#b5c8d3';
+   const fac=(!sys.uncharted||isVisited)&&sys.faction?FACTIONS.find(f=>f.id===sys.faction):null;
+   ctx.strokeStyle=sel?'#f1b879':here?'#91efda':fac?fac.color:isVisited?'#91efda':sys.uncharted?'#8493ae':'#b5c8d3';
+   ctx.fillStyle=here?'#91efda':sel?'#f1b879':fac?fac.color:isVisited?'#91efda':'#b5c8d3';
    ctx.beginPath();ctx.arc(p.x,p.y,sel||here?5:3,0,Math.PI*2);
    if(sys.uncharted&&!isVisited)ctx.stroke();else ctx.fill();
    if(here){

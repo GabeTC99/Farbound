@@ -1,0 +1,16 @@
+{
+  "release": "2.11.0",
+  "name": "Frontier Presence",
+  "date": "2026-09-18",
+  "notes": [
+    "Market and Commissary desks are labeled Refuel; first dock and Nellby-9 send new pilots to the two service buttons.",
+    "Station traffic boards post rotating shortages and surpluses about every 20 minutes of playtime; Galaxy chart shows the bulletin.",
+    "Scan and follow a hyperspace wake, then jump — the contact drops in at the destination for a hold scan or fugitive intercept.",
+    "Prospect a rock with SCAN before mining for a bonus ton. Unprospected rocks still mine as before.",
+    "Buy price stays above sell even when a bulletin is posting."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

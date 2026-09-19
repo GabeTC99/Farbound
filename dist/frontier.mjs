@@ -1,4 +1,4 @@
-import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,dist,clamp,angleDiff,rng,shipRadius,moduleSlots} from './core.mjs';
+import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,jumpCost,price,dist,clamp,angleDiff,rng,shipRadius,moduleSlots} from './core.mjs';
 import {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface,terrainAt} from './surface.mjs';
 import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
@@ -17,13 +17,19 @@ export {createStationLayout} from './station-layout.mjs';
 export {createPlanetLayout} from './planet-layout.mjs';
 export {systemSky,wantedTier} from './atmosphere.mjs';
 export {EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,eventArrowTargets,eventObjective,salvageDerelict} from './dynamic-events.mjs';
+export function pursuitObjective(game){
+ const p=game.s?.pursuit;if(!p)return null;
+ if(p.until&&(game.s.playtime||0)>p.until)return null;
+ if(p.to===game.s.system)return{text:`Intercept ${p.name} before they dock`,kind:p.kind};
+ return{text:`Follow ${p.name}'s wake to ${systemName(SYSTEMS[p.to],game.s)}`,kind:p.kind};
+}
 export {STATION_ROBOT,ROBOT_LINES,buildRobotContext,pickRobotLine,speakRobot,ensureRobotState} from './station-robot.mjs';
 export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,PLANET_KINDS,STAR_TYPES,advanceOrbits,applyOrbitPhase} from './system-layout.mjs';
 export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};
 export function newSave(){return {...migrate(v1Save()),systemScans:[]};}
- function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],spectrumScanned:s.spectrumScanned||[],heat:25,bounty:0,detained:false,dockId:null,stationPos:null,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,companies:{},metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,interventions:0,salvages:0,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
+ function migrate(s){const modules=UPGRADES.filter(u=>s.upgrades[u.id]).map((u,i)=>({uid:'m-'+(i+1),kind:u.id,grade:s.upgrades[u.id]}));return{...s,version:2,systemScans:[...s.visited],spectrumScanned:s.spectrumScanned||[],heat:25,bounty:0,detained:false,dockId:null,stationPos:null,transit:[],explorationLog:s.data?[{id:'legacy-cache',type:'legacy',system:s.system,name:'Recovered exploration cache',value:s.data,sold:false}]:[],upgrades:Object.fromEntries(UPGRADES.map(u=>[u.id,0])),fleet:[s.ship],modules,nextModule:modules.length+1,loadouts:Object.fromEntries(shipIds.map(id=>[id,id===s.ship?modules.map(m=>m.uid):[]])),hangar:{},guilds:Object.fromEntries(guildIds.map(id=>[id,{joined:false,stage:0,active:false,baseline:0}])),reputation:Object.fromEntries(factionIds.map(id=>[id,0])),allegiance:null,records:[],surfaceScanned:[],surface:null,cleared:{},route:null,operations:[],nextOperation:1,engineVolume:.35,robotMet:false,companies:{},metrics:{discoveries:s.visited.filter(i=>SYSTEMS[i].uncharted).length,anomalies:0,geology:0,deliveries:s.completed.filter(id=>id.endsWith('-0')).length,operations:0,pirates:s.kills,interventions:0,salvages:0,pursuits:0,factionKills:Object.fromEntries(factionIds.map(id=>[id,0]))}};}
 export function validateSave(x){
  if(!x||![1,2].includes(x.version))return null;const base=v1Validate({...x,version:1});if(!base)return null;if(x.version===1)return migrate(base);
  try{const s=migrate(base);
@@ -52,7 +58,7 @@ export function validateSave(x){
   const validId=id=>typeof id==='string'&&/^(planet-\d+-\d+|moon-\d+-\d+-\d+)-a[0-5]$/.test(id)&&!!SYSTEMS[Number(id.split('-')[1])];
   if(!Array.isArray(x.surfaceScanned)||x.surfaceScanned.length>5760||x.surfaceScanned.some(id=>!validId(id)))return null;s.surfaceScanned=[...new Set(x.surfaceScanned)];
   if(!Array.isArray(x.records)||x.records.length>5760||x.records.some(r=>!r||!validId(r.id)||!numeric(r.value)||r.value>100000||!['geology','relic','biosignature','signal'].includes(r.kind)||!s.surfaceScanned.includes(r.id)))return null;s.records=x.records.map(r=>({id:r.id,kind:r.kind,value:r.value,system:Number(r.id.split('-')[1])}));if(new Set(s.records.map(r=>r.id)).size!==s.records.length)return null;
-  for(const k of ['discoveries','anomalies','geology','deliveries','operations','pirates','interventions','salvages']){if(!numeric(x.metrics?.[k]??(k==='interventions'||k==='salvages'?0:null)))return null;s.metrics[k]=x.metrics?.[k]??0;}for(const id of factionIds){if(!numeric(x.metrics?.factionKills?.[id]))return null;s.metrics.factionKills[id]=x.metrics.factionKills[id];}
+  for(const k of ['discoveries','anomalies','geology','deliveries','operations','pirates','interventions','salvages','pursuits']){if(!numeric(x.metrics?.[k]??(k==='interventions'||k==='salvages'||k==='pursuits'?0:null)))return null;s.metrics[k]=x.metrics?.[k]??0;}for(const id of factionIds){if(!numeric(x.metrics?.factionKills?.[id]))return null;s.metrics.factionKills[id]=x.metrics.factionKills[id];}
   if(!Array.isArray(x.operations)||x.operations.length>3||x.operations.some(o=>!o||!/^op-\d+$/.test(o.uid)||!factionIds.includes(o.faction)||!['relief','combat'].includes(o.type)||!Number.isInteger(o.target)||!SYSTEMS[o.target]||!Number.isInteger(o.kills)||o.kills<0||o.kills>2))return null;s.operations=x.operations.map(o=>({uid:o.uid,faction:o.faction,type:o.type,target:o.target,kills:o.kills}));if(new Set(s.operations.map(o=>o.uid)).size!==s.operations.length||new Set(s.operations.map(o=>o.faction+o.type)).size!==s.operations.length)return null;
   for(const [id,list]of Object.entries(x.cleared||{})){if(!/^\d+$/.test(id)||!SYSTEMS[+id]||!Array.isArray(list)||list.length>500||list.some(v=>typeof v!=='string'||!/^(rock|pirate|patrol|op)-[a-z0-9-]+$/.test(v)))return null;s.cleared[id]=[...new Set(list)];}
   s.companies={};
@@ -63,6 +69,13 @@ export function validateSave(x){
     s.companies[id]={completed:c.completed,standing:c.standing,perk:!!c.perk};
    }
   }
+  if(x.briefed!==undefined){if(typeof x.briefed!=='boolean')return null;s.briefed=x.briefed;}else s.briefed=!!s.robotMet;
+  s.pursuit=null;
+  if(x.pursuit!=null){
+   const p=x.pursuit;
+   if(!p||typeof p.uid!=='string'||p.uid.length>48||typeof p.name!=='string'||!p.name.length||p.name.length>60||typeof p.hull!=='string'||p.hull.length>24||!['trader','fugitive'].includes(p.kind)||!Number.isInteger(p.to)||!SYSTEMS[p.to])return null;
+   s.pursuit={uid:p.uid,name:p.name,hull:p.hull,color:typeof p.color==='string'&&p.color.length<24?p.color:'#d2b48c',size:Number.isFinite(p.size)?clamp(p.size,8,32):14,from:Number.isInteger(p.from)&&SYSTEMS[p.from]?p.from:0,to:p.to,kind:p.kind,until:Number.isFinite(p.until)?p.until:0};
+  }
   s.allegiance=factionIds.includes(x.allegiance)?x.allegiance:null;s.engineVolume=clamp(Number.isFinite(Number(x.engineVolume))?Number(x.engineVolume):.35,0,1);s.graphics=['high','balanced','performance'].includes(x.graphics)?x.graphics:'high';s.nextModule=Math.max(1,...s.modules.map(m=>+m.uid.slice(2)+1));s.nextOperation=Math.max(1,Number.isInteger(x.nextOperation)?x.nextOperation:1,...s.operations.map(o=>+o.uid.slice(3)+1));
   const st=getStats(s);s.hull=clamp(x.hull,1,st.hull);s.shield=clamp(x.shield,0,st.shield);s.fuel=clamp(x.fuel,0,st.fuel);if(cargoUsed(s)>st.cargo)return null;
   if(x.surface){const a=x.surface;if(!new RegExp('^(planet|moon)-'+s.system+'-\\d+(-\\d+)?$').test(a.planetId)||!['x','y','integrity'].every(k=>Number.isFinite(a[k])))return null;s.surface={planetId:a.planetId,x:clamp(a.x,40,5960),y:clamp(a.y,55,850),integrity:clamp(a.integrity,1,100),recordStart:Number.isInteger(a.recordStart)?clamp(a.recordStart,0,s.records.length):s.records.length};if(a.foot!=null){if(!a.foot||!Number.isFinite(a.foot.x)||!Number.isFinite(a.foot.y))return null;s.surface.foot={x:clamp(a.foot.x,20,980),y:clamp(a.foot.y,20,720)};}s.docked=false;}
@@ -72,6 +85,53 @@ export function validateSave(x){
 }
 export function systemName(sys,s){return sys.uncharted&&!s.visited.includes(sys.id)?'Uncharted '+sys.catalog:sys.name;}
 export function findRoute(from,to,range){if(!SYSTEMS[from]||!SYSTEMS[to]||!Number.isFinite(range)||range<=0)return null;if(from===to)return[];const costs=SYSTEMS.map(()=>Infinity),previous=SYSTEMS.map(()=>-1),seen=new Set();costs[from]=0;for(let n=0;n<SYSTEMS.length;n++){let current=-1;for(let i=0;i<costs.length;i++)if(!seen.has(i)&&(current<0||costs[i]<costs[current]))current=i;if(current<0||!Number.isFinite(costs[current])||current===to)break;seen.add(current);for(const sys of SYSTEMS){if(seen.has(sys.id)||sys.id===current)continue;const d=jumpDistance(current,sys.id),c=costs[current]+1+d*.0001;if(d<=range&&c<costs[sys.id]){costs[sys.id]=c;previous[sys.id]=current;}}}if(previous[to]<0)return null;let cur=to;const path=[];while(cur!==from){path.unshift(cur);cur=previous[cur];if(cur<0)return null;}return path;}
+/** Charted stations (and visited uncharted docks) the player can price against. */
+export function knownMarkets(save){
+ return SYSTEMS.filter(sys=>sys.hasStation&&(!sys.uncharted||(save?.visited||[]).includes(sys.id)));
+}
+/** Best legal sale of `good` from `fromId`. haveCargo compares destination sell vs local sell; otherwise vs local buy. */
+export function tradeHop(fromId,good,save,opts={}){
+ const from=SYSTEMS[fromId];if(!from?.hasStation||!GOODS.some(g=>g.id===good)||!save)return null;
+ const haveCargo=!!opts.haveCargo,range=getStats(save).range,buyHere=price(from,good,true,save),sellHere=price(from,good,false,save);
+ let best=null;
+ for(const sys of knownMarkets(save)){
+  if(sys.id===fromId)continue;
+  const path=findRoute(fromId,sys.id,range);if(!path)continue;
+  const sell=price(sys,good,false,save),profit=haveCargo?sell-sellHere:sell-buyHere;
+  if(profit<=0)continue;
+  const fuel=path.reduce((sum,id,i)=>sum+jumpCost(i?path[i-1]:fromId,id,save),0);
+  if(!best||profit>best.profit||(profit===best.profit&&(path.length<best.jumps||(path.length===best.jumps&&fuel<best.fuel)))){
+   best={good,fromId,to:sys.id,sell,buyHere,sellHere,profit,jumps:path.length,fuel,path};
+  }
+ }
+ return best;
+}
+export function bestExport(fromId,save){
+ let best=null;
+ for(const g of GOODS){
+  const hop=tradeHop(fromId,g.id,save,{haveCargo:false});
+  if(hop&&(!best||hop.profit>best.profit))best=hop;
+ }
+ return best;
+}
+export function systemPresence(sys,save){
+ const faction=FACTIONS.find(f=>f.id===sys.faction);
+ if(!faction)return{label:'Unclaimed',status:'Unclaimed',tone:'',color:'#8493ae',faction:null};
+ const rep=save?.reputation?.[faction.id]||0,op=(save?.operations||[]).some(o=>o.target===sys.id);
+ let status='Held';
+ if((sys.danger||0)>=3)status='Lawless';
+ else if(op||(sys.danger||0)>=2)status='Contested';
+ else if(rep>=20)status='Friendly';
+ else if(rep<=-20)status='Hostile';
+ else status=['Secure','Patrolled'][sys.danger]||'Held';
+ return{label:faction.name+' · '+status,status,tone:rep<=-20?'danger':rep>=20?'safe':'',color:faction.color,faction:faction.id};
+}
+/** Heading-up radar blip. Canvas +Y is down; returned −Y is ahead of the ship nose. */
+export function radarBlip(px,py,ox,oy,angle,scale=.054){
+ const a=(angle||0)+Math.PI/2,c=Math.cos(a),s=Math.sin(a);
+ const dx=(ox-px)*scale,dy=(oy-py)*scale;
+ return{x:dx*c+dy*s,y:-dx*s+dy*c};
+}
 export function missionDestination(s,m){return m.type==='delivery'?m.destination:m.type==='survey'&&!surveyWorldIds(m.destination,SYSTEMS[m.destination]).every(id=>s.scanned.includes(id))?m.destination:m.origin;}
 const COMPANY_POOL={
  Agricultural:[{name:'Harvest Circle',focus:'delivery'},{name:'Greenhold Provisions',focus:'survey'},{name:'Seedwright Co-op',focus:'mining'}],
@@ -139,10 +199,10 @@ export function operationDetails(s,o){
  return {...d,destination,next,ready:d.ready&&SYSTEMS[s.system].hasStation,navLabel:destination!==s.system?'Plot route':combat?'Find target':'Select station'};
 }
 export class Game extends FlightGame{
- constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.onfoot=null;this.scooping=false;this.discoveryScan=null;this.dynScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.companies??={};this.s.stationPos??=null;this.s.systemScans??=[...this.s.visited];this.s.spectrumScanned??=[];this.s.explorationLog??=[];this.s.transit??=[];if(!Number.isFinite(this.s.engineVolume))this.s.engineVolume=.35;if(!['high','balanced','performance'].includes(this.s.graphics))this.s.graphics='high';ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;const ground=terrainAt(this.surface.x,this.surface.seed)-19;if(this.surface.y>=ground-2){this.surface.y=ground;this.surface.landed=true;}if(this.s.surface.foot&&this.surface.landed)this.onfoot=createOnFoot(createPlanetLayout(this.surface),this.s.surface.foot);}}else if(this.s.docked)this.enterStationDeck();}
+ constructor(save=newSave()){super(save.version===1?migrate(save):save);this.surface=null;this.onfoot=null;this.scooping=false;this.discoveryScan=null;this.dynScan=null;this.wakes=[];this.signals=[];this.derelicts=[];this.responseAt=null;this.responseWave=0;this.heatWanted=0;this.lastKnown=null;this.lastHitSecurity=false;this.dyn=new DynamicEventManager(this);this.s.heat??=25;this.s.bounty??=0;this.s.detained??=false;this.s.robotMet??=false;this.s.companies??={};this.s.briefed??=false;this.s.pursuit??=null;this.s.stationPos??=null;this.s.systemScans??=[...this.s.visited];this.s.spectrumScanned??=[];this.s.explorationLog??=[];this.s.transit??=[];if(!Number.isFinite(this.s.engineVolume))this.s.engineVolume=.35;if(!['high','balanced','performance'].includes(this.s.graphics))this.s.graphics='high';ensureRobotState(this);this.surfaceRecordsStart=this.s.records.length;if(this.s.surface){const p=this.planets.find(p=>p.id===this.s.surface.planetId);if(p){this.surface=createSurface(p,this.s.surfaceScanned,this.s.surface);this.surfaceRecordsStart=this.s.surface.recordStart;const ground=terrainAt(this.surface.x,this.surface.seed)-19;if(this.surface.y>=ground-2){this.surface.y=ground;this.surface.landed=true;}if(this.s.surface.foot&&this.surface.landed)this.onfoot=createOnFoot(createPlanetLayout(this.surface),this.s.surface.foot);}}else if(this.s.docked)this.enterStationDeck();}
  nearestPort(){return SYSTEMS.filter(s=>s.hasStation).sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0].id;}
  nearestPrison(){const barges=SYSTEMS.filter(s=>s.prison&&s.hasStation);return (barges.sort((a,b)=>jumpDistance(this.s.system,a.id)-jumpDistance(this.s.system,b.id))[0]||SYSTEMS.find(s=>s.hasStation)).id;}
- makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];if(this.onfoot?.kind==='wreck')this.onfoot=null;this.dyn?.reset();applyOrbitPhase({stars:this.stars,planets:this.planets.filter(p=>p.type==='planet'),moons:this.planets.filter(p=>p.type==='moon')},this.s.playtime||0);this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}else if(this.s.dockId){const dock=this.stations.find(s=>s.id===this.s.dockId&&s.type==='station');if(dock)this.station=dock;}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction),anchor=this.station;for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:anchor.x+850+i*180,y:anchor.y+400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();}
+ makeSystem(){if(this.s.docked&&!SYSTEMS[this.s.system].hasStation)this.s.system=this.nearestPort();super.makeSystem();this.player.r=shipRadius(this.s.ship);const cleared=this.s.cleared?.[this.s.system]||[];this.asteroids=this.asteroids.filter(a=>!cleared.includes(a.id));this.enemies=this.enemies.filter(a=>!cleared.includes(a.id));this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.playerCrimeUntil=0;this.playerCrime=null;this.heatWanted=0;this.lastKnown=null;this.responseAt=null;this.wakes=[];this.signals=[];this.derelicts=[];if(this.onfoot?.kind==='wreck')this.onfoot=null;this.dyn?.reset();applyOrbitPhase({stars:this.stars,planets:this.planets.filter(p=>p.type==='planet'),moons:this.planets.filter(p=>p.type==='moon')},this.s.playtime||0);this.traffic=this.makeTraffic();this.patrols=[];if(!this.sys.hasStation){this.station.type='beacon';this.target=this.star;this.traffic=[];}else if(this.s.dockId){const dock=this.stations.find(s=>s.id===this.s.dockId&&s.type==='station');if(dock)this.station=dock;}if(this.sys.faction){const f=FACTIONS.find(f=>f.id===this.sys.faction),anchor=this.station;for(let i=0;i<2;i++){const p={id:'patrol-'+f.id+'-'+i,name:f.name+' patrol',type:'faction',faction:f.id,x:anchor.x+850+i*180,y:anchor.y+400+i*250,angle:1,hp:105,max:105,r:20,fire:1,bounty:240,status:'PATROLLING'};if(cleared.includes(p.id))continue;if((this.s.reputation?.[f.id]||0)<=-20){p.type='enemy';this.enemies.push(p);}else this.patrols.push(p);}}this.spawnOperations();this.ingestTransitArrivals();this.realizePursuit();}
  triggerDynamicEvent(type){if(this.s.docked)this.launch();EVENT_CONFIG.log=true;const ok=this.dyn.trigger(type);this.notify(ok?('DEV · dynamic event · '+type):('DEV · could not start '+type),ok?'good':'bad');return ok;}
  onCombatLoss(loss,{security}= {}){
   this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.heat=25;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;this.responseAt=null;
@@ -214,7 +274,8 @@ export class Game extends FlightGame{
   this.s.transit=this.s.transit.filter(t=>!(t.to===this.s.system&&t.eta<=this.s.playtime+1));
   for(const t of due){
    const jump=this.jumpAnchor((Math.random()-.5)*180),station={x:this.station.x,y:this.station.y,status:'DOCKED'};
-   this.traffic.push({id:'traffic-arr-'+t.uid,uid:t.uid,type:'traffic',name:t.name,job:'ARRIVING FROM JUMP POINT',hull:t.hull,color:t.color,size:t.size,turn:t.turn,speed:t.speed,wait:t.wait,canJump:true,points:[jump,station],x:jump.x,y:jump.y,angle:Math.atan2(station.y-jump.y,station.x-jump.x),r:Math.max(11,t.size-1),hp:48+t.size*2,max:48+t.size*2,target:1,pause:0.4,thrust:0,status:'AT JUMP POINT',underAttackUntil:0,phase:Math.random()*6,work:0,trail:[]});
+   const pursued=this.s.pursuit?.uid===t.uid;
+   this.traffic.push({id:'traffic-arr-'+t.uid,uid:t.uid,type:'traffic',name:t.name,job:'ARRIVING FROM JUMP POINT',hull:t.hull,color:t.color,size:t.size,turn:t.turn,speed:t.speed,wait:t.wait,canJump:true,pursued,points:[jump,station],x:jump.x,y:jump.y,angle:Math.atan2(station.y-jump.y,station.x-jump.x),r:Math.max(11,t.size-1),hp:48+t.size*2,max:48+t.size*2,target:1,pause:0.4,thrust:0,status:'AT JUMP POINT',underAttackUntil:0,phase:Math.random()*6,work:0,trail:[]});
   }
  }
  departJump(ship){
@@ -229,6 +290,7 @@ export class Game extends FlightGame{
   if(this.target===ship)this.target=wake;
  }
  updateTraffic(dt){
+  if(this.s.pursuit?.until&&this.s.playtime>this.s.pursuit.until)this.clearPursuit('The contact folded too far ahead. Pursuit dropped.');
   for(const w of this.wakes)w.life-=dt;
   this.wakes=this.wakes.filter(w=>w.life>0);
   if(this.target?.type==='wake'&&!this.wakes.includes(this.target))this.target=this.station;
@@ -260,6 +322,7 @@ export class Game extends FlightGame{
     }else ship.status='IN TRANSIT';
     if(ship.pause<=0&&ship.canJump&&stop.status==='AT JUMP POINT'&&ship.job==='DEPARTING FOR JUMP POINT'){this.departJump(ship);continue;}
     if(ship.pause<=0&&ship.canJump&&stop.status==='DOCKED'&&ship.job==='ARRIVING FROM JUMP POINT'){
+     if(ship.pursued)this.clearPursuit(`${ship.name} reached the station. Pursuit lost.`);
      const jump=this.jumpAnchor((Math.random()-.5)*160);
      ship.destination=pickTradeDestination(this.s.system,SYSTEMS,jumpDistance);
      ship.job='DEPARTING FOR JUMP POINT';
@@ -357,10 +420,78 @@ export class Game extends FlightGame{
   if(!wake){this.notify('No hyperspace wake in range.');return false;}
   if(Math.hypot(this.player.vx,this.player.vy)>140){this.notify('Slow below 140 m/s to resolve a wake.');return false;}
   this.target=wake;wake.scanned=true;
-  this.notify(`${wake.shipName} jumped toward ${systemName(SYSTEMS[wake.to],this.s)}.`,'good');
+  this.notify(`${wake.shipName} jumped toward ${systemName(SYSTEMS[wake.to],this.s)}. Plot the wake to intercept.`,'good');
   return true;
  }
- followWake(){const wake=this.target?.type==='wake'?this.target:null;if(!wake){this.notify('Target a scanned wake first.');return false;}if(!wake.scanned)return this.scanWake();return this.setRoute(wake.to);}
+ followWake(){
+  const wake=this.target?.type==='wake'?this.target:null;
+  if(!wake){this.notify('Target a scanned wake first.');return false;}
+  if(!wake.scanned)return this.scanWake();
+  const kind=wake.hull==='courier'&&Math.random()<.4?'fugitive':'trader';
+  this.s.pursuit={uid:wake.uid,name:wake.shipName,hull:wake.hull||'freighter',color:wake.color||'#d2b48c',size:wake.size||14,from:wake.from,to:wake.to,kind,until:(this.s.playtime||0)+2400};
+  const t=this.s.transit.find(x=>x.uid===wake.uid);
+  if(t)t.eta=this.s.playtime;
+  this.notify(`Pursuit logged · ${wake.shipName} bound for ${systemName(SYSTEMS[wake.to],this.s)}. Jump to intercept.`,'good');
+  return this.setRoute(wake.to);
+ }
+ prospectRock(){
+  if(this.s.docked||this.surface||this.jump){this.notify('Launch into local space to prospect.');return false;}
+  const rock=this.target?.type==='asteroid'?this.target:this.asteroids.filter(a=>dist(this.player,a)<220).sort((a,b)=>dist(this.player,a)-dist(this.player,b))[0];
+  if(!rock){this.notify('Target a rock to prospect it.');return false;}
+  if(Math.hypot(this.player.vx,this.player.vy)>140){this.notify('Slow below 140 m/s to prospect.');return false;}
+  if(dist(this.player,rock)>220){this.notify('Approach the rock to prospect it.');return false;}
+  this.target=rock;rock.prospected=true;
+  const label=rock.ore==='crystal'?'Void crystals':'Titanium ore';
+  this.notify(`Prospected · ${label}. Mining this rock yields extra.`,'good');
+  return true;
+ }
+ scanPursuit(){
+  const ship=this.target?.pursued?this.target:this.traffic.find(t=>t.pursued&&dist(this.player,t)<280);
+  if(!ship){this.notify('No pursued contact in range.');return false;}
+  if(Math.hypot(this.player.vx,this.player.vy)>160){this.notify('Slow down to scan the contact.');return false;}
+  if(dist(this.player,ship)>280){this.notify('Close to 280 m to scan the contact.');return false;}
+  const p=this.s.pursuit;
+  this.s.metrics.pursuits=(this.s.metrics.pursuits||0)+1;
+  if(p?.kind==='fugitive'){
+   ship.type='enemy';ship.bounty=520;ship.wanted=true;ship.hp=ship.hp||90;ship.max=ship.max||90;ship.r=ship.r||18;ship.fire=.4;ship.eventOwned=true;
+   this.enemies.push(ship);this.traffic=this.traffic.filter(t=>t!==ship);this.target=ship;this.s.pursuit=null;
+   this.notify(`${ship.name} flagged wanted · ${ship.bounty} cr bounty.`,'good');
+   return true;
+  }
+  const goods=['food','ore','tech','meds','crystal'],good=goods[Math.floor(Math.random()*goods.length)];
+  this.s.credits+=180;
+  let extra='';
+  const st=getStats(this.s),free=st.cargo-cargoUsed(this.s);
+  if(free>0){this.s.cargo[good]=(this.s.cargo[good]||0)+1;extra=` · +1 t ${good}`;}
+  this.notify(`Manifest scanned · ${ship.name} hauling ${good} · +180 cr${extra}`,'good');
+  this.s.pursuit=null;ship.pursued=false;
+  return true;
+ }
+ realizePursuit(){
+  const p=this.s.pursuit;if(!p)return false;
+  if(p.until&&this.s.playtime>p.until){this.clearPursuit();return false;}
+  if(p.to!==this.s.system)return false;
+  let ship=this.traffic.find(t=>t.uid===p.uid)||this.traffic.find(t=>t.pursued);
+  if(!ship){
+   const jump=this.jumpAnchor(40);
+   const dock=this.sys.hasStation?{x:this.station.x,y:this.station.y,status:'DOCKED'}:{x:jump.x+420,y:jump.y+80,status:'AT JUMP POINT'};
+   ship={id:'traffic-pursuit',uid:p.uid,type:'traffic',name:p.name,job:'ARRIVING FROM JUMP POINT',hull:p.hull,color:p.color,size:p.size,turn:2.4,speed:118,wait:3.4,canJump:true,pursued:true,points:[jump,dock],x:jump.x,y:jump.y,angle:Math.atan2(dock.y-jump.y,dock.x-jump.x),r:Math.max(11,(p.size||14)-1),hp:52+(p.size||14)*2,max:52+(p.size||14)*2,target:1,pause:0.3,thrust:0,status:'AT JUMP POINT',underAttackUntil:0,phase:Math.random()*6,work:0,trail:[]};
+   this.traffic.push(ship);
+  }
+  ship.pursued=true;this.target=ship;
+  const key=p.uid+'@'+this.s.system;
+  if(this._pursuitAnnounced!==key){
+   this._pursuitAnnounced=key;
+   this.notify(p.kind==='fugitive'?`Fugitive contact · ${p.name} at the jump point. Scan or intercept.`:`Wake contact · ${p.name} dropping in. Scan their hold before they dock.`,'good');
+  }
+  return true;
+ }
+ clearPursuit(reason){
+  const p=this.s.pursuit;if(!p)return;
+  for(const t of this.traffic)if(t.pursued||t.uid===p.uid)t.pursued=false;
+  this.s.pursuit=null;this._pursuitAnnounced=null;
+  if(reason)this.notify(reason);
+ }
  payBounty(){if(!this.s.docked||!(this.s.bounty||this.s.detained))return false;const fine=Math.max(this.s.bounty||0,this.s.detained?500:0);if(this.s.credits<fine){this.notify(this.s.detained?'Insufficient credits to clear the detention fine.':'Insufficient credits to clear the bounty.','bad');return false;}const paid=fine;this.s.credits-=paid;this.s.bounty=0;const wasDetained=this.s.detained;this.s.detained=false;this.heatWanted=0;this.lastKnown=null;this.playerCrimeUntil=0;this.playerCrime=null;if(wasDetained){this.s.stationPos=null;this.enterStationDeck();}this.notify((this.sys.prison?'Detention fine cleared':'Bounty cleared')+' · '+paid.toLocaleString()+' cr · standing CLEAN','good');return true;}
  teleportTo(systemId,{docked=false,credits=null,bounty=null,fuel=true,repair=true}={}){
   if(!SYSTEMS[systemId])return false;
@@ -392,8 +523,9 @@ export class Game extends FlightGame{
  refreshRoute(){if(this.s.route)this.s.route.path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range)||[];}
  jumpNext(){if(!this.s.route)return false;const path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range);if(!path?.length){this.notify('Route complete.');return false;}this.s.route.path=path;return this.jumpTo(path[0]);}
  jumpTo(id){if(this.surface){this.notify('Return to orbit before jumping.');return false;}const ok=super.jumpTo(id);if(ok){this.scooping=false;this.discoveryScan=null;this.spectrumScan=null;}return ok;}
- dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.s.heat=25;this.s.stationPos=null;this.enterStationDeck();this.notify(pending||this.s.records.length?'Exploration data ready for review at Cartographics. Walk the deck to Cartographics.':'Docking complete. Walk the station deck to visit services.');speakRobot(this,'greeting');}else if(ok&&!this.onfoot)this.enterStationDeck();return ok;}
+ dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.s.heat=25;this.s.stationPos=null;this.enterStationDeck();const st=getStats(this.s),needService=this.s.fuel<st.fuel*.92||this.s.hull<st.hull*.95;if(!this.s.briefed){this.s.briefed=true;this.s.tutorial=Math.max(this.s.tutorial,3);this.notify(pending||this.s.records.length?'Exploration data is at Cartographics. Fuel and hull top off at Market — first two buttons on the counter.':'Docking complete. Walk to Market for refuel and repair, then Contracts for work.');}else if(pending||this.s.records.length)this.notify('Exploration data ready for review at Cartographics. Walk the deck to Cartographics.');else if(needService)this.notify('Market counter: Refuel and Repair are the two buttons at the top of the desk.');else this.notify('Docking complete. Walk the station deck to visit services.');speakRobot(this,'greeting');}else if(ok&&!this.onfoot)this.enterStationDeck();return ok;}
  talkRobot(mode='talk'){if(!this.s.docked){this.notify('Dock before chatting with station services.');return null;}return speakRobot(this,mode==='tip'?'tip':mode==='greeting'?'greeting':'talk');}
+ service(kind){const ok=super.service(kind);if(ok)this.s.tutorial=Math.max(this.s.tutorial||0,4);return ok;}
  get visiblePlanets(){return this.planets.filter(p=>!this.sys.uncharted||this.s.systemScans?.includes(this.s.system)||this.s.scanned.includes(p.id)||(this.s.spectrumScanned||[]).includes(p.id));}
  discover(){
   if(this.s.docked||this.surface||this.jump){this.notify('Launch into local space to use the discovery scanner.');return false;}
@@ -401,7 +533,16 @@ export class Game extends FlightGame{
   if(this.s.systemScans.includes(this.s.system)){this.notify('System catalog complete. Spectrum-scan worlds from range, then approach for a detailed survey.');return false;}
   this.discoveryScan={progress:0};this.notify('Discovery pulse charging.');return true;
  }
- scanTarget(){if(this.surface)return this.scanSurface();if(this.discoveryScan||this.jump)return false;if(!this.visiblePlanets.length)return this.discover();if(!this.visiblePlanets.includes(this.target))this.target=this.visiblePlanets.reduce((a,b)=>dist(this.player,a)<dist(this.player,b)?a:b);return super.scanTarget();}
+ scanTarget(){
+  if(this.surface)return this.scanSurface();
+  if(this.discoveryScan||this.jump)return false;
+  if(this.target?.type==='asteroid')return this.prospectRock();
+  if(this.target?.pursued||(this.target?.type==='traffic'&&this.s.pursuit&&this.target.uid===this.s.pursuit.uid))return this.scanPursuit();
+  if(this.target?.type==='wake')return this.target.scanned?this.followWake():this.scanWake();
+  if(!this.visiblePlanets.length)return this.discover();
+  if(!this.visiblePlanets.includes(this.target))this.target=this.visiblePlanets.reduce((a,b)=>dist(this.player,a)<dist(this.player,b)?a:b);
+  return super.scanTarget();
+ }
 
  land(){if(this.s.docked||this.jump)return false;if(!this.visiblePlanets.length){this.notify('Run a discovery scan to locate worlds first.');return false;}const candidates=this.visiblePlanets.filter(isLandableBody);if(!candidates.length){this.notify('No landable worlds here. Gas and ice giants cannot be entered.');return false;}const p=candidates.includes(this.target)?this.target:candidates[0];this.target=p;if(!isLandableBody(p)){this.notify((p.kind||'This giant')+' — not landable. Select a solid world or moon.');return false;}if(dist(this.player,p)>p.r+450){this.auto=p;this.notify('Approaching landing range. Tap LAND when you arrive.');return false;}if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s for atmospheric entry.');return false;}this.auto=null;this.scan=null;this.spectrumScan=null;this.discoveryScan=null;this.scooping=false;this.shots=[];this.onfoot=null;this.surface=createSurface(p,this.s.surfaceScanned);this.surfaceRecordsStart=this.s.records.length;this.player.vx=this.player.vy=0;this.notify('Surface flight · '+(this.surface.readout||p.kind)+'. Soft-land, then disembark.','good');return true;}
  takeoff(){if(!this.surface)return false;if(this.onfoot){this.notify('Board the skiff first.');return false;}const p=this.planets.find(p=>p.id===this.surface.planetId);this.surface=null;this.s.surface=null;this.onfoot=null;this.player.x=p.x;this.player.y=p.y+p.r+360;this.player.vx=this.player.vy=0;this.target=p;this.notify('Back in orbit. Dock to sell anomaly signals.');return true;}
@@ -531,7 +672,7 @@ export class Game extends FlightGame{
   if(this.scooping){this.s.fuel=Math.min(getStats(this.s).fuel,this.s.fuel+this.scoopRate*dt);if(this.s.fuel>=getStats(this.s).fuel){this.scooping=false;this.scoopRate=0;this.notify('Fuel tank full. Scoop retracted.','good');}}
  }
 
- accept(id){if(!this.s.docked)return false;const m=contractsFor(this.s).find(x=>x.id===id);if(!m)return false;if(this.s.missions.length>=3){this.notify('Finish a contract first. Maximum 3 active.');return false;}if((m.type==='delivery'||m.type==='salvage')&&getStats(this.s).cargo-cargoUsed(this.s)<(m.tons||0)){this.notify(`Free up ${m.tons} t of cargo space first.`);return false;}const job={...m};if(job.type==='bounty'||job.type==='escort')job.startKills=this.s.metrics?.pirates??this.s.kills;if(job.type==='geology')job.startGeology=this.s.metrics?.geology||0;this.s.missions.push(job);this.notify('Contract accepted: '+m.name,'good');return true;}
+ accept(id){if(!this.s.docked)return false;const m=contractsFor(this.s).find(x=>x.id===id);if(!m)return false;if(this.s.missions.length>=3){this.notify('Finish a contract first. Maximum 3 active.');return false;}if((m.type==='delivery'||m.type==='salvage')&&getStats(this.s).cargo-cargoUsed(this.s)<(m.tons||0)){this.notify(`Free up ${m.tons} t of cargo space first.`);return false;}const job={...m};if(job.type==='bounty'||job.type==='escort')job.startKills=this.s.metrics?.pirates??this.s.kills;if(job.type==='geology')job.startGeology=this.s.metrics?.geology||0;this.s.missions.push(job);this.s.tutorial=Math.max(this.s.tutorial||0,5);this.notify('Contract accepted: '+m.name,'good');return true;}
  missionReady(m){
   if(m.type==='delivery')return this.s.system===m.destination;
   if(this.s.system!==m.origin)return false;
@@ -648,7 +789,7 @@ export class Game extends FlightGame{
   const previous=this.s.system,wasDocked=this.s.docked,wasJumping=!!this.jump,beforeScanned=new Set(this.s.scanned),beforeData=this.s.data;for(const b of this.shots)if(b.trafficShot||b.playerShot){b.previousX=b.x;b.previousY=b.y;}super.update(dt,input);this.resolveTrafficShots();if(!wasDocked&&this.s.docked){this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.enterStationDeck();}const added=this.s.scanned.find(id=>!beforeScanned.has(id));if(added){const planet=this.planets.find(p=>p.id===added),value=this.s.data-beforeData;this.logExploration({id:added,type:'world',system:this.s.system,name:planet?.name||added,value});}
   if(previous!==this.s.system){
    this.refreshRoute();
-   if(wasJumping&&!this.s.docked){this.player.x=this.star.x+this.star.r+950;this.player.y=this.star.y;this.player.angle=0;this.player.vx=this.player.vy=0;this.target=this.star;this.notify('Arrived near the primary star. Run a discovery scan to catalog this system.');}
+   if(wasJumping&&!this.s.docked){this.player.x=this.star.x+this.star.r+950;this.player.y=this.star.y;this.player.angle=0;this.player.vx=this.player.vy=0;this.target=this.star;const chased=this.realizePursuit();if(!chased)this.notify('Arrived near the primary star. Run a discovery scan to catalog this system.');}
   }
   if(this.s.docked){
    this.s.heat=25;this.discoveryScan=null;this.scooping=false;this.scoopRate=0;this.s.playtime+=dt;

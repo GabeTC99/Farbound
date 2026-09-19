@@ -26,12 +26,18 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-018 | Kind-driven surfaces | Planet kind drives surface flight feel, anomaly mixes, landmark POIs, and approach readouts that match Spectrum dossiers. | Ready for review |
 | FB-019 | Company career ladders | Company ranks unlock exclusive jobs (escort, salvage, geology), Preferred hangar discounts, and a Partner liaison module. | Ready for review |
 | FB-020 | Optional cloud sync | Opt-in email account sync (Supabase) so beta testers can upload/download pilots across devices. Local saves remain primary. | Ready for review |
+| FB-021 | Frontier presence | First-hour Market discoverability (refuel/repair), wake-pursuit payoff, rotating market bulletins, optional asteroid prospecting, and station vocation copy. | Ready for review |
+| FB-022 | Frontier instruments | Godot HUD cohesion on the web beta: heading-up radar and flight-mode chip, Market/Galaxy trade-route plots, faction-colored galaxy presence, and per-station concierge names. | Ready for review |
 
 ## Tracking
 
 Use the stable FB identifiers when adding detail, choosing priorities, or updating progress. Suggested progression: Planned → Ready → In progress → Verification → Complete. Ready for review means implemented and tested, awaiting review and publication.
 
 ## Change history
+
+- September 19, 2026: Candidate 2.12.0 Frontier Instruments (FB-022): heading-up radar and flight-mode chip, Market/Galaxy trade-route plots, faction-colored galaxy presence, and per-station concierge names. Remaining Godot-parity lanes (not in this drop): surface pocket NPCs, post-ladder guild careers, extra commodities/refining, full 3D interiors.
+
+- September 18, 2026: Candidate 2.11.0 Frontier Presence (FB-021): Market briefing and Refuel desk labels, rotating traffic-board bulletins, hyperspace-wake pursuit intercepts, and optional asteroid prospecting.
 
 - September 11, 2026: Candidate 2.10.1 Cloud Sync adds optional Supabase email OTP / magic-link pilot upload and download (FB-020). Disabled until `cloud-config.mjs` is filled; see `docs/CLOUD_SYNC.md`.
 

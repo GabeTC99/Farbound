@@ -1,13 +1,23 @@
 /** Station service robot — configurable name + witty dialogue pools. Rename via STATION_ROBOT.displayName. */
-import {getStats} from './core.mjs';
+import {getStats,rng} from './core.mjs';
 
-/** Single rename point for Jill / later station overrides. */
+const ROBOT_NAMES=['Nellby-9','Vesper-4','Quill-7','Hearth-2','Lodestone-5','Marrow-8','Picket-3','Sable-6','Auger-1','Wick-12'];
+const FACTION_LINES={
+ concord:['Concord space. Relief crates and lectures, in that order.','neutral'],
+ directorate:['Directorate docks run hot. They like hulls that work and mouths that do not.','annoyed'],
+ freeholds:['Freehold stations keep their own books. Watch your manners and your hold.','happy']
+};
+
+/** Single rename point for Jill / later station overrides. Solace stays Nellby-9. */
 export const STATION_ROBOT={
  id:'nellby-9',
  displayName:'Nellby-9',
  roleLabel:'Station Service Unit',
- /** Optional later: (sys)=>string for per-station names */
- nameFor(_sys){return this.displayName;}
+ nameFor(sys){
+  if(!sys||sys.id===0)return this.displayName;
+  const r=rng((sys.id*911+19)|0);
+  return ROBOT_NAMES[Math.floor(r()*ROBOT_NAMES.length)];
+ }
 };
 
 /** @typedef {'neutral'|'happy'|'confused'|'annoyed'|'alert'} RobotExpression */
@@ -15,11 +25,11 @@ export const STATION_ROBOT={
 /** Tagged line pools. Each entry: [text, expression]. Expand freely. */
 export const ROBOT_LINES={
  greeting:[
-  ['Welcome to the station. Please refrain from venting the atmosphere.','happy'],
-  ['Docking complete. Catastrophe has been postponed.','happy'],
+  ['Welcome. Market is the arm with Refuel and Repair at the top of the counter. Start there.','happy'],
+  ['Docking complete. Catastrophe has been postponed. Market still sells fuel.','happy'],
   ['Another ship safely docked. My faith in pilots has risen marginally.','neutral'],
   ['Welcome aboard. Try not to scratch the paint. It’s older than both of us.','happy'],
-  ['Docking successful. Exploding afterward is still discouraged.','annoyed']
+  ['Docking successful. Exploding afterward is still discouraged. Walk to Market if you are leaking.','annoyed']
  ],
  general:[
   ['I am required to appear helpful. Fortunately, I am excellent at it.','happy'],
@@ -76,18 +86,20 @@ export const ROBOT_LINES={
  tips:[
   ['Slow below 100 m/s before scanning a world or scooping fuel. Fast pilots miss the interesting parts.','happy'],
   ['Discovery Pulse catalogs a system. Approach a world and Scan for the detailed survey payout.','happy'],
-  ['Buy where goods are produced, sell where demand is high. The Galaxy chart shows economies.','neutral'],
+  ['Buy where goods are produced, sell where demand is high. The Galaxy chart and Market traffic board show economies.','neutral'],
   ['Stars refill fuel for free. Closer means faster scooping and more heat — move away before you cook.','alert'],
-  ['Station services keep local space running. Closing the desk launches you. Other menus pause flight.','confused'],
+  ['Station services keep local space running. Closing the desk returns you to the deck. Launch from the hangar.','confused'],
   ['Assaulting civilians adds bounty and summons security. Prison barges are not always in-system.','annoyed'],
-  ['Hyperspace wakes can be scanned and followed. Slow down near one before resolving the signature.','happy'],
+  ['Hyperspace wakes can be scanned and followed. Jump after the contact — they drop in at the destination.','happy'],
   ['Cartographics sells exploration data in one package. Recovery and destruction discard unsold entries.','neutral'],
-  ['Mineral belts pay in titanium. Hold FIRE while pointed at rocks. Pirates also enjoy this advice.','confused'],
+  ['Prospect a rock before you mine it. SCAN at close range; prospected seams yield extra tons.','confused'],
   ['Plot routes from the Galaxy chart, then Jump next. Fuel is spent on jumps, not local flight.','happy'],
   ['Guild commissions need acceptance before progress counts. Claim unique modules at any station desk.','neutral'],
-  ['If heat hits 100%, your hull pays the bill. Scooping at 95% retracts itself. Listen to the thermometer.','alert']
+  ['If heat hits 100%, your hull pays the bill. Scooping at 95% retracts itself. Listen to the thermometer.','alert'],
+ ['Market Refuel and Repair are the first two buttons. I mention this because pilots keep asking.','annoyed'],
+  ['Tap a commodity on the Market to plot a sale. The Galaxy chart colors faction space.','happy']
  ],
- faction:[]
+ faction:Object.values(FACTION_LINES)
 };
 
 const TRADE_GOODS=['food','tech','meds','crystal'];
@@ -129,6 +141,14 @@ export function pickRobotLine(game,mode='talk'){
  const ctx=buildRobotContext(game);
  const avoid=game.robotState?.lastText||'';
  if(mode==='greeting'){
+  if(!game.s.robotMet){
+   const st=getStats(game.s);
+   const leak=game.s.fuel<st.fuel*.92||game.s.hull<st.hull*.95;
+   const text=leak
+    ?`Welcome to ${game.sys?.station||'the station'}. You are leaking fuel or hull. Market is the Refuel / Repair arm — first two buttons on the counter.`
+    :`Welcome to ${game.sys?.station||'the station'}. Walk to Market for fuel and repairs — first two buttons — then Contracts if you want work.`;
+   return{text,expression:'happy',tag:'greeting'};
+  }
   const greet=poolFor('greeting')||ROBOT_LINES.general;
   const line=pickFrom(greet,avoid);
   return{...line,tag:'greeting'};
@@ -139,11 +159,16 @@ export function pickRobotLine(game,mode='talk'){
   return{...line,tag:'tips'};
  }
  const situational=['wanted','damaged','explore','mining','trade','danger'].filter(t=>ctx.tags.includes(t)&&poolFor(t));
+ if(ctx.faction&&FACTION_LINES[ctx.faction])situational.push('faction');
  const ambient=['repeat','friendly','general'].filter(t=>(t==='general'||ctx.tags.includes(t))&&poolFor(t));
  // Prefer situational context when present; occasionally fall back to ambient for variety
  const useSituational=situational.length&&Math.random()<0.78;
  const candidates=useSituational?situational:ambient.length?ambient:['general'];
  const tag=candidates[Math.floor(Math.random()*candidates.length)];
+ if(tag==='faction'&&FACTION_LINES[ctx.faction]){
+  const [text,expression]=FACTION_LINES[ctx.faction];
+  return{text,expression,tag:'faction'};
+ }
  const line=pickFrom(poolFor(tag)||ROBOT_LINES.general,avoid);
  return{...line,tag};
 }
