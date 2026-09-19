@@ -1,5 +1,5 @@
 import {operationCards} from './frontier-views.mjs';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,price,marketBulletin,ECONOMY_SPECIALTY,contractsFor,companiesFor,companyRank,jumpDistance,jumpCost,dist,clamp,rng,systemSky,wantedTier,systemName,EVENT_IDS,eventArrowTargets,eventObjective,pursuitObjective,surveyWorldIds,systemLayoutMeta,missionDestination,operationDetails,FACTIONS,nearestAnomaly,terrainAt,surfaceAltitude,nearestZone,tradeHop} from './frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,price,marketBulletin,ECONOMY_SPECIALTY,contractsFor,companiesFor,companyRank,jumpDistance,jumpCost,dist,clamp,rng,systemSky,wantedTier,systemName,EVENT_IDS,eventArrowTargets,eventObjective,pursuitObjective,surveyWorldIds,systemLayoutMeta,missionDestination,operationDetails,FACTIONS,nearestAnomaly,terrainAt,surfaceAltitude,nearestZone,tradeHop,radarBlip} from './frontier.mjs';
 import {RELEASE,RELEASE_NAME} from './release.mjs';
 import {bindGamepadListeners,pollGamepad,gamepadConnected,xbIcon,xboxHelpRow} from './gamepad.mjs';
 import {readPilot,writePilot,readCheckpoint} from './pilot-storage.mjs';
@@ -844,12 +844,12 @@ function drawRadar(){
  r.beginPath();r.arc(134,134,64,0,6.28);r.strokeStyle='#38525e99';r.stroke();
  r.strokeStyle='#38525e66';r.beginPath();r.moveTo(134,12);r.lineTo(134,30);r.stroke();
  r.save();r.beginPath();r.arc(134,134,121,0,6.28);r.clip();
- const p=game.player,scale=.054,tid=game.target;
- r.translate(134,134);r.rotate(-(p.angle||0));
+ const p=game.player,tid=game.target;
+ r.translate(134,134);
  const docks=(game.stations||[]).filter(s=>s.type==='station');
  for(const o of [...docks,...(game.stars||[game.star]),...game.wakes,...game.signals,...game.derelicts,...game.patrols,...game.traffic,...game.visiblePlanets,...(softFX()?[]:game.asteroids),...game.enemies]){
   if(!o)continue;
-  const x=(o.x-p.x)*scale,y=(o.y-p.y)*scale;
+  const {x,y}=radarBlip(p.x,p.y,o.x,o.y,p.angle);
   const locked=tid&&(o===tid||(o.id!=null&&o.id===tid.id));
   r.fillStyle=o.type==='enemy'?'#ee8d87':o.type==='wake'?'#9be7ff':o.type==='signal'?'#efa778':o.type==='derelict'?'#a8b4be':o.type==='planet'?'#85b8cf':o.type==='asteroid'?'#797b76':o.type==='traffic'?'#8aa3b5':o.type==='star'?'#e8c18a':'#91efd9';
   const sz=o.type==='station'||o.type==='star'?7:4;

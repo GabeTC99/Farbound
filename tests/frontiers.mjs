@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,FACTIONS,getStats,cargoUsed,jumpDistance,jumpCost,price,marketBulletin,ECONOMY_SPECIALTY,pursuitObjective,contractsFor,companiesFor,companyRank,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds,tradeHop,bestExport,systemPresence} from '../dist/frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,GUILDS,MODULES,FACTIONS,getStats,cargoUsed,jumpDistance,jumpCost,price,marketBulletin,ECONOMY_SPECIALTY,pursuitObjective,contractsFor,companiesFor,companyRank,findRoute,systemName,missionDestination,guildProgress,operationDetails,terrainAt,surveyWorldIds,tradeHop,bestExport,systemPresence,radarBlip} from '../dist/frontier.mjs';
 import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core.mjs';
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
 import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
@@ -142,6 +142,23 @@ test('Trade hops pick a higher-paying dock, keep buy above sell, and plot from M
  const friendly=systemPresence(SYSTEMS[0],g.s);
  assert.equal(SYSTEMS[0].faction,'concord');
  assert.match(friendly.label,/Friendly/);
+});
+test('Heading-up radar maps the ship nose to dish-up',()=>{
+ const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} !~ ${b}`);
+ let b=radarBlip(0,0,10,0,0,1);
+ near(b.x,0);assert.ok(b.y<0,'angle 0 nose +X is dish-up');
+ b=radarBlip(0,0,0,10,Math.PI/2,1);
+ near(b.x,0);assert.ok(b.y<0,'launch heading +Y is dish-up');
+ b=radarBlip(0,0,0,-10,-Math.PI/2,1);
+ near(b.x,0);assert.ok(b.y<0,'screen-up heading is dish-up');
+ b=radarBlip(0,0,0,10,0,1);
+ assert.ok(b.x>0,'starboard sits dish-right');near(b.y,0);
+ const g=new Game();g.launch();
+ const st=radarBlip(g.player.x,g.player.y,g.station.x,g.station.y,g.player.angle);
+ assert.ok(st.y>0,'after launch the dock sits aft (player faces away)');
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/radarBlip/);
+ assert.doesNotMatch(app,/r\.rotate\(-\(p\.angle/);
 });
 test('First dock briefs Market refuel/repair; prospecting is optional extra yield',()=>{
  const g=new Game();
