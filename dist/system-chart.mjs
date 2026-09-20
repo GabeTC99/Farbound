@@ -115,6 +115,7 @@ export class SystemChart{
    const sel=g.target===planet;
    ctx.fillStyle=planet.color||(planet.type==='moon'?'#a8b8c8':'#85b8cf');
    ctx.beginPath();ctx.arc(p.x,p.y,sr,0,Math.PI*2);ctx.fill();
+   if(sr>6){ctx.strokeStyle=(planet.color||'#85b8cf')+'88';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(p.x,p.y,sr+2,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1;}
    if(sel){ctx.strokeStyle='#f1b879';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x,p.y,sr+5,0,Math.PI*2);ctx.stroke();ctx.lineWidth=1;}
    ctx.font=`${labelSize}px system-ui`;ctx.fillStyle=sel?'#f0c498':'#99b0bc';ctx.textAlign='center';
    ctx.fillText(planet.name||(planet.type==='moon'?'Moon':'World'),p.x,p.y+sr+labelSize+2);

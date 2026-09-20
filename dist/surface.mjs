@@ -10,7 +10,10 @@ const KIND_ANOMALIES={
  arid:['relic','geology','signal','relic','geology','signal'],
  ice:['geology','signal','relic','geology','signal','relic'],
  metal:['geology','geology','signal','relic','geology','signal'],
- mineral:['geology','relic','biosignature','geology','signal','relic']
+ mineral:['geology','relic','biosignature','geology','signal','relic'],
+ volcanic:['geology','relic','signal','geology','relic','signal'],
+ barren:['geology','relic','signal','geology','signal','relic'],
+ toxic:['signal','relic','geology','signal','relic','geology']
 };
 const KIND_NAMES={
  earthlike:{geology:'River-cut mineral bank',relic:'Overgrown survey ruin',biosignature:'Canopy biolume grove',signal:'Atmospheric radio bloom'},
@@ -18,7 +21,10 @@ const KIND_NAMES={
  arid:{geology:'Wind-scoured ore scar',relic:'Buried desert outpost',biosignature:'Dormant spore field',signal:'Sandstorm echo'},
  ice:{geology:'Crevasse ore lens',relic:'Frozen landing frame',biosignature:'Subglacial colony',signal:'Ice-crack radio ping'},
  metal:{geology:'Native metal seam',relic:'Slag-field foundry husk',biosignature:'Heat-vent microbes',signal:'Magnetic interference'},
- mineral:{geology:'Resonant mineral vein',relic:'Buried artificial structure',biosignature:'Bioluminescent colony',signal:'Subsurface radio echo'}
+ mineral:{geology:'Resonant mineral vein',relic:'Buried artificial structure',biosignature:'Bioluminescent colony',signal:'Subsurface radio echo'},
+ volcanic:{geology:'Fresh lava shelf',relic:'Heat-warped survey hut',biosignature:'Vent-edge microbes',signal:'Magma-chamber rumble'},
+ barren:{geology:'Regolith quarry',relic:'Crashed lander frame',biosignature:'Dormant dust lichen',signal:'Vacuum radio ghost'},
+ toxic:{geology:'Acid-etched ore plate',relic:'Corroded pump stack',biosignature:'Sulfur bloom',signal:'Cloud-deck static'}
 };
 const KIND_POI={
  earthlike:'Lush basin shelf',
@@ -26,7 +32,10 @@ const KIND_POI={
  arid:'Dune ruin',
  ice:'Ice crevasse',
  metal:'Exposed metal seam',
- mineral:'Basalt terrace'
+ mineral:'Basalt terrace',
+ volcanic:'Caldera rim',
+ barren:'Crater terrace',
+ toxic:'Acid fog shelf'
 };
 
 export function createSurface(p,scanned=[],saved=null){
@@ -41,7 +50,7 @@ export function createSurface(p,scanned=[],saved=null){
  });
  // Unique landmark POI for this kind (extra anomaly slot flavor, still scannable).
  const poiX=3200+r()*900,poiId=p.id+'-a6';
- anomalies.push({id:poiId,kind:kindId==='metal'||kindId==='mineral'?'geology':kindId==='earthlike'||kindId==='ocean'?'biosignature':'relic',name:KIND_POI[kindId]||'Surface landmark',x:poiX,y:terrainAt(poiX,seed)-10,value:700+Math.round(r()*500),scanned:scanned.includes(poiId),landmark:true});
+ anomalies.push({id:poiId,kind:kindId==='metal'||kindId==='mineral'||kindId==='volcanic'?'geology':kindId==='earthlike'||kindId==='ocean'?'biosignature':'relic',name:KIND_POI[kindId]||'Surface landmark',x:poiX,y:terrainAt(poiX,seed)-10,value:700+Math.round(r()*500),scanned:scanned.includes(poiId),landmark:true});
  return{
   planetId:p.id,planetName:p.name,seed,width:6000,
   kindId,color:p.color||'#87b3ac',kind:p.kind||'Mineral world',
@@ -62,16 +71,16 @@ export function updateSurface(s,dt,input,stats){
  const boost=input.boost?1.65:1;
  const g=clamp(s.gravity||1,.45,1.9);
  // Ice sink, thin-air skim, metal hard landings, arid heat haze feel.
- const ice=s.kindId==='ice',metal=s.kindId==='metal',arid=s.kindId==='arid',thin=s.atmosphere==='thin'||s.atmosphere==='none';
+ const ice=s.kindId==='ice',metal=s.kindId==='metal',arid=s.kindId==='arid',volcanic=s.kindId==='volcanic',toxic=s.kindId==='toxic',thin=s.atmosphere==='thin'||s.atmosphere==='none';
  const thrustScale=(thin?1.12:1)*(ice?.92:1)*(metal?.9:1);
- const drag=1.7*(ice?1.25:1)*(thin?.85:1);
+ const drag=1.7*(ice?1.25:1)*(thin?.85:1)*(toxic?1.15:1);
  const liftDrag=2.2*(g*.55+.45);
  s.throttle=Math.min(1,Math.hypot(ax,ay));
  s.vx+=(ax*380*boost*thrustScale-s.vx*drag)*dt;
  s.vy+=(ay*310*boost*thrustScale-s.vy*liftDrag)*dt;
  // Extra downward pull on high-g / metal worlds; floatier skim on thin air.
  s.vy+=((g-1)*42+(metal?18:0)-(thin?12:0))*dt;
- if(arid)s.vx+=(Math.sin((s.x||0)*.01+s.seed)*.6)*dt*40; // heat-haze drift
+ if(arid||volcanic)s.vx+=(Math.sin((s.x||0)*.01+s.seed)*.6)*dt*40; // heat-haze drift
  s.x=clamp(s.x+s.vx*dt,40,5960);s.y=clamp(s.y+s.vy*dt,55,880);
  const ground=terrainAt(s.x,s.seed)-19;
  const alt=ground-s.y;
