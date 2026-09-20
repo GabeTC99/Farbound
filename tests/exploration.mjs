@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.15\.0'/);
+ assert.match(release,/export const RELEASE='2\.15\.1'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -148,8 +148,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.15\.0/);
- assert.match(sw,/release:'2\.15\.0'/);
+ assert.match(sw,/farbound-v2\.15\.1/);
+ assert.match(sw,/release:'2\.15\.1'/);
  assert.match(sw,/planet-render\.mjs/);
  assert.match(sw,/ship-render\.mjs/);
  assert.match(sw,/star-render\.mjs/);

@@ -19,9 +19,16 @@ for(const ship of SHIPS){
  assert.match(svg,/<polygon /);
  assert.match(svg,/linearGradient/);
  assert.match(svg,/radialGradient/);
+ assert.match(svg,/hull-thick/);
+ assert.match(svg,/heat-tiles/);
+ assert.match(svg,/engine-bell/);
+ assert.match(svg,/canopy/);
+ assert.doesNotMatch(svg,/#d8fff8/);
  const fallback=hullSvg(ship);
  assert.match(fallback,/ship-preview/);
  assert.match(fallback,/<polygon /);
+ assert.match(fallback,/hull-thick/);
+ assert.doesNotMatch(fallback,/#d8fff8/);
 }
 
 for(const kind of NPC_KINDS){
@@ -67,5 +74,5 @@ assert.equal(g.player.r,24);
 g.launch();
 assert(!g.s.docked);
 
-console.log('PASS Fleet atlas: 20 hulls, '+NPC_KINDS.length+' NPC kinds, class materials stay distinct');
-console.log('PASS Hangar previews use lit gradients; exhaust still follows per-ship thrust');
+console.log('PASS Fleet atlas: 20 hulls, '+NPC_KINDS.length+' NPC kinds, grounded metal stays distinct');
+console.log('PASS Hangar previews use volume, heat tiles, and bells; exhaust still follows thrust');
