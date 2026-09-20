@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Farbound · Fleet Atlas 2.15.3</title>
+<title>Farbound · Fleet Atlas 2.15.4</title>
 <style>
 body{margin:0;background:#070d17;color:#c8dde6;font:14px/1.4 system-ui;padding:20px}
 h1{font-weight:500;letter-spacing:.08em;font-size:14px;color:#83d7c4;text-transform:uppercase}
@@ -15,11 +15,11 @@ h2{font-weight:500;font-size:13px;color:#9eb7bd;margin:28px 0 12px}
 .card span{color:#8aa7b4;font-size:12px}
 .stars{display:flex;flex-wrap:wrap;gap:16px}
 .star-card{text-align:center}
-.star-card canvas{background:#050a12;border-radius:10px;border:1px solid #1c2c36}
+.star-card canvas{background:#050a12;border-radius:10px;border:1px solid #1c2c36;width:280px;height:280px}
 </style>
 </head>
 <body>
-<h1>Fleet Atlas 2.15.3 · attached craft</h1>
+<h1>Fleet Atlas 2.15.4 · sharp stars</h1>
 <h2>Hangar previews</h2>
 <div class="grid" id="svg"></div>
 <h2>Local-space hulls</h2>
@@ -72,9 +72,9 @@ void NPC_KINDS;
 const stars=$('stars');
 for(const id of Object.keys(STAR_ART)){
  const wrap=document.createElement('div');wrap.className='star-card';
- const c=document.createElement('canvas');c.width=220;c.height=220;
- const ctx=c.getContext('2d');ctx.fillStyle='#050a12';ctx.fillRect(0,0,220,220);
- drawStarBody(ctx,{x:110,y:110,r:38,spectral:id,id:'preview-'+id},{lite:false});
+ const c=document.createElement('canvas');c.width=280;c.height=280;
+ const ctx=c.getContext('2d');ctx.fillStyle='#050a12';ctx.fillRect(0,0,280,280);
+ drawStarBody(ctx,{x:140,y:140,r:78,spectral:id,id:'preview-'+id},{lite:false,pixelScale:1});
  wrap.appendChild(c);wrap.insertAdjacentHTML('beforeend',`<div><b>${id}</b> · ${STAR_TYPES[id]?.label||''}</div>`);
  stars.appendChild(wrap);
 }

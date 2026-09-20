@@ -1,23 +1,25 @@
 /**
  * Spectral-class star artwork for local space.
  * Photosphere is seeded once per class+seed and cached; corona/limb composite each frame.
+ * Disk textures stay high-res so game zoom does not upscale a muddy 160px splat.
  */
 import {STAR_TYPES} from './system-layout.mjs';
 
 export const STAR_ART={
- O:{core:[248,252,255],hot:[198,226,255],photo:[110,168,255],limb:[64,118,220],spot:[36,64,120],corona:'#6a9cff',chromo:'#c8e4ff',coronaScale:2.95,flare:1,gran:.55,spots:0},
- B:{core:[244,248,255],hot:[210,228,255],photo:[150,190,255],limb:[88,140,220],spot:[48,72,128],corona:'#8ab4ff',chromo:'#d8ecff',coronaScale:2.7,flare:.7,gran:.5,spots:0},
- A:{core:[255,255,255],hot:[244,248,255],photo:[226,234,248],limb:[168,184,214],spot:[96,108,140],corona:'#d0dcff',chromo:'#f4f7ff',coronaScale:2.45,flare:.35,gran:.42,spots:1},
- F:{core:[255,252,236],hot:[255,244,210],photo:[255,228,168],limb:[214,176,96],spot:[140,104,48],corona:'#ffe08a',chromo:'#fff4c8',coronaScale:2.35,flare:.15,gran:.48,spots:2},
- G:{core:[255,236,186],hot:[255,214,140],photo:[232,176,88],limb:[176,112,48],spot:[110,64,28],corona:'#f0b45a',chromo:'#ffe2a0',coronaScale:2.25,flare:0,gran:.52,spots:3},
- K:{core:[255,198,140],hot:[255,160,88],photo:[232,128,56],limb:[168,72,32],spot:[96,40,22],corona:'#e88848',chromo:'#ffc080',coronaScale:2.1,flare:0,gran:.58,spots:5},
- M:{core:[255,168,120],hot:[255,112,72],photo:[200,68,48],limb:[128,32,28],spot:[72,18,16],corona:'#d05840',chromo:'#ff8868',coronaScale:1.95,flare:0,gran:.62,spots:7}
+ O:{core:[248,252,255],hot:[198,226,255],photo:[110,168,255],limb:[64,118,220],spot:[36,64,120],corona:'#6a9cff',chromo:'#c8e4ff',coronaScale:1.72,flare:1,gran:.55,spots:0},
+ B:{core:[244,248,255],hot:[210,228,255],photo:[150,190,255],limb:[88,140,220],spot:[48,72,128],corona:'#8ab4ff',chromo:'#d8ecff',coronaScale:1.62,flare:.7,gran:.5,spots:0},
+ A:{core:[255,255,255],hot:[244,248,255],photo:[226,234,248],limb:[168,184,214],spot:[96,108,140],corona:'#d0dcff',chromo:'#f4f7ff',coronaScale:1.52,flare:.35,gran:.42,spots:1},
+ F:{core:[255,252,236],hot:[255,244,210],photo:[255,228,168],limb:[214,176,96],spot:[140,104,48],corona:'#ffe08a',chromo:'#fff4c8',coronaScale:1.44,flare:.15,gran:.48,spots:2},
+ G:{core:[255,236,186],hot:[255,214,140],photo:[232,176,88],limb:[176,112,48],spot:[110,64,28],corona:'#f0b45a',chromo:'#ffe2a0',coronaScale:1.38,flare:0,gran:.52,spots:3},
+ K:{core:[255,198,140],hot:[255,160,88],photo:[232,128,56],limb:[168,72,32],spot:[96,40,22],corona:'#e88848',chromo:'#ffc080',coronaScale:1.32,flare:0,gran:.58,spots:5},
+ M:{core:[255,168,120],hot:[255,112,72],photo:[200,68,48],limb:[128,32,28],spot:[72,18,16],corona:'#d05840',chromo:'#ff8868',coronaScale:1.26,flare:0,gran:.62,spots:7}
 };
 
 export const STAR_CLASS_IDS=Object.keys(STAR_ART);
+export const STAR_TEX={lite:128,full:384};
 
 const cache=new Map();
-const MAX_CACHE=16;
+const MAX_CACHE=24;
 
 function hashu(n){n=Math.imul(n^(n>>>16),2246822519);n=Math.imul(n^(n>>>13),3266489917);return(n^(n>>>16))>>>0;}
 function n2(x,y,seed){
@@ -34,6 +36,22 @@ function fbm(x,y,seed,oct=4){
  let sum=0,amp=1,freq=1,norm=0;
  for(let i=0;i<oct;i++){sum+=n2(x*freq,y*freq,seed+i*19)*amp;norm+=amp;amp*=.5;freq*=2.07;}
  return sum/norm;
+}
+/** Cellular granules: bright cell centers, hard dark lanes. */
+function granule(nx,ny,seed,freq){
+ const x=nx*freq,y=ny*freq;
+ const ix=Math.floor(x),iy=Math.floor(y);
+ let min=4;
+ for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+  const jx=ix+ox,jy=iy+oy;
+  const hx=hashu(jx*374761393+jy*668265263+seed)/4294967296;
+  const hy=hashu(jx*1274126177+jy*3346424281+seed+19)/4294967296;
+  const dx=x-(jx+hx),dy=y-(jy+hy);
+  const d=dx*dx+dy*dy;
+  if(d<min)min=d;
+ }
+ const v=Math.max(0,1-Math.sqrt(min)*1.55);
+ return v*v*(3-2*v);
 }
 function mix(A,B,t){t=t<0?0:t>1?1:t;return[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,A[2]+(B[2]-A[2])*t];}
 function clamp8(v){return v<0?0:v>255?255:v;}
@@ -63,22 +81,29 @@ export function sampleStarColor(spectral,seed,nx,ny){
 function colorAt(spectral,seed,nx,ny,d){
  const art=artOfStar(spectral);
  const mu=Math.sqrt(Math.max(0,1-d*d));
- const limb=.28+.72*Math.pow(mu,art.gran>.55?.7:.85);
- let c=mix(art.photo,art.hot,fbm(nx*3.2,ny*3.2,seed,4));
- const gran=fbm(nx*(7+art.gran*6),ny*(7+art.gran*6),seed+9,3);
- c=mix(c,art.core,Math.max(0,gran-.55)*art.gran);
- c=mix(c,art.limb,Math.max(0,.42-gran)*art.gran*.8);
+ // Darken late so granulation stays readable; the rim still drops.
+ const limb=.40+.60*Math.pow(mu,art.gran>.55?.58:.72);
+ let c=mix(art.photo,art.hot,fbm(nx*6.8,ny*6.8,seed,3));
+ const cells=granule(nx,ny,seed+11,8.4+art.gran*6.2);
+ const wrinkle=fbm(nx*(18+art.gran*8),ny*(18+art.gran*8),seed+9,2);
+ const gran=cells*.78+wrinkle*.22;
+ c=mix(c,art.core,Math.max(0,gran-.36)*1.18);
+ c=mix(c,art.limb,Math.max(0,.46-gran)*1.22);
  if(art.spots){
   for(let i=0;i<art.spots;i++){
    const cx=((hashu(seed+i*31)&1023)/1023)*1.5-.75;
    const cy=((hashu(seed+i*47)&1023)/1023)*1.5-.75;
-   const cr=.08+((hashu(seed+i*59)&255)/255)*.12;
+   const cr=.055+((hashu(seed+i*59)&255)/255)*.08;
    const dist=Math.hypot(nx-cx,ny-cy);
-   if(dist<cr)c=mix(c,art.spot,1-dist/cr);
+   if(dist<cr){
+    const u=dist/cr;
+    const k=u<.48?1:Math.pow(1-(u-.48)/.52,2.4);
+    c=mix(c,art.spot,k*.96);
+   }
   }
  }
- const coreGlow=Math.max(0,1-d*1.15);
- c=mix(c,art.core,coreGlow*.35);
+ const coreGlow=Math.max(0,1-d*1.4);
+ c=mix(c,art.core,coreGlow*.12);
  return[clamp8(c[0]*limb),clamp8(c[1]*limb),clamp8(c[2]*limb)];
 }
 
@@ -89,16 +114,17 @@ function makeCanvas(size){
 }
 
 function paintPhotosphere(canvas,spectral,seed,size){
- const ctx=canvas.getContext('2d');
+ const ctx=canvas.getContext('2d',{willReadFrequently:true});
  const img=ctx.createImageData(size,size);
- const data=img.data,cx=size*.5,r=size*.5-1;
+ const data=img.data,cx=size*.5,r=size*.5-0.5;
+ const aa=1.15/r;
  for(let y=0;y<size;y++){
   for(let x=0;x<size;x++){
    const nx=(x-cx)/r,ny=(y-cx)/r,d2=nx*nx+ny*ny,i=(y*size+x)*4;
    if(d2>1){data[i+3]=0;continue;}
    const d=Math.sqrt(d2);
    const c=colorAt(spectral,seed,nx,ny,d);
-   const edge=d>.97?Math.max(0,(1-d)/.03):1;
+   const edge=d>1-aa?Math.max(0,(1-d)/aa):1;
    data[i]=c[0];data[i+1]=c[1];data[i+2]=c[2];data[i+3]=(255*edge)|0;
   }
  }
@@ -106,10 +132,19 @@ function paintPhotosphere(canvas,spectral,seed,size){
  return canvas;
 }
 
-function textureFor(p,lite){
+export function texSizeFor(p,lite,pixelScale){
+ if(lite)return STAR_TEX.lite;
+ const dest=Math.ceil((p?.r||80)*2*Math.max(.65,pixelScale||1));
+ if(dest>420)return 512;
+ if(dest>280)return STAR_TEX.full;
+ if(dest>180)return 256;
+ return 192;
+}
+
+function textureFor(p,lite,pixelScale){
  const spectral=p.spectral||'G';
  const seed=seedNum(p.seed||p.id||spectral);
- const size=lite?80:160;
+ const size=texSizeFor(p,lite,pixelScale);
  const key=spectral+'|'+seed+'|'+size;
  const hit=cache.get(key);
  if(hit){cache.delete(key);cache.set(key,hit);return hit;}
@@ -137,36 +172,38 @@ function drawFlares(ctx,p,art,lite){
  const n=art.flare>0.6?6:4;
  ctx.save();
  ctx.translate(p.x,p.y);
- ctx.strokeStyle=withAlpha(art.chromo,.28+art.flare*.2);
- ctx.lineWidth=Math.max(1.2,p.r*.03);
+ ctx.strokeStyle=withAlpha(art.chromo,.42+art.flare*.22);
+ ctx.lineWidth=Math.max(.85,p.r*.016);
+ ctx.lineCap='butt';
  for(let i=0;i<n;i++){
   const a=i*(Math.PI/n);
   ctx.rotate(a);
   ctx.beginPath();
-  ctx.moveTo(p.r*.92,0);
-  ctx.lineTo(p.r*(1.55+art.flare*.55),0);
+  ctx.moveTo(p.r*.96,0);
+  ctx.lineTo(p.r*(1.22+art.flare*.28),0);
   ctx.stroke();
  }
  ctx.restore();
 }
 
 function drawCorona(ctx,p,art,lite){
- const span=p.r*art.coronaScale*(lite?.85:1);
- const g=ctx.createRadialGradient(p.x,p.y,p.r*.42,p.x,p.y,span);
- g.addColorStop(0,withAlpha(art.chromo,.55));
- g.addColorStop(.28,withAlpha(art.corona,.42));
- g.addColorStop(.58,withAlpha(art.corona,.16));
+ const span=p.r*art.coronaScale*(lite?.82:1);
+ const inner=p.r*.97;
+ const g=ctx.createRadialGradient(p.x,p.y,inner,p.x,p.y,span);
+ g.addColorStop(0,withAlpha(art.chromo,lite?.16:.26));
+ g.addColorStop(.2,withAlpha(art.corona,lite?.1:.15));
+ g.addColorStop(.52,withAlpha(art.corona,.05));
  g.addColorStop(1,withAlpha(art.corona,0));
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,span,0,6.28);ctx.fill();
  if(lite)return;
- const ring=ctx.createRadialGradient(p.x,p.y,p.r*.92,p.x,p.y,p.r*1.18);
+ const ring=ctx.createRadialGradient(p.x,p.y,p.r*.985,p.x,p.y,p.r*1.045);
  ring.addColorStop(0,withAlpha(art.chromo,0));
- ring.addColorStop(.55,withAlpha(art.chromo,.5));
+ ring.addColorStop(.45,withAlpha(art.chromo,.58));
  ring.addColorStop(1,withAlpha(art.corona,0));
- ctx.fillStyle=ring;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.18,0,6.28);ctx.fill();
+ ctx.fillStyle=ring;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.045,0,6.28);ctx.fill();
 }
 
-/** Draw a star disc at world coords. opts: {lite, clock} */
+/** Draw a star disc at world coords. opts: {lite, clock, pixelScale} */
 export function drawStarBody(ctx,p,opts={}){
  if(!p||!ctx)return;
  const lite=!!opts.lite;
@@ -174,10 +211,16 @@ export function drawStarBody(ctx,p,opts={}){
  const art=artOfStar(spectral);
  if(!lite)drawFlares(ctx,p,art,lite);
  drawCorona(ctx,p,art,lite);
- const tex=textureFor(p,lite);
+ const tex=textureFor(p,lite,opts.pixelScale);
  ctx.save();
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.clip();
- if(tex)ctx.drawImage(tex,p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+ if(tex){
+  const dest=p.r*2;
+  const smooth=dest>tex.width*1.06;
+  ctx.imageSmoothingEnabled=smooth;
+  if(smooth&&'imageSmoothingQuality'in ctx)ctx.imageSmoothingQuality='high';
+  ctx.drawImage(tex,p.x-p.r,p.y-p.r,dest,dest);
+ }
  else{
   const g=ctx.createRadialGradient(p.x-p.r*.18,p.y-p.r*.16,p.r*.08,p.x,p.y,p.r);
   g.addColorStop(0,hexOf(art.core));
@@ -186,16 +229,16 @@ export function drawStarBody(ctx,p,opts={}){
   ctx.fillStyle=g;ctx.fill();
  }
  if(!lite){
-  const hx=p.x-p.r*.22,hy=p.y-p.r*.2;
-  const spec=ctx.createRadialGradient(hx,hy,0,hx,hy,p.r*.55);
-  spec.addColorStop(0,withAlpha(hexOf(art.core),.42));
-  spec.addColorStop(.45,withAlpha(hexOf(art.hot),.12));
+  const hx=p.x-p.r*.3,hy=p.y-p.r*.28;
+  const spec=ctx.createRadialGradient(hx,hy,0,hx,hy,p.r*.28);
+  spec.addColorStop(0,withAlpha(hexOf(art.core),.22));
+  spec.addColorStop(.55,withAlpha(hexOf(art.hot),.06));
   spec.addColorStop(1,'#0000');
   ctx.fillStyle=spec;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
  }
  ctx.restore();
- ctx.lineWidth=Math.max(1,p.r*.012);
- ctx.strokeStyle=withAlpha(hexOf(art.limb),.45);
+ ctx.lineWidth=Math.max(.7,p.r*.009);
+ ctx.strokeStyle=withAlpha(hexOf(art.limb),.78);
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.stroke();
 }
 
