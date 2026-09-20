@@ -20,7 +20,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ### Candidate 2.13.2
 
-- **Polished isometric interiors:** metal floor panels, door frames at spoke mouths, hangar bay mouth, railings, directional light and contact shadows. Kiosks, crates, shuttle, and crew share the same camera without the toy-block look.
+- **Polished isometric interiors:** metal floor plates, hub curb and rim light, door frames at the hub–spoke junction, corridor walls, hangar mouth, and metal railings. Directional light, contact shadows, and grounded crew/prop silhouettes.
 - Same desks, hangar launch, hull collision, and screen-space walking. Planet sites stay overhead. Rollback: `git checkout v2.12.1`.
 
 ### Candidate 2.13.1

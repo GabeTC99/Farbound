@@ -36,7 +36,7 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
-- September 20, 2026: Candidate 2.13.2 Living Concourse polish: panelled floors, door frames, hangar mouth, metal railings, directional lighting, contact shadows, and clearer prop/crew silhouettes on the same 2:1 isometric camera. Rollback tag `v2.12.1`.
+- September 20, 2026: Candidate 2.13.2 Living Concourse polish: panelled floors, hub curb, door frames at the hub–spoke junction, hangar mouth, metal railings, directional lighting, contact shadows, and clearer prop/crew silhouettes on the same 2:1 isometric camera. Rollback tag `v2.12.1`.
 
 - September 20, 2026: Candidate 2.13.1 Living Concourse isometric pass: station interiors use a 2:1 isometric camera with extruded hub/arm sides, depth-sorted crew and furniture, and screen-space walking. Same desks and hull collision. Rollback tag `v2.12.1`.
 

@@ -376,6 +376,10 @@ test('Living concourse: standing crew, props, speech, and isometric station rend
  assert.match(render,/drawDoorFrame/);
  assert.match(render,/drawRailing/);
  assert.match(render,/drawContactShadow/);
+ assert.match(render,/drawHubCurb/);
+ assert.match(render,/drawDeckRim/);
+ assert.match(render,/drawRimWindows/);
+ assert.match(render,/along=hull\.hubR/);
  assert.equal(STATION_ISO.ix,1);assert.equal(STATION_ISO.iy,.5);
  const right=isoWalkAxes(1,0);
  assert.ok(right.ax>0&&right.ay<0,'stick right should walk world +X −Y (screen east)');
