@@ -355,6 +355,9 @@ test('Living concourse: standing crew, props, speech, and isometric station rend
  g.onfoot.x=hangar.x;g.onfoot.y=hangar.y;
  ticks(g,.4,{aim:-Math.PI/2,thrust:1});
  assert(pointInHull(g.onfoot.hull,g.onfoot.x,g.onfoot.y,14));
+ const office=g.onfoot.zones.find(z=>z.service==='shipyard'&&!z.launch);
+ assert(office);g.onfoot.x=office.x;g.onfoot.y=office.y;
+ assert.equal(g.interactStation().service,'shipyard');
  const prison=createStationLayout({prison:true,detained:true,name:'Prison barge',robotName:'Picket-3'});
  assert(prison.zones.some(z=>z.service==='detention'));
  assert(!prison.zones.some(z=>z.service==='contracts'));
@@ -374,7 +377,6 @@ test('Living concourse: standing crew, props, speech, and isometric station rend
  assert.ok(right.ax>0&&right.ay<0,'stick right should walk world +X −Y (screen east)');
  const down=isoWalkAxes(0,1);
  assert.ok(down.ax>0&&down.ay>0,'stick down should walk world +X +Y (toward camera)');
- const office=g.onfoot.zones.find(z=>z.service==='shipyard'&&!z.launch)||g.onfoot.zones.find(z=>/office/i.test(z.label));
  const proj=makeStationProjector({x:office.x,y:office.y},390,844);
  const hub=proj.p(g.onfoot.hull.cx,g.onfoot.hull.cy,0);
  const rim=proj.p(g.onfoot.hull.cx+g.onfoot.hull.hubR,g.onfoot.hull.cy,0);
