@@ -1,5 +1,5 @@
 import {operationCards} from './frontier-views.mjs';
-import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,price,marketBulletin,ECONOMY_SPECIALTY,contractsFor,companiesFor,companyRank,jumpDistance,jumpCost,dist,clamp,rng,systemSky,wantedTier,systemName,EVENT_IDS,eventArrowTargets,eventObjective,pursuitObjective,surveyWorldIds,systemLayoutMeta,missionDestination,operationDetails,FACTIONS,nearestAnomaly,terrainAt,surfaceAltitude,nearestZone,tradeHop,radarBlip,PLANET_KINDS,findBodyOfKind} from './frontier.mjs';
+import {Game,newSave,validateSave,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,price,marketBulletin,ECONOMY_SPECIALTY,contractsFor,companiesFor,companyRank,jumpDistance,jumpCost,dist,clamp,rng,systemSky,wantedTier,systemName,EVENT_IDS,eventArrowTargets,eventObjective,pursuitObjective,surveyWorldIds,systemLayoutMeta,missionDestination,operationDetails,FACTIONS,nearestAnomaly,terrainAt,surfaceAltitude,nearestZone,tradeHop,radarBlip,PLANET_KINDS,findBodyOfKind,STAR_TYPES,findStarOfClass,shipRadius} from './frontier.mjs';
 import {RELEASE,RELEASE_NAME} from './release.mjs';
 import {bindGamepadListeners,pollGamepad,gamepadConnected,xbIcon,xboxHelpRow} from './gamepad.mjs';
 import {readPilot,writePilot,readCheckpoint} from './pilot-storage.mjs';
@@ -14,6 +14,8 @@ import {renderSurface} from './surface-render.mjs';
 import {renderOnFoot} from './onfoot-render.mjs';
 import {drawPlanetBody} from './planet-render.mjs';
 import {getHullDef,drawHullDef} from './hull-defs.mjs';
+import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft} from './ship-render.mjs';
+import {drawStarBody} from './star-render.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',system:'<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
 const icon=(name)=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.ship}</svg>`;
@@ -351,6 +353,8 @@ function renderPanel(){
 <div class="setting-row"><div><h3>Teleport · nebula sky</h3><p>${systemName(nebulaSys,s)} · ${systemSky(nebulaSys).label}</p></div><button data-action="dev-teleport" data-id="${nebulaSys.id}">Go</button></div>
 <div class="setting-row"><div><h3>Teleport · uncharted relay</h3><p>${systemName(relay,s)}</p></div><button data-action="dev-teleport" data-id="${relay.id}">Go</button></div>
 <div class="setting-row"><div><h3>Planet atlas</h3><p>Catalog a system and sit off a world of each kind.</p></div><div class="section-actions">${Object.keys(PLANET_KINDS).map(id=>`<button data-action="dev-planet" data-id="${id}">${esc(PLANET_KINDS[id].label.replace(' world','').replace(' giant',''))}</button>`).join('')}</div></div>
+<div class="setting-row"><div><h3>Fleet atlas</h3><p>Grant a hull and sit it in local space.</p></div><div class="section-actions">${SHIPS.map(b=>`<button data-action="dev-ship" data-id="${b.id}">${esc(b.name)}</button>`).join('')}</div></div>
+<div class="setting-row"><div><h3>Stellar atlas</h3><p>Sit off a primary of each spectral class.</p></div><div class="section-actions">${Object.keys(STAR_TYPES).map(id=>`<button data-action="dev-star" data-id="${id}">${id} · ${esc(STAR_TYPES[id].label)}</button>`).join('')}</div></div>
 <div class="setting-row"><div><h3>Home station</h3><p>Return to Solace docked.</p></div><button data-action="dev-home">Dock at Solace</button></div>
 <div class="setting-row"><div><h3>${esc(STATION_ROBOT.displayName)} · Market strip</h3><p>Dock at Solace Market and force a dialogue line on the strip.</p></div><div class="section-actions"><button data-action="dev-concierge">Open market</button><button data-action="dev-robot-talk">Force line</button></div></div>
 <div class="setting-row"><div><h3>Nearest prison barge</h3><p>Teleport docked to a detention barge.</p></div><button data-action="dev-prison">Go to prison</button></div>
@@ -414,6 +418,31 @@ async function action(a,id){
    const p=game.planets.find(x=>x.id===hit.body.id);
    if(p){game.target=p;game.player.x=p.x;game.player.y=p.y+p.r+120;game.player.vx=game.player.vy=0;game.player.angle=-Math.PI/2;}
    game.notify('DEV · '+(p?.kind||id)+' · '+hit.sys.name,'good');
+   closePanel();save();break;
+  }
+  case 'dev-ship':{
+   const b=SHIPS.find(s=>s.id===id);
+   if(!b){game.notify('Unknown hull.');break;}
+   if(game.s.docked)game.launch();
+   if(!game.s.fleet.includes(id))game.s.fleet.push(id);
+   game.s.hangar[game.s.ship]={hull:game.s.hull,shield:game.s.shield,fuel:game.s.fuel};
+   game.s.ship=id;
+   const st=getStats(game.s),h=game.s.hangar[id]||st;
+   game.s.hull=clamp(h.hull,1,st.hull);game.s.shield=st.shield;game.s.fuel=clamp(h.fuel,0,st.fuel);
+   game.player.r=shipRadius(id);
+   const dock=game.station||{x:0,y:0};
+   game.player.x=dock.x+160;game.player.y=dock.y+40;game.player.vx=game.player.vy=0;game.player.angle=0;game.player.thrust=.6;
+   game.notify('DEV · '+b.name+' · '+b.role,'good');
+   closePanel();save();break;
+  }
+  case 'dev-star':{
+   const hit=findStarOfClass(id,SYSTEMS);
+   if(!hit){game.notify('No '+id+' star on the chart.');break;}
+   game.teleportTo(hit.sys.id,{docked:false});
+   if(!game.s.systemScans.includes(hit.sys.id))game.s.systemScans.push(hit.sys.id);
+   const star=(game.stars||[game.star]).find(s=>s.id===hit.star.id)||game.star;
+   game.target=star;game.player.x=star.x;game.player.y=star.y+star.r+140;game.player.vx=game.player.vy=0;game.player.angle=-Math.PI/2;
+   game.notify('DEV · '+star.spectralLabel+' · '+hit.sys.name,'good');
    closePanel();save();break;
   }
   case 'dev-home':game.teleportTo(0,{docked:true});game.s.detained=false;panel='station';renderPanel();save();break;
@@ -557,20 +586,23 @@ canvas.addEventListener('pointerdown',e=>{if(panel||!started||game.s.docked||gam
 function drawMap(){const c=$('galaxy-map');if(!c)return;if(mapChart?.canvas===c){mapChart.selected=selectedSystem;mapChart.draw();return;}mapChart=new GalaxyChart(c,game,mapCamera,id=>{selectedSystem=id;renderPanel();},selectedSystem);}
 function drawSystemMap(){const c=$('system-map');if(!c)return;if(systemChart?.canvas===c){systemChart.draw();return;}systemChart=new SystemChart(c,game,systemCamera,body=>{if(!body||game.s.docked||game.surface)return;game.target=body;if(body.type==='station')game.station=body;game.auto=null;updateHUD();drawSystemMap();});}
 function circle(x,y,r,color,stroke=false){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);if(stroke){const prev=ctx.lineWidth;ctx.strokeStyle=color;ctx.lineWidth=1;ctx.stroke();ctx.lineWidth=prev;}else{ctx.fillStyle=color;ctx.fill();}}
-function drawShip(x,y,a,color,size=19,enemy=false,thrust=0,boost=false){ctx.save();ctx.translate(x,y);ctx.rotate(a);if(thrust>.05){const len=(softFX()?12:(12+Math.random()*(boost?47:18)))*thrust;ctx.fillStyle='#76efdb';ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(-size+3,-5);ctx.lineTo(-size-len,0);ctx.lineTo(-size+3,5);ctx.fill();ctx.globalAlpha=1;}ctx.fillStyle=enemy?'#4d252d':'#183742';ctx.strokeStyle=color;ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(size*1.25,0);ctx.lineTo(-size,size*.74);ctx.lineTo(-size*.55,0);ctx.lineTo(-size,-size*.74);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=color;ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(size*.85,0);ctx.lineTo(-size*.5,0);ctx.stroke();ctx.fillStyle='#c8f8f2';ctx.fillRect(0,-2,5,4);ctx.restore();}
+function localLight(x,y,a){
+ const host=(game.stars||[game.star])[0]||game.star,lx=(host?.x??0)-x,ly=(host?.y??0)-y;
+ const c=Math.cos(-a),s=Math.sin(-a);
+ return{x:lx*c-ly*s,y:lx*s+ly*c};
+}
+function drawShip(x,y,a,color,size=19,enemy=false,thrust=0,boost=false){
+ ctx.save();ctx.translate(x,y);ctx.rotate(a);
+ const L=localLight(x,y,a);
+ if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y});
+ else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y});
+ ctx.restore();
+}
 function drawSecurityShip(p,hostile=false){
- const f=FACTIONS.find(f=>f.id===p.faction),color=hostile?'#ee918b':(f?.color||'#9eb7bd'),size=18,thrust=p.thrust||0;
+ const f=FACTIONS.find(f=>f.id===p.faction),color=hostile?'#ee918b':(f?.color||'#9eb7bd');
+ const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);
- if(thrust>.05){const len=(10+Math.random()*16)*thrust;ctx.fillStyle='#76efdb';ctx.globalAlpha=.65;ctx.beginPath();ctx.moveTo(-size+2,size*.22);ctx.lineTo(-size-len,size*.22);ctx.lineTo(-size+2,size*.22+3.5);ctx.fill();ctx.beginPath();ctx.moveTo(-size+2,-size*.22-3.5);ctx.lineTo(-size-len,-size*.22);ctx.lineTo(-size+2,-size*.22);ctx.fill();ctx.globalAlpha=1;}
- ctx.fillStyle=hostile?'#3a1f28':'#15202c';ctx.strokeStyle=color;ctx.lineWidth=1.7;ctx.beginPath();
- ctx.moveTo(size*1.15,0);ctx.lineTo(size*.35,size*.38);ctx.lineTo(-size*.15,size*.88);ctx.lineTo(size*.05,size*.32);ctx.lineTo(-size*.85,size*.48);ctx.lineTo(-size,size*.18);ctx.lineTo(-size*.55,0);ctx.lineTo(-size,-size*.18);ctx.lineTo(-size*.85,-size*.48);ctx.lineTo(size*.05,-size*.32);ctx.lineTo(-size*.15,-size*.88);ctx.lineTo(size*.35,-size*.38);
- ctx.closePath();ctx.fill();ctx.stroke();
- ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(size*.55,0);ctx.lineTo(-size*.25,0);ctx.moveTo(-size*.1,size*.4);ctx.lineTo(size*.2,size*.15);ctx.moveTo(-size*.1,-size*.4);ctx.lineTo(size*.2,-size*.15);ctx.stroke();ctx.globalAlpha=1;
- ctx.fillStyle='#d7f7ff';ctx.beginPath();ctx.ellipse(size*.35,0,4.2,2.8,0,0,6.28);ctx.fill();
- const flash=Math.floor(clock*(p.status==='RESPONDING'?10:6)+ (p.x||0)*.01)%2===0;
- ctx.fillStyle=flash?'#ff3b4a':'#243038';ctx.fillRect(-size*.2,size*.5,5,3.4);
- ctx.fillStyle=flash?'#243038':'#3b8cff';ctx.fillRect(-size*.2,-size*.5-3.4,5,3.4);
- ctx.globalAlpha=.9;ctx.fillStyle=flash?'#ff3b4a':'#3b8cff';ctx.fillRect(-size*.05,-2.4,7,4.8);ctx.globalAlpha=1;
+ drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y});
  ctx.restore();
 }
 function drawPlayerShip(dt=1/60){
@@ -582,29 +614,18 @@ function drawPlayerShip(dt=1/60){
  if(!softFX()){for(const t of playerTrail){t.life-=dt;ctx.globalAlpha=Math.max(0,t.life*1.8);circle(t.x,t.y,boost?2.4:1.7,t.color);}ctx.globalAlpha=1;playerTrail=playerTrail.filter(t=>t.life>0);}
  if(game.time-game.lastDamage<.3)circle(p.x,p.y,size+14,'#a4f5ed88',true);
  else if(game.s.shield>0&&game.s.shield<st.shield&&game.time-game.lastDamage>4){ctx.globalAlpha=.14+.05*Math.sin(clock*2);circle(p.x,p.y,size+12,color,true);ctx.globalAlpha=1;}
+ const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);ctx.transform(1,0,Math.tan(shipBank)*.35,1,0,0);
- drawHullDef(ctx,getHullDef(hull.id),size,color,hull.accent,{thrust,boost,clock});
+ drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y});
  ctx.restore();
  if(boost){ctx.globalAlpha=.2;circle(p.x,p.y,size+28,hull.accent,true);ctx.globalAlpha=1;}
 }
 function drawTrafficShip(tr){
  const size=tr.size||12,color=tr.color||'#647d94',lite=softFX();
  if(!lite){for(const t of tr.trail||[]){ctx.globalAlpha=Math.max(0,t.life*1.6);circle(t.x,t.y,1.6,color);}ctx.globalAlpha=1;}
+ const L=localLight(tr.x,tr.y,tr.angle);
  ctx.save();ctx.translate(tr.x,tr.y);ctx.rotate(tr.angle);
- if(tr.thrust>.05){const len=(lite?8:(8+Math.random()*14))*tr.thrust;ctx.fillStyle='#76efdb';ctx.globalAlpha=.65;ctx.beginPath();ctx.moveTo(-size+2,-4);ctx.lineTo(-size-len,0);ctx.lineTo(-size+2,4);ctx.fill();ctx.globalAlpha=1;}
- ctx.fillStyle='#142833';ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.beginPath();
- if(tr.hull==='freighter'){ctx.moveTo(size*1.05,0);ctx.lineTo(size*.2,size*.72);ctx.lineTo(-size,size*.78);ctx.lineTo(-size*.7,0);ctx.lineTo(-size,-size*.78);ctx.lineTo(size*.2,-size*.72);}
- else if(tr.hull==='prospector'){ctx.moveTo(size,0);ctx.lineTo(-size*.15,size*.68);ctx.lineTo(-size,size*.4);ctx.lineTo(-size*.55,0);ctx.lineTo(-size,-size*.4);ctx.lineTo(-size*.15,-size*.68);}
- else if(tr.hull==='tender'){ctx.moveTo(size*1.1,0);ctx.lineTo(size*.15,size*.55);ctx.lineTo(-size*.75,size*.68);ctx.lineTo(-size,0);ctx.lineTo(-size*.75,-size*.68);ctx.lineTo(size*.15,-size*.55);}
- else if(tr.hull==='surveyor'){ctx.moveTo(size*1.15,0);ctx.lineTo(-size*.15,size*.62);ctx.lineTo(-size,size*.35);ctx.lineTo(-size*.5,0);ctx.lineTo(-size,-size*.35);ctx.lineTo(-size*.15,-size*.62);}
- else{ctx.moveTo(size*1.35,0);ctx.lineTo(-size*.15,size*.42);ctx.lineTo(-size,size*.28);ctx.lineTo(-size*.45,0);ctx.lineTo(-size,-size*.28);ctx.lineTo(-size*.15,-size*.42);}
- ctx.closePath();ctx.fill();ctx.stroke();
- if(tr.hull==='prospector'){ctx.beginPath();ctx.moveTo(size*.2,size*.28);ctx.lineTo(size*.58,size*.42);ctx.lineTo(size*.48,size*.58);ctx.lineTo(size*.12,size*.48);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(size*.48,size*.5);ctx.lineTo(size*.72,size*.55);ctx.lineTo(size*.48,size*.62);ctx.closePath();ctx.fill();ctx.stroke();}
- if(tr.hull==='tender'){ctx.beginPath();ctx.moveTo(-size*.05,size*.32);ctx.quadraticCurveTo(-size*1.35,0,-size*.05,-size*.32);ctx.stroke();}
- if(tr.hull==='surveyor'){ctx.beginPath();ctx.arc(-size*.05,-size*.95,size*.4,0,6.28);ctx.stroke();ctx.globalAlpha=.35;ctx.fill();ctx.globalAlpha=1;}
- if(tr.hull==='freighter'){ctx.strokeStyle=color;ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(-size*.15,-size*.4);ctx.lineTo(-size*.15,size*.4);ctx.moveTo(size*.25,-size*.35);ctx.lineTo(size*.25,size*.35);ctx.stroke();ctx.globalAlpha=1;}
- ctx.fillStyle='#c8f8f2';ctx.fillRect(size*.05,-1.8,4.2,3.6);
- const blink=((clock*3+tr.phase)%1)<.55;ctx.fillStyle=blink?'#ff6b6b':'#2a3840';ctx.fillRect(-2,size*.55,3,3);ctx.fillStyle=blink?'#2a3840':'#6dffb0';ctx.fillRect(-2,-size*.55-3,3,3);
+ drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y});
  ctx.restore();
  if(tr.status==='FUEL SCOOPING'){ctx.strokeStyle='#ffc68577';ctx.lineWidth=1.5;ctx.setLineDash([6,10]);ctx.beginPath();ctx.moveTo(game.star.x,game.star.y);ctx.lineTo(tr.x,tr.y);ctx.stroke();ctx.setLineDash([]);}
  if(tr.status==='MINING RUN'){const rock=game.asteroids[0];if(rock){ctx.strokeStyle='#9ad7c988';ctx.lineWidth=1.4;ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(tr.x,tr.y);ctx.lineTo(rock.x+Math.sin(tr.work)*12,rock.y+Math.cos(tr.work)*12);ctx.stroke();ctx.setLineDash([]);}}
@@ -630,7 +651,15 @@ function drawPlanet(p){
 }
 function label(text,x,y,color='#a1bdc8',size=14){ctx.font=`${size}px system-ui`;ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(text,x,y);}
 function drawStation(s=game.station){if(!s||s.type==='beacon')return;const scale=s.r/65,lite=liteFX();ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);ctx.lineWidth=2;circle(0,0,64,'#527d8c',true);circle(0,0,51,'#29434f',true);for(let i=0;i<(lite?3:6);i++){ctx.save();ctx.rotate(i*Math.PI/(lite?1.5:3));ctx.fillStyle='#18303e';ctx.strokeStyle='#6a94a3';ctx.fillRect(35,-9,45,18);ctx.strokeRect(35,-9,45,18);if(!lite){ctx.fillStyle='#82d7c2';ctx.fillRect(68,-3,7,6);}ctx.restore();}circle(0,0,22,'#132833');circle(0,0,22,'#7db9bd',true);ctx.restore();if(!lite){ctx.setLineDash([9,13]);circle(s.x,s.y,125*scale,'#4c8c8740',true);ctx.setLineDash([]);}label(s.name,s.x,s.y-100*scale,'#94c7cd');if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-78*scale,'#608592',12);}
-function drawStar(p=game.star){const col=p.color||'#e9be82',hot=p.spectral==='M'||p.spectral==='K'?'#f0c8a0':'#f8d9a3';if(liteFX()){circle(p.x,p.y,p.r*1.7,col+'55');circle(p.x,p.y,p.r,col);circle(p.x-p.r*.13,p.y-p.r*.1,p.r*.74,hot);}else{const g=ctx.createRadialGradient(p.x,p.y,p.r*.5,p.x,p.y,p.r*2.2);g.addColorStop(0,col+'aa');g.addColorStop(.45,col+'44');g.addColorStop(1,col+'00');circle(p.x,p.y,p.r*2.2,g);circle(p.x,p.y,p.r,col);circle(p.x-p.r*.13,p.y-p.r*.1,p.r*.74,hot);}label(p.name+(p.spectralLabel?' · '+p.spectralLabel:''),p.x,p.y+p.r+45,col);if(p.primary!==false&&p.id==='star'){if(!liteFX()){circle(p.x,p.y,p.r+600,'#ecc08533',true);circle(p.x,p.y,p.r+150,'#ff777722',true);label('FUEL SCOOPING ZONE · WATCH HEAT',p.x,p.y+p.r+70,'#987c62',12);}else circle(p.x,p.y,p.r+150,'#ff777722',true);}else if(!liteFX())circle(p.x,p.y,p.r+320,col+'22',true);}
+function drawStar(p=game.star){
+ const col=p.color||'#e9be82';
+ drawStarBody(ctx,p,{lite:liteFX(),clock});
+ label(p.name+(p.spectralLabel?' · '+p.spectralLabel:''),p.x,p.y+p.r+45,col);
+ if(p.primary!==false&&p.id==='star'){
+  if(!liteFX()){circle(p.x,p.y,p.r+600,'#ecc08533',true);circle(p.x,p.y,p.r+150,'#ff777722',true);label('FUEL SCOOPING ZONE · WATCH HEAT',p.x,p.y+p.r+70,'#987c62',12);}
+  else circle(p.x,p.y,p.r+150,'#ff777722',true);
+ }else if(!liteFX())circle(p.x,p.y,p.r+320,col+'22',true);
+}
 function drawWake(w){
  const pulse=14+((1-w.life/90)*18)+Math.sin(clock*5+w.x)*3;
  ctx.strokeStyle=w.scanned?'#9be7ffaa':'#7aa0c888';ctx.lineWidth=1.6;ctx.setLineDash(w.scanned?[]:[5,7]);

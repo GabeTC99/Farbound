@@ -1,7 +1,6 @@
 import {operationCards,factionView} from '../dist/frontier-views.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
 import {Game,newSave,validateSave,SYSTEMS,SHIPS,getStats,dist,jumpDistance,findRoute,operationDetails,FACTIONS,angleDiff,systemSky,wantedTier,EVENT_IDS,EVENT_CONFIG,eventArrowTargets,eventObjective,surveyWorldIds,systemLayoutMeta,buildSystemLayout,isLandablePlanet,applyOrbitPhase,advanceOrbits} from '../dist/frontier.mjs';
 import {readPilot,writePilot,SAVE_KEY,PRE_EXPLORATION_KEY} from '../dist/pilot-storage.mjs';
 const tests=[];const test=(name,fn)=>tests.push([name,fn]);
@@ -128,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.14\.0'/);
+ assert.match(release,/export const RELEASE='2\.15\.3'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'&&panel!=='system-map'/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
@@ -144,10 +143,16 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/SPECTRUM/);
  assert.match(app,/drawPlanetBody/);
  assert.match(app,/from '\.\/planet-render\.mjs'/);
+ assert.match(app,/from '\.\/ship-render\.mjs'/);
+ assert.match(app,/from '\.\/star-render\.mjs'/);
+ assert.match(app,/drawStarBody/);
+ assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.14\.0/);
- assert.match(sw,/release:'2\.14\.0'/);
+ assert.match(sw,/farbound-v2\.15\.3/);
+ assert.match(sw,/release:'2\.15\.3'/);
  assert.match(sw,/planet-render\.mjs/);
+ assert.match(sw,/ship-render\.mjs/);
+ assert.match(sw,/star-render\.mjs/);
  assert.match(sw,/system-chart\.mjs/);
  assert.match(sw,/hull-defs\.mjs/);
  assert.match(sw,/planet-layout\.mjs/);
@@ -161,13 +166,19 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert(sw.includes("'./release.mjs'"));
  const g=new Game();assert(g.s.docked);assert(g.onfoot);assert(g.launch());assert(!g.s.docked);assert.equal(g.onfoot,null);
 });
-test('Security cutters and prospector boom use dedicated hull geometry',()=>{
+test('Security cutters and prospector boom use dedicated hull geometry',async()=>{
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ const ships=readFileSync(new URL('../dist/ship-render.mjs',import.meta.url),'utf8');
  assert.match(source,/function drawSecurityShip/);
  assert(source.includes("drawSecurityShip(p)")&&source.includes('drawSecurityShip(e,true)'));
- assert(source.includes("#ff3b4a")&&source.includes("#3b8cff"));
- assert(!source.includes('ctx.lineTo(size*.95,size*1.05)'));
- assert.match(source,/tr\.hull==='prospector'[\s\S]*?size\*\.72,size\*\.55/);
+ assert.match(source,/drawSecurityCraft/);
+ assert.match(source,/drawTrafficCraft/);
+ assert(ships.includes("#ff3b4a")&&ships.includes("#3b8cff"));
+ assert.match(ships,/security:\{/);
+ assert.match(ships,/prospector:\{/);
+ assert.match(ships,/\.58,\.42/);
+ const {NPC_HULLS}=await import('../dist/ship-render.mjs');
+ assert(NPC_HULLS.prospector.parts.some(p=>p.type==='poly'&&p.pts.some(([x,y])=>x>.5&&y>.4)));
 });
 test('Living traffic performs distinct jobs and pauses at real destinations',()=>{
  const g=new Game();assert.deepEqual(g.traffic.map(t=>t.job),['ARRIVING FROM JUMP POINT','DEPARTING FOR JUMP POINT','MINING RUN','FUEL SCOOPING','PLANETARY SURVEY']);
@@ -317,13 +328,18 @@ test('Legacy hangar saves pad loadouts for new hulls',()=>{
  const loaded=validateSave(raw);assert(loaded);assert.deepEqual(loaded.loadouts.sparrow,[]);assert.deepEqual(loaded.loadouts.eagle,[]);assert.deepEqual(loaded.loadouts.goliath,[]);
  assert.equal(loaded.ship,'wren');assert(loaded.fleet.includes('wren'));
 });
-test('Player thrust and boost never control another ship’s exhaust',()=>{
+test('Player thrust and boost never control another ship’s exhaust',async()=>{
  const g=new Game();g.launch();g.update(1/30,{thrust:1,boost:true});assert.equal(g.player.thrust,1);assert(g.player.boost);const patrol=g.patrols[0].thrust;g.update(1/30,{});assert.equal(g.player.thrust,0);assert(!g.player.boost);assert.equal(g.patrols[0].thrust,patrol);
- // Exercise the actual renderer without a browser or global game state.
- const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),fn=source.match(/function drawShip\([^\n]+/)[0];
- let flames=0;const ctx=new Proxy({}, {get:(_,key)=>key==='lineTo'?((x,y)=>{if(x<-24&&y===0)flames++;}):()=>{},set:()=>true});
- const sandbox={ctx,Math};vm.createContext(sandbox);vm.runInContext('function softFX(){return false}function liteFX(){return false}'+fn+';this.drawShip=drawShip',sandbox);
- sandbox.drawShip(0,0,0,'white',19,false,0);assert.equal(flames,0);sandbox.drawShip(0,0,0,'white',19,false,1,true);assert.equal(flames,1);sandbox.drawShip(0,0,0,'white',19,false,0);assert.equal(flames,1);
+ const {drawCraft}=await import('../dist/ship-render.mjs');
+ let flames=0;
+ const ctx=new Proxy({},{get:(_,key)=>key==='lineTo'?((x,y)=>{if(x<-24&&Math.abs(y)<6)flames++;}):()=>{},set:()=>true});
+ drawCraft(ctx,{kind:'wren',size:19,thrust:0,boost:false,clock:0,lite:true});
+ assert.equal(flames,0);
+ drawCraft(ctx,{kind:'wren',size:19,thrust:1,boost:true,clock:0,lite:true});
+ assert(flames>=1);
+ const idle=flames;
+ drawCraft(ctx,{kind:'wren',size:19,thrust:0,boost:false,clock:0,lite:true});
+ assert.equal(flames,idle);
 });
 test('Planets, stars and stations allow uninterrupted overflight',()=>{
  for(const kind of ['planet','star','station']){

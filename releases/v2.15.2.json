@@ -1,0 +1,14 @@
+{
+  "release": "2.15.2",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Hangar cards and local-space hulls (all 20 player ships plus NPC/traffic/security) pick up class kits: framed canopies with depth, recessed ceramic bells, radiators, antennae, cargo-bay doors, docking clamps, and combat hardpoints.",
+    "A scout, hauler, and gunship no longer share one extruded wedge. Flight, docking, hitboxes, and menus are unchanged. Stars stay the 2.15.0 spectral pass.",
+    "Service worker cache bumped to farbound-v2.15.2 so Pages picks up the craft paint."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

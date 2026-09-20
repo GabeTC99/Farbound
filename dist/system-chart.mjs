@@ -1,4 +1,6 @@
 /** Local-space system chart — pan/zoom canvas with live ship position. */
+import {drawStarBody} from './star-render.mjs';
+import {drawCraft} from './ship-render.mjs';
 export class SystemChart{
  constructor(canvas,game,view,onSelect){
   this.canvas=canvas;this.game=game;this.view=view;this.onSelect=onSelect;
@@ -124,12 +126,9 @@ export class SystemChart{
 
   for(const star of stars){
    const p=this.project(star.x,star.y,w,h),sr=Math.max(8,Math.min(36,(star.r||160)*scale*.55));
-   const glow=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,sr*2.2);
-   glow.addColorStop(0,(star.color||'#e8c18a')+'cc');glow.addColorStop(1,(star.color||'#e8c18a')+'00');
-   ctx.fillStyle=glow;ctx.beginPath();ctx.arc(p.x,p.y,sr*2.2,0,Math.PI*2);ctx.fill();
-   ctx.fillStyle=star.color||'#e8c18a';ctx.beginPath();ctx.arc(p.x,p.y,sr,0,Math.PI*2);ctx.fill();
+   drawStarBody(ctx,{x:p.x,y:p.y,r:sr,spectral:star.spectral,color:star.color,id:star.id},{lite:true});
    if(g.target===star){ctx.strokeStyle='#f1b879';ctx.beginPath();ctx.arc(p.x,p.y,sr+6,0,Math.PI*2);ctx.stroke();}
-   ctx.font=`${labelSize}px system-ui`;ctx.fillStyle='#e8c18a';ctx.textAlign='center';
+   ctx.font=`${labelSize}px system-ui`;ctx.fillStyle=star.color||'#e8c18a';ctx.textAlign='center';
    ctx.fillText(star.name||'Star',p.x,p.y+sr+labelSize+2);
    pushHit(star,p.x,p.y,sr);
   }
@@ -145,9 +144,9 @@ export class SystemChart{
   }
 
   const ship=this.shipWorld(),sp=this.project(ship.x,ship.y,w,h);
+  const hull=g.s?.ship||'wren';
   ctx.save();ctx.translate(sp.x,sp.y);ctx.rotate(ship.angle||0);
-  ctx.fillStyle='#a7f0df';ctx.strokeStyle='#091820';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(-7,6);ctx.lineTo(-4,0);ctx.lineTo(-7,-6);ctx.closePath();ctx.fill();ctx.stroke();
+  drawCraft(ctx,{kind:hull,size:11,color:'#a7f0df',accent:'#7ad9c8',lite:true,clock:0,thrust:0,drawLights:false});
   ctx.restore();
   ctx.strokeStyle='#91efda66';ctx.beginPath();ctx.arc(sp.x,sp.y,16,0,Math.PI*2);ctx.stroke();
   ctx.font=`${labelSize}px system-ui`;ctx.fillStyle='#b8f5e8';ctx.textAlign='center';

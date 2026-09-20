@@ -10,6 +10,7 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-002 | Discovery scanning | Create exploration and discovery scanning mechanics inspired by Elite Dangerous. Initial implementation: four-second system pulse, followed by separate close-range world surveys. Touch controls and H/R shortcuts; data sells at stations. | Ready for review |
 | FB-003 | Procedural planet variety | Create varied planet types with randomized variations constrained by physically plausible rules. Planet classification, composition, and appearance must remain consistent; no Earth-like gas giants. 2.14.0 paints each kind with its own albedo and adds volcanic, barren, and toxic worlds. | Complete |
 | FB-024 | Planet atlas artwork | Distinct type-driven planet rendering in local space (not palette swaps), extra kinds, atmosphere limbs, and matching surface/on-foot cues. | Ready for review |
+| FB-025 | Fleet and stellar atlas | Distinct class-driven ship artwork (all flyable hulls + NPC silhouettes) and spectral-aware star discs that match Planet Atlas quality. | Ready for review |
 | FB-004 | Fuel scooping | Allow ships to collect fuel from stars through a fuel-scooping mechanic. Initial implementation: built-in scoops on all current ships, distance-dependent collection at all current primary stars, speed limits, and automatic retraction. | Ready for review |
 | FB-005 | Stellar heat | Add heat from stars as a gameplay mechanic, including during fuel scooping. Initial implementation: distance-dependent heat, cooling away from stars, warning at 80%, scoop retraction at 95%, hull damage above 100%. | Ready for review |
 | FB-006 | System arrival location | Place the player near the destination system’s primary star upon arrival in a new system. Initial implementation: arrival 950 local units above the primary star’s surface, outside scoop range, with zero velocity. | Ready for review |
@@ -36,6 +37,14 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 Use the stable FB identifiers when adding detail, choosing priorities, or updating progress. Suggested progression: Planned → Ready → In progress → Verification → Complete. Ready for review means implemented and tested, awaiting review and publication.
 
 ## Change history
+
+- September 20, 2026: Candidate 2.15.3 Fleet Atlas attach pass (FB-025): engines, weapons, antennae, radiators, clamps, and dishes sit on reshaped hulls instead of floating off dart notches and wing tips. Stars unchanged from 2.15.0. Rollback tag `v2.14.0`.
+
+- September 20, 2026: Candidate 2.15.2 Fleet Atlas craft pass (FB-025): class kits (canopy depth, recessed bells, radiators, antennae, cargo doors, hardpoints) so hulls read as distinct small spacecraft. Stars unchanged from 2.15.0. Rollback tag `v2.14.0`.
+
+- September 20, 2026: Candidate 2.15.1 Fleet Atlas craft pass (FB-025): volume, panel lines, heat tiles, physical engine bells, and framed glass so hulls read as small spacecraft rather than class-colored icons. Stars unchanged from 2.15.0. Rollback tag `v2.14.0`.
+
+- September 20, 2026: Candidate 2.15.0 Fleet Atlas (FB-025): class-driven ship materials and lighting for all 20 hulls plus NPC craft; spectral photospheres, corona, and limb darkening for O–M stars. Rollback tag `v2.14.0`.
 
 - September 20, 2026: Candidate 2.14.0 Planet Atlas (FB-024): kind-driven globe albedo, volcanic/barren/toxic types, atmosphere limbs, and surface/on-foot cues. Classification still forbids Earth-like gas giants. Rollback tag `v2.13.2`.
 
