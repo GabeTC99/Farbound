@@ -113,7 +113,7 @@ function makeNpcs(r,hull,zones,look){
   const a=Math.atan2(z.y-hull.cy,z.x-hull.cx);
   const pos=polar(z.x,z.y,a+Math.PI,26);
   npcs.push(npcBase('clerk-'+z.id,'clerk',CLERK_NAMES[i%CLERK_NAMES.length],pos.x,pos.y,{
-   facing:a,color:NPC_COLORS[i%NPC_COLORS.length],suit:look.floor,service:z.service,speed:0
+   facing:a,color:NPC_COLORS[i%NPC_COLORS.length],suit:look.floor,service:z.service,speed:0,phase:i*.85
   }));
  });
  for(let i=0;i<4;i++){

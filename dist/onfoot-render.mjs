@@ -410,7 +410,7 @@ function drawProp(ctx,sx,sy,scale,prop,s,clock,nearId){
 }
 
 function renderStationConcourse(ctx,width,height,s,clock){
- const scale=width<650?1.05:height<520?1.1:1.28;
+ const scale=width<650?1.7:height<520?1.95:2.28;
  const cameraX=s.x-width*.5/scale,cameraY=s.y-height*.48/scale;
  const sx=x=>(x-cameraX)*scale,sy=y=>(y-cameraY)*scale;
  const accent=s.accent||'#7ec8c0';
@@ -437,13 +437,13 @@ function renderStationConcourse(ctx,width,height,s,clock){
  for(const prop of s.props||[])sprites.push({y:prop.y+(prop.kind==='window'?-40:0),draw:()=>drawProp(ctx,sx,sy,scale,prop,s,clock,zone?.service)});
  for(const n of s.npcs||[]){
   sprites.push({y:n.y,draw:()=>{
-   if(n.role==='robot')drawRobotUnit(ctx,sx(n.x),sy(n.y),scale*.95,n.color||accent,clock);
-   else drawStandingCrew(ctx,sx(n.x),sy(n.y),scale*.95,n.facing||0,n.walk||0,n.color||'#8aa3b0',n.suit||'#2a3d48',{crate:n.role==='hauler',sit:!!n.sit||n.role==='sitter'});
+   if(n.role==='robot')drawRobotUnit(ctx,sx(n.x),sy(n.y),scale*1.05,n.color||accent,clock);
+   else drawStandingCrew(ctx,sx(n.x),sy(n.y),scale*1.08,n.facing||0,n.walk||0,n.color||'#8aa3b0',n.suit||'#2a3d48',{crate:n.role==='hauler',sit:!!n.sit||n.role==='sitter'});
    if(n.line)drawSpeech(ctx,sx(n.x),sy(n.y)-6*scale,scale,n.line);
    else if(Math.hypot(n.x-s.x,n.y-s.y)<78)drawNameplate(ctx,sx(n.x),sy(n.y),scale,n.name);
   }});
  }
- sprites.push({y:s.y,draw:()=>drawStandingCrew(ctx,sx(s.x),sy(s.y),scale*1.08,s.facing,s.walk||0,accent,'#1d3844',{player:true})});
+ sprites.push({y:s.y,draw:()=>drawStandingCrew(ctx,sx(s.x),sy(s.y),scale*1.22,s.facing,s.walk||0,accent,'#1d3844',{player:true})});
  sprites.sort((a,b)=>a.y-b.y);
  for(const spr of sprites)spr.draw();
 

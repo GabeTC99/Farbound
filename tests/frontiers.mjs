@@ -343,7 +343,9 @@ test('Living concourse: standing crew, props, speech, and 2.5D station renderer'
  const kinds=new Set(g.onfoot.props.map(p=>p.kind));
  for(const kind of ['kiosk','crate','shuttle','bench','planter','bollard','window','light'])assert(kinds.has(kind),kind);
  assert(pointInHull(g.onfoot.hull,g.onfoot.x,g.onfoot.y,14));
- ticks(g,3);
+ const pell=g.onfoot.npcs.find(n=>n.role==='tech');
+ g.onfoot.x=pell.x;g.onfoot.y=pell.y;
+ ticks(g,4);
  assert(g.onfoot.npcs.some(n=>n.line),'idle crew should chat');
  const hangar=g.onfoot.zones.find(z=>z.launch);
  g.onfoot.x=hangar.x;g.onfoot.y=hangar.y;

@@ -85,11 +85,13 @@ export function updateOnFoot(s,dt,input={}){
  for(const n of s.npcs){
   if((n.lineUntil||0)>0){n.lineUntil-=dt;if(n.lineUntil<=0)n.line=null;}
   const path=n.path||[];
+  const nearby=Math.hypot(n.x-s.x,n.y-s.y)<135;
+  const chatter=s.npcs.reduce((c,o)=>c+(o.line?1:0),0);
   if(path.length<2){
    n.moving=0;
    n.walk=(n.walk||0)+dt*.35;
    if(n.role==='talker'||n.role==='robot'||n.role==='clerk'||n.role==='tech'||n.role==='sitter'){
-    if((n.lineUntil||0)<=0&&((n.phase=(n.phase||0)+dt)>2.4)){
+    if((n.lineUntil||0)<=0&&nearby&&chatter<2&&((n.phase=(n.phase||0)+dt)>1.8+((n.id||'').length%5)*.25)){
      n.phase=0;
      n.line=pickStationChat(n,s.x+s.y+(n.x||0));
      n.lineUntil=2.2+(n.id||'').length%3;
@@ -100,7 +102,7 @@ export function updateOnFoot(s,dt,input={}){
   }
   if((n.pause||0)>0){
    n.pause-=dt;n.moving=0;
-   if((n.lineUntil||0)<=0&&n.pause>0.15&&n.pause<0.35){
+   if((n.lineUntil||0)<=0&&nearby&&chatter<2&&n.pause>0.15&&n.pause<0.35){
     n.line=pickStationChat(n,n.phase||0);
     n.lineUntil=1.8;
    }
