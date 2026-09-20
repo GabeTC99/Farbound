@@ -10,6 +10,7 @@ h2{font-weight:500;font-size:13px;color:#9eb7bd;margin:28px 0 12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
 .card{background:#0b1723;border:1px solid #29404c;border-radius:10px;padding:12px}
 .card canvas,.card svg{display:block;width:100%;height:88px;background:radial-gradient(circle at 30% 20%,#163044,#08141c 70%);border-radius:8px}
+#canvas .card canvas,#npc .card canvas{height:140px}
 .card b{display:block;margin-top:8px;color:#d7f7ef}
 .card span{color:#8aa7b4;font-size:12px}
 .stars{display:flex;flex-wrap:wrap;gap:16px}
@@ -38,7 +39,7 @@ function paintShip(kind,size,color,accent,hostile=false){
  const ctx=c.getContext('2d');
  ctx.fillStyle='#071018';ctx.fillRect(0,0,440,176);
  ctx.translate(220,88);
- drawCraft(ctx,{kind,size:size*2.2,color,accent,thrust:.65,clock:.3,lightX:-1,lightY:-.7,hostile});
+ drawCraft(ctx,{kind,size:Math.max(38,size*2.8),color,accent,thrust:.7,clock:.3,lightX:-1,lightY:-.7,hostile});
  return c;
 }
 const svg=$('svg'),cans=$('canvas'),npc=$('npc');
