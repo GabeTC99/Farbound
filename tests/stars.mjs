@@ -44,7 +44,8 @@ assert.match(app,/Stellar atlas/);
 assert.match(app,/drawStarBody/);
 assert.match(app,/from '\.\/star-render\.mjs'/);
 assert.match(app,/pixelScale:cam\.zoom\*dpr/);
-assert.match(app,/Math\.round\(\(\(s\.x\*width/);
+assert.match(app,/starScreenPos\(/);
+assert.ok(!/Math\.round\(\(\(s\.x\*width/.test(app));
 assert.ok(!/const hot=p\.spectral==='M'/.test(app));
 
 const hit=findStarOfClass('M',SYSTEMS);

@@ -17,7 +17,7 @@ import {drawPlanetBody} from './planet-render.mjs';
 import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft} from './ship-render.mjs';
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
-import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT} from './flight-loop.mjs';
+import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',system:'<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
 const icon=(name)=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.ship}</svg>`;
@@ -603,7 +603,11 @@ function resize(){
  const view=viewportSize();
  width=view.width;height=view.height;dpr=canvasDpr();
  const nextW=Math.max(1,Math.round(width*dpr)),nextH=Math.max(1,Math.round(height*dpr));
- if(canvas.width!==nextW||canvas.height!==nextH){canvas.width=nextW;canvas.height=nextH;skyLayer=null;}
+ if(canvas.width!==nextW||canvas.height!==nextH){
+  canvas.width=nextW;canvas.height=nextH;skyLayer=null;skyLayerKey='';
+  // Paint before the compositor presents: desynchronized+alpha:false can flash white on a fresh buffer (Fold / leave station).
+  fillSpaceClear(ctx,dpr,width,height);
+ }
  if(panel==='map')drawMap();if(panel==='system-map')drawSystemMap();
 }
 function scheduleResize(){
@@ -696,39 +700,38 @@ function drawWake(w){
  circle(w.x,w.y,pulse,ctx.strokeStyle,true);circle(w.x,w.y,pulse*.55,'#9be7ff33',true);ctx.setLineDash([]);
  label(w.scanned?('WAKE → '+systemName(SYSTEMS[w.to],game.s)):('WAKE · '+(w.shipName||'unknown')),w.x,w.y-pulse-14,w.scanned?'#9be7ff':'#8aa7b4',11);
 }
-function paintSkyWashes(target,sky,lite,soft,drift){
- const seed=sky.seed||0,span=Math.max(width,height);
- target.fillStyle=sky.bg;target.fillRect(0,0,width,height);
- // Soft Milky Way band behind local gas — seeded tilt, kind strength, tiny cam drift.
- if(!lite&&(sky.galaxy||0)>.05){
-  const gMul=sky.galaxy,ang=sky.bandAngle||0;
-  const px=width*.5-cam.x*.012,py=height*.5-cam.y*.012;
-  target.save();target.translate(px,py);target.rotate(ang);
-  const band=target.createLinearGradient(0,-span*.34,0,span*.34);
-  const core=Math.floor(10+gMul*28).toString(16).padStart(2,'0');
-  const mid=Math.floor(6+gMul*16).toString(16).padStart(2,'0');
-  band.addColorStop(0,'#0000');band.addColorStop(.32,sky.tint+mid);band.addColorStop(.5,sky.tint+core);
-  band.addColorStop(.68,sky.tint+mid);band.addColorStop(1,'#0000');
-  target.globalAlpha=.26+gMul*.28;target.fillStyle=band;target.fillRect(-span*.9,-span*.34,span*1.8,span*.68);
-  const bulge=target.createRadialGradient(0,0,span*.04,0,0,span*.42);
-  bulge.addColorStop(0,sky.star+(Math.floor(8+gMul*18).toString(16).padStart(2,'0')));
-  bulge.addColorStop(.5,sky.tint+'10');bulge.addColorStop(1,sky.tint+'00');
-  target.globalAlpha=.18+gMul*.26;target.fillStyle=bulge;target.fillRect(-span*.55,-span*.3,span*1.1,span*.6);
-  const dustN=soft?55:galaxyDust.length;
-  for(let i=0;i<dustN;i++){
-   const d=galaxyDust[i],x=d.u*span*.72,y=d.v*span*.18+Math.sin(d.u*3.1+(seed&7))*.01*span;
-   target.globalAlpha=d.a*gMul*.55*(d.warm?1.1:1);target.fillStyle=d.warm?sky.tint:sky.star;
-   target.fillRect(x,y,d.r,d.r);
-  }
-  target.restore();target.globalAlpha=1;
+function paintGalaxyBand(target,sky,lite,soft){
+ // Soft Milky Way band — live, camera-linked. Never bake cam into the wash cache.
+ if(lite||(sky.galaxy||0)<=.05)return;
+ const seed=sky.seed||0,span=Math.max(width,height),gMul=sky.galaxy,ang=sky.bandAngle||0;
+ const par=skyParallax(cam.x,cam.y),px=width*.5-par.x,py=height*.5-par.y;
+ target.save();target.translate(px,py);target.rotate(ang);
+ const band=target.createLinearGradient(0,-span*.34,0,span*.34);
+ const core=Math.floor(10+gMul*28).toString(16).padStart(2,'0');
+ const mid=Math.floor(6+gMul*16).toString(16).padStart(2,'0');
+ band.addColorStop(0,'#0000');band.addColorStop(.32,sky.tint+mid);band.addColorStop(.5,sky.tint+core);
+ band.addColorStop(.68,sky.tint+mid);band.addColorStop(1,'#0000');
+ target.globalAlpha=.26+gMul*.28;target.fillStyle=band;target.fillRect(-span*.9,-span*.34,span*1.8,span*.68);
+ const bulge=target.createRadialGradient(0,0,span*.04,0,0,span*.42);
+ bulge.addColorStop(0,sky.star+(Math.floor(8+gMul*18).toString(16).padStart(2,'0')));
+ bulge.addColorStop(.5,sky.tint+'10');bulge.addColorStop(1,sky.tint+'00');
+ target.globalAlpha=.18+gMul*.26;target.fillStyle=bulge;target.fillRect(-span*.55,-span*.3,span*1.1,span*.6);
+ const dustN=soft?55:galaxyDust.length;
+ for(let i=0;i<dustN;i++){
+  const d=galaxyDust[i],x=d.u*span*.72,y=d.v*span*.18+Math.sin(d.u*3.1+(seed&7))*.01*span;
+  target.globalAlpha=d.a*gMul*.55*(d.warm?1.1:1);target.fillStyle=d.warm?sky.tint:sky.star;
+  target.fillRect(x,y,d.r,d.r);
  }
- // Procedural gas washes — Quiet Frontier mint/slate, deterministic per system.
+ target.restore();target.globalAlpha=1;
+}
+function paintSkyWashes(target,sky,lite,soft){
+ const seed=sky.seed||0,span=Math.max(width,height);
+ // Procedural gas washes — Quiet Frontier mint/slate, deterministic per system. No cam / clock.
  if(!lite){
   const washes=sky.wash||[sky.tint];
   for(let i=0;i<washes.length;i++){
    const ox=((seed>>((i*7)%24))&255)/255,oy=((seed>>((i*11+3)%24))&255)/255;
-   const cx=width*(.15+ox*.7)+Math.sin(drift*.03+i)*span*.01;
-   const cy=height*(.12+oy*.65)+Math.cos(drift*.025+i*1.3)*span*.008;
+   const cx=width*(.15+ox*.7),cy=height*(.12+oy*.65);
    const r0=span*(.04+i*.02),r1=span*(.42+sky.nebulaAlpha*.35-i*.06);
    const g=target.createRadialGradient(cx,cy,r0,cx,cy,r1);
    const a0=Math.floor(38+sky.nebulaAlpha*70-i*12).toString(16).padStart(2,'0');
@@ -755,19 +758,27 @@ function paintSkyWashes(target,sky,lite,soft,drift){
   target.fillStyle=floor;target.fillRect(0,0,width,height);
  }
 }
-function drawSkyBackdrop(){
- const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
- const bucket=Math.floor(clock*4),cx=Math.round(cam.x*.012),cy=Math.round(cam.y*.012);
- const key=sky.seed+'|'+sky.kind+'|'+(width|0)+'|'+(height|0)+'|'+(lite?1:0)+'|'+(soft?1:0)+'|'+bucket+'|'+cx+'|'+cy;
- if(!skyLayer||skyLayer.width!==Math.max(1,width|0)||skyLayer.height!==Math.max(1,height|0)){
-  skyLayer=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(Math.max(1,width|0),Math.max(1,height|0)):document.createElement('canvas');
-  skyLayer.width=Math.max(1,width|0);skyLayer.height=Math.max(1,height|0);skyLayerKey='';
+function ensureSkyLayer(w,h,sky,lite,soft){
+ const key=skyCacheKey(sky,w,h,lite,soft);
+ if(!skyLayer||skyLayer.width!==w||skyLayer.height!==h){
+  skyLayer=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(w,h):document.createElement('canvas');
+  skyLayer.width=w;skyLayer.height=h;skyLayerKey='';
  }
  if(skyLayerKey!==key){
-  paintSkyWashes(skyLayer.getContext('2d',{alpha:false}),sky,lite,soft,bucket/4);
+  const g=skyLayer.getContext('2d',{alpha:true});
+  g.setTransform(1,0,0,1,0,0);
+  g.clearRect(0,0,w,h);
+  paintSkyWashes(g,sky,lite,soft);
   skyLayerKey=key;
  }
- ctx.drawImage(skyLayer,0,0,width,height);
+ return skyLayer;
+}
+function drawSkyBackdrop(){
+ const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
+ const w=Math.max(1,width|0),h=Math.max(1,height|0);
+ ctx.fillStyle=sky.bg||SPACE_CLEAR;ctx.fillRect(0,0,width,height);
+ paintGalaxyBand(ctx,sky,lite,soft);
+ ctx.drawImage(ensureSkyLayer(w,h,sky,lite,soft),0,0,width,height);
  // Soft ion curtains — faint drifting veils, not hard scanlines.
  if(sky.kind==='ion'&&!lite){
   const n=soft?2:3;
@@ -786,13 +797,12 @@ function drawSkyBackdrop(){
   if(lite&&((starI++)&3))continue;else if(!lite&&soft&&((starI++)&1))continue;
   if(sky.kind==='nebula'&&(s.r<1&&(Math.floor(s.x*100)%3)))continue;
   if(sky.kind==='deep'&&(Math.floor(s.x*80+s.y*40)%4))continue;
-  const x=Math.round(((s.x*width-cam.x*s.depth)%width+width)%width);
-  const y=Math.round(((s.y*height-cam.y*s.depth)%height+height)%height);
+  const pos=starScreenPos(s,cam.x,cam.y,width,height);
   const tw=s.bright?(.88+.12*Math.sin(clock*2.2+s.x*20)):1;
   ctx.globalAlpha=s.a*starMul*tw;ctx.fillStyle=s.bright?sky.tint:sky.star;
   const sz=s.bright?Math.max(2,Math.round(s.r*starSize)):1;
-  ctx.fillRect(x,y,sz,sz);
-  if(s.bright&&!lite){ctx.globalAlpha=s.a*starMul*tw*.5;ctx.fillRect(x-1,y,sz+2,1);ctx.fillRect(x,y-1,1,sz+2);}
+  ctx.fillRect(pos.x,pos.y,sz,sz);
+  if(s.bright&&!lite){ctx.globalAlpha=s.a*starMul*tw*.5;ctx.fillRect(pos.x-1,pos.y,sz+2,1);ctx.fillRect(pos.x,pos.y-1,1,sz+2);}
  }
  ctx.globalAlpha=1;
  if(!lite&&sky.lightning&&((clock*(sky.kind==='storm'?2.4:1.7))%2.6)<.1){
@@ -817,7 +827,7 @@ function worldInView(x,y,pad=90){
  return sx>-pad&&sx<width+pad&&sy>-pad&&sy<height+pad;
 }
 function render(dt=1/60,snapCam=false){
- ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#060c16';ctx.fillRect(0,0,width,height);
+ fillSpaceClear(ctx,dpr,width,height);
  if(game.onfoot&&(game.s.docked||game.surface)){renderOnFoot(ctx,width,height,game.onfoot,clock);return;}
  if(game.surface){renderSurface(ctx,width,height,game.surface,clock,getStats(game.s));return;}
  cam.zoom=started?(width<650?.54:height<520?.55:.75):.26;const desiredX=started?game.player.x:400,desiredY=started?game.player.y:50;

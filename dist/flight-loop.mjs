@@ -66,6 +66,45 @@ export function lerpAngle(a,b,t){
  return a+d*(t<0?0:t>1?1:t);
 }
 
+/** Screen-space wrap used by distant stars / sky tiles. */
+export function wrapUnit(v,span){
+ if(!(span>0))return 0;
+ v=v%span;
+ return v<0?v+span:v;
+}
+
+/** Distant-star parallax depths stay in this band (slow drift, not world-locked). */
+export const STAR_DEPTH_MIN=.02;
+export const STAR_DEPTH_MAX=.11;
+/** Milky Way / sky-band drift vs interpolated camera. */
+export const SKY_PARALLAX=.012;
+export const SPACE_CLEAR='#060c16';
+
+export function skyParallax(camX,camY,k=SKY_PARALLAX){
+ return {x:(camX||0)*k,y:(camY||0)*k};
+}
+
+/** Continuous star position — do not snap to integers or the field stair-steps while the ship interpolates. */
+export function starScreenPos(star,camX,camY,width,height){
+ return {
+  x:wrapUnit((star.x||0)*width-(camX||0)*(star.depth||0),width),
+  y:wrapUnit((star.y||0)*height-(camY||0)*(star.depth||0),height)
+ };
+}
+
+/** Sky wash cache is static per system/size/quality. Camera and clock must not be in the key. */
+export function skyCacheKey(sky,width,height,lite,soft){
+ return (sky?.seed||0)+'|'+(sky?.kind||'')+'|'+(width|0)+'|'+(height|0)+'|'+(lite?1:0)+'|'+(soft?1:0);
+}
+
+/** Immediate opaque fill so a resize or desynchronized swap never presents an uninitialized (white) buffer. */
+export function fillSpaceClear(ctx,dpr,width,height,color=SPACE_CLEAR){
+ if(!ctx)return;
+ ctx.setTransform(dpr||1,0,0,dpr||1,0,0);
+ ctx.fillStyle=color;
+ ctx.fillRect(0,0,width,height);
+}
+
 export function canvasScale({cssW,cssH,dpr,graphics='high'}={}){
  const w=Math.max(1,cssW||1),h=Math.max(1,cssH||1);
  const raw=Math.max(1,dpr||1);
