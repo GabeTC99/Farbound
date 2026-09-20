@@ -1,0 +1,15 @@
+{
+  "release": "2.13.0",
+  "name": "Living Concourse",
+  "date": "2026-09-20",
+  "notes": [
+    "Station interiors are now a 2.5D concourse: standing crew, Y-sorted furniture, and speech on the same wheel layout.",
+    "Hangar has a shuttle, crates, and a pad tech; clerks staff the desks; walkers, a hauler, sitters, and the concierge fill the hub.",
+    "Desks are kiosks with hanging signs instead of flat icon pads. Planet sites stay overhead.",
+    "Rollback point: git checkout v2.12.1 restores the bird’s-eye station. Stick mapping and hull collision are unchanged."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

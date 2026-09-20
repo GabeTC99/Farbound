@@ -28,12 +28,15 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 | FB-020 | Optional cloud sync | Opt-in email account sync (Supabase) so beta testers can upload/download pilots across devices. Local saves remain primary. | Ready for review |
 | FB-021 | Frontier presence | First-hour Market discoverability (refuel/repair), wake-pursuit payoff, rotating market bulletins, optional asteroid prospecting, and station vocation copy. | Ready for review |
 | FB-022 | Frontier instruments | Godot HUD cohesion on the web beta: screen-up radar with a heading chevron and flight-mode chip, Market/Galaxy trade-route plots, faction-colored galaxy presence, and per-station concierge names. | Ready for review |
+| FB-023 | Living concourse | Remake the station interior as a 2.5D (Stardew-style) concourse: standing crew, Y-sorted furniture, speech, and a busier hub on the existing wheel hull. Planet on-foot stays overhead. | Ready for review |
 
 ## Tracking
 
 Use the stable FB identifiers when adding detail, choosing priorities, or updating progress. Suggested progression: Planned → Ready → In progress → Verification → Complete. Ready for review means implemented and tested, awaiting review and publication.
 
 ## Change history
+
+- September 20, 2026: Candidate 2.13.0 Living Concourse (FB-023): 2.5D station interiors with standing crew, kiosks, hangar shuttle, and floor speech. Same wheel collision and stick mapping. Rollback tag `v2.12.1`. Remaining Godot-parity lanes (not in this drop): surface pocket NPCs, post-ladder guild careers, extra commodities/refining, full 3D interiors.
 
 - September 19, 2026: Candidate 2.12.1 pins radar contacts to local space so the dish does not spin when the ship turns. The mint chevron still shows heading.
 

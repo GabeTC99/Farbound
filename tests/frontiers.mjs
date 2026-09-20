@@ -5,6 +5,7 @@ import {Game as ClassicGame,getStats as classicStats} from '../dist/classic/core
 import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} from '../dist/pilot-storage.mjs';
 import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
 import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
+import {createStationLayout,pickStationChat,pointInHull} from '../dist/station-layout.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
 function roundtrip(g){const s=validateSave(JSON.parse(JSON.stringify(g.serialize())));assert(s,'Saved pilot must validate');return new Game(s);}
@@ -328,6 +329,44 @@ test('Station space legs: dock enters deck, desks open services, hangar launches
  assert(h.payBounty());
  assert(!h.s.detained);
  assert(h.launch());
+});
+test('Living concourse: standing crew, props, speech, and 2.5D station renderer',()=>{
+ const g=new Game();
+ assert.equal(g.onfoot.kind,'station');
+ assert.equal(g.onfoot.faction,'concord');
+ assert(g.onfoot.factionColor);
+ const roles=new Set(g.onfoot.npcs.map(n=>n.role));
+ for(const role of ['clerk','walker','robot','hauler','talker','tech','sitter'])assert(roles.has(role),role);
+ assert(g.onfoot.npcs.filter(n=>n.role==='clerk').length>=5);
+ const names=new Set(g.onfoot.npcs.filter(n=>n.role!=='robot').map(n=>n.name));
+ assert.equal(names.size,g.onfoot.npcs.filter(n=>n.role!=='robot').length,'crew names should be unique');
+ const robot=g.onfoot.npcs.find(n=>n.role==='robot');
+ assert.equal(robot.name,STATION_ROBOT.nameFor(SYSTEMS[0]));
+ const kinds=new Set(g.onfoot.props.map(p=>p.kind));
+ for(const kind of ['kiosk','crate','shuttle','bench','planter','bollard','window','light'])assert(kinds.has(kind),kind);
+ assert(pointInHull(g.onfoot.hull,g.onfoot.x,g.onfoot.y,14));
+ const pell=g.onfoot.npcs.find(n=>n.role==='tech');
+ g.onfoot.x=pell.x;g.onfoot.y=pell.y;
+ ticks(g,4);
+ assert(g.onfoot.npcs.some(n=>n.line),'idle crew should chat');
+ const hangar=g.onfoot.zones.find(z=>z.launch);
+ g.onfoot.x=hangar.x;g.onfoot.y=hangar.y;
+ ticks(g,.4,{aim:-Math.PI/2,thrust:1});
+ assert(pointInHull(g.onfoot.hull,g.onfoot.x,g.onfoot.y,14));
+ const prison=createStationLayout({prison:true,detained:true,name:'Prison barge',robotName:'Picket-3'});
+ assert(prison.zones.some(z=>z.service==='detention'));
+ assert(!prison.zones.some(z=>z.service==='contracts'));
+ assert(prison.npcs.some(n=>n.role==='clerk'));
+ assert.equal(prison.npcs.find(n=>n.role==='robot')?.name,'Picket-3');
+ assert(pickStationChat({role:'walker',id:'walk-0'}));
+ const render=readFileSync(new URL('../dist/onfoot-render.mjs',import.meta.url),'utf8');
+ assert.match(render,/renderStationConcourse/);
+ assert.match(render,/drawStandingCrew/);
+ assert.match(render,/drawRobotUnit/);
+ assert.match(render,/drawKiosk/);
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ assert.match(app,/CONCOURSE/);
+ assert.match(app,/step onto the concourse/);
 });
 test('Surface beacon ping reveals the nearest unscanned anomaly',()=>{
  const g=new Game();g.launch();
