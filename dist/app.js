@@ -683,6 +683,7 @@ function drawWake(w){
 function paintSkyWashes(target,sky,lite,soft,drift){
  const seed=sky.seed||0,span=Math.max(width,height);
  target.fillStyle=sky.bg;target.fillRect(0,0,width,height);
+ // Soft Milky Way band behind local gas — seeded tilt, kind strength, tiny cam drift.
  if(!lite&&(sky.galaxy||0)>.05){
   const gMul=sky.galaxy,ang=sky.bandAngle||0;
   const px=width*.5-cam.x*.012,py=height*.5-cam.y*.012;
@@ -705,6 +706,7 @@ function paintSkyWashes(target,sky,lite,soft,drift){
   }
   target.restore();target.globalAlpha=1;
  }
+ // Procedural gas washes — Quiet Frontier mint/slate, deterministic per system.
  if(!lite){
   const washes=sky.wash||[sky.tint];
   for(let i=0;i<washes.length;i++){
@@ -750,6 +752,7 @@ function drawSkyBackdrop(){
   skyLayerKey=key;
  }
  ctx.drawImage(skyLayer,0,0,width,height);
+ // Soft ion curtains — faint drifting veils, not hard scanlines.
  if(sky.kind==='ion'&&!lite){
   const n=soft?2:3;
   for(let i=0;i<n;i++){

@@ -9,7 +9,7 @@ export const MAX_FRAME_DT=.1;
 export const MAX_STEPS=5;
 /** Matches the old per-frame 0.09 lerp at 60 Hz: 1-exp(-k/60) ≈ 0.09. */
 export const CAM_FOLLOW=5.66;
-export const PIXEL_BUDGET={high:3.6e6,balanced:2.4e6,performance:1.4e6};
+export const PIXEL_BUDGET={high:6.2e6,balanced:3.2e6,performance:1.8e6};
 
 export function createFrameClock(now=0){
  return {last:now,acc:0,ready:false};

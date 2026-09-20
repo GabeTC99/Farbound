@@ -9,7 +9,7 @@ import {texSizeFor,STAR_TEX} from '../dist/star-render.mjs';
 
 assert.equal(FIXED_DT,1/60);
 assert.ok(CAM_FOLLOW>5&&CAM_FOLLOW<7);
-assert.equal(PIXEL_BUDGET.high,3.6e6);
+assert.equal(PIXEL_BUDGET.high,6.2e6);
 
 const clock=createFrameClock(0);
 const first=beginFrame(clock,0);
@@ -47,11 +47,12 @@ assert.ok(Math.abs(lerpAngle(3,-3,.5))<1e-6||Math.abs(Math.abs(lerpAngle(3,-3,.5
 const phone=canvasScale({cssW:390,cssH:844,dpr:3,graphics:'high'});
 assert.ok(phone<=2&&phone>=1.5,'typical phone keeps a high-DPR canvas');
 const desktop=canvasScale({cssW:1440,cssH:900,dpr:2,graphics:'high'});
-assert.ok(desktop>=1.7,'1080p-class desktop stays near 2x');
+assert.equal(desktop,2,'typical laptop retina stays at 2x');
 const foldInner=canvasScale({cssW:1800,cssH:2200,dpr:3,graphics:'high'});
+assert.ok(foldInner<2,'huge fold CSS sizes drop below 2x');
 assert.ok(foldInner*1800*foldInner*2200<=PIXEL_BUDGET.high*1.05,'huge CSS viewports stay on budget');
 const lite=canvasScale({cssW:1280,cssH:800,dpr:2,graphics:'performance'});
-assert.ok(lite<desktop||lite<=Math.sqrt(PIXEL_BUDGET.performance/(1280*800))+1e-6);
+assert.ok(lite<2,'performance mode scales a 2x laptop canvas');
 
 assert.deepEqual(viewportSize({innerWidth:800,innerHeight:600}),{width:800,height:600});
 assert.deepEqual(viewportSize({innerWidth:800,innerHeight:600,visualViewport:{width:390,height:700}}),{width:390,height:700});
