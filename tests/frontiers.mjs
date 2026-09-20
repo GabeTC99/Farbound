@@ -338,6 +338,8 @@ test('Living concourse: standing crew, props, speech, and 2.5D station renderer'
  const roles=new Set(g.onfoot.npcs.map(n=>n.role));
  for(const role of ['clerk','walker','robot','hauler','talker','tech','sitter'])assert(roles.has(role),role);
  assert(g.onfoot.npcs.filter(n=>n.role==='clerk').length>=5);
+ const names=new Set(g.onfoot.npcs.filter(n=>n.role!=='robot').map(n=>n.name));
+ assert.equal(names.size,g.onfoot.npcs.filter(n=>n.role!=='robot').length,'crew names should be unique');
  const robot=g.onfoot.npcs.find(n=>n.role==='robot');
  assert.equal(robot.name,STATION_ROBOT.nameFor(SYSTEMS[0]));
  const kinds=new Set(g.onfoot.props.map(p=>p.kind));

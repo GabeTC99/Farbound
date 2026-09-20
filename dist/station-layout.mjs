@@ -13,7 +13,7 @@ function zone(id,label,service,x,y,r,icon,extra={}){return{id,label,service,x,y,
 
 const NPC_COLORS=['#7ec8c0','#c9a46a','#8aa3b8','#b78fc8','#8fc98a','#d4a090'];
 const CLERK_NAMES=['Rin','Vela','Pax','Orrin','Sable','Joss','Nim','Kade'];
-const WALKER_NAMES=['Ives','Mara','Pell','Juno','Tov','Ellis','Wren','Hale'];
+const WALKER_NAMES=['Ives','Mara','Pell','Juno','Tov','Ellis','Wren','Hale','Nash','Quin','Bram','Pike'];
 export const STATION_CHAT={
  market:['Refuel’s on the counter.','Two buttons. Fuel, then hull.','Don’t overpay the shortage.'],
  data:['Catalogs sell as a bundle.','Scan twice. Always.','Unsold data dies with the hull.'],
@@ -102,17 +102,24 @@ function chatFor(service,role){
  return pool;
 }
 
+function takeName(pool,used){
+ for(const n of pool){if(!used.has(n)){used.add(n);return n;}}
+ const fallback=pool[used.size%pool.length]+'-'+used.size;
+ used.add(fallback);return fallback;
+}
+
 function npcBase(id,role,name,x,y,extra={}){
  return{id,role,name,x,y,facing:0,walk:0,moving:0,pause:0,line:null,lineUntil:0,path:[],speed:.16,...extra};
 }
 
 function makeNpcs(r,hull,zones,look){
  const npcs=[];
+ const used=new Set();
  const desks=zones.filter(z=>!z.launch);
  desks.forEach((z,i)=>{
   const a=Math.atan2(z.y-hull.cy,z.x-hull.cx);
   const pos=polar(z.x,z.y,a+Math.PI,26);
-  npcs.push(npcBase('clerk-'+z.id,'clerk',CLERK_NAMES[i%CLERK_NAMES.length],pos.x,pos.y,{
+  npcs.push(npcBase('clerk-'+z.id,'clerk',takeName(CLERK_NAMES,used),pos.x,pos.y,{
    facing:a,color:NPC_COLORS[i%NPC_COLORS.length],suit:look.floor,service:z.service,speed:0,phase:i*.85
   }));
  });
@@ -121,7 +128,7 @@ function makeNpcs(r,hull,zones,look){
   const path=[0,1,2,3,4,5].map(k=>polar(hull.cx,hull.cy,spokeAngle(hull,k)+.18*r(),ring));
   const rot=Math.floor(r()*path.length);
   const p=path.slice(rot).concat(path.slice(0,rot));
-  npcs.push(npcBase('walk-'+i,'walker',WALKER_NAMES[i%WALKER_NAMES.length],p[0].x,p[0].y,{
+  npcs.push(npcBase('walk-'+i,'walker',takeName(WALKER_NAMES,used),p[0].x,p[0].y,{
    path:p,speed:.11+.1*r(),phase:r()*4,color:NPC_COLORS[(i+2)%NPC_COLORS.length],suit:'#243844',pause:r()*1.2
   }));
  }
@@ -129,7 +136,7 @@ function makeNpcs(r,hull,zones,look){
  if(hangar&&market){
   const mid=polar(hull.cx,hull.cy,Math.atan2(market.y-hull.cy,market.x-hull.cx)*.5+spokeAngle(hull,0)*.5,hull.hubR*.72);
   const path=[{x:hangar.x,y:hangar.y-18},mid,{x:market.x+16,y:market.y+10},mid];
-  npcs.push(npcBase('haul-0','hauler','Tov',path[0].x,path[0].y,{
+  npcs.push(npcBase('haul-0','hauler',takeName(WALKER_NAMES,used),path[0].x,path[0].y,{
    path,speed:.16,phase:r()*2,color:'#c9a46a',suit:'#3a3228',pause:.4
   }));
  }
@@ -141,16 +148,16 @@ function makeNpcs(r,hull,zones,look){
   }));
  }
  const talkA=polar(hull.cx,hull.cy,2.4,hull.hubR*.42);
- npcs.push(npcBase('talk-a','talker','Ellis',talkA.x-11,talkA.y,{facing:.15,color:'#8fc98a',suit:'#2a3d48',speed:0}));
- npcs.push(npcBase('talk-b','talker','Hale',talkA.x+11,talkA.y,{facing:Math.PI-.15,color:'#8aa3b8',suit:'#2a3d48',speed:0}));
+ npcs.push(npcBase('talk-a','talker',takeName(WALKER_NAMES,used),talkA.x-11,talkA.y,{facing:.15,color:'#8fc98a',suit:'#2a3d48',speed:0}));
+ npcs.push(npcBase('talk-b','talker',takeName(WALKER_NAMES,used),talkA.x+11,talkA.y,{facing:Math.PI-.15,color:'#8aa3b8',suit:'#2a3d48',speed:0}));
  if(hangar){
-  npcs.push(npcBase('tech-0','tech','Pell',hangar.x-30,hangar.y+16,{
+  npcs.push(npcBase('tech-0','tech',takeName(WALKER_NAMES,used),hangar.x-30,hangar.y+16,{
    facing:-.35,color:'#c9a46a',suit:'#3a3228',service:'shipyard',speed:0
   }));
  }
  for(let i=0;i<2;i++){
   const p=polar(hull.cx,hull.cy,i*2.15+.4,hull.coreR+40);
-  npcs.push(npcBase('sit-'+i,'sitter',WALKER_NAMES[(i+5)%WALKER_NAMES.length],p.x,p.y+1,{
+  npcs.push(npcBase('sit-'+i,'sitter',takeName(WALKER_NAMES,used),p.x,p.y+1,{
    facing:i*2.15+.4+Math.PI/2,color:NPC_COLORS[(i+4)%NPC_COLORS.length],suit:'#243844',speed:0,sit:true
   }));
  }

@@ -440,7 +440,7 @@ function renderStationConcourse(ctx,width,height,s,clock){
    if(n.role==='robot')drawRobotUnit(ctx,sx(n.x),sy(n.y),scale*1.05,n.color||accent,clock);
    else drawStandingCrew(ctx,sx(n.x),sy(n.y),scale*1.08,n.facing||0,n.walk||0,n.color||'#8aa3b0',n.suit||'#2a3d48',{crate:n.role==='hauler',sit:!!n.sit||n.role==='sitter'});
    if(n.line)drawSpeech(ctx,sx(n.x),sy(n.y)-6*scale,scale,n.line);
-   else if(Math.hypot(n.x-s.x,n.y-s.y)<78)drawNameplate(ctx,sx(n.x),sy(n.y),scale,n.name);
+   else if(Math.hypot(n.x-s.x,n.y-s.y)<78&&Math.hypot(n.x-s.x,n.y-s.y)>18)drawNameplate(ctx,sx(n.x),sy(n.y),scale,n.name);
   }});
  }
  sprites.push({y:s.y,draw:()=>drawStandingCrew(ctx,sx(s.x),sy(s.y),scale*1.22,s.facing,s.walk||0,accent,'#1d3844',{player:true})});
