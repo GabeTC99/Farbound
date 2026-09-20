@@ -1,6 +1,6 @@
 /**
  * Grounded spacecraft paint for local space and hangar.
- * Geometry stays in hull-defs; this module adds volume, plates, and physical engines.
+ * Geometry stays in hull-defs; this module adds class kits, materials, and physical engines.
  */
 import {HULL_DEFS,getHullDef} from './hull-defs.mjs';
 
@@ -24,6 +24,21 @@ export const HULL_CLASS={
  magpie:'trader',jackal:'combat',kestrel:'explorer',mole:'miner',osprey:'explorer',
  falcon:'combat',albatross:'explorer',ox:'trader',vulture:'combat',heron:'explorer',
  badger:'miner',raptor:'combat',condor:'explorer',goliath:'trader',eagle:'combat'
+};
+
+const KIT={
+ explorer:{antenna:1,radiators:1,rcs:1,clamps:1,sensors:1},
+ scout:{antenna:1,rcs:1,nacelle:1},
+ trader:{cargo:1,clamps:1,radiators:1,rcs:1},
+ miner:{radiators:1,clamps:1,rcs:1},
+ courier:{antenna:1,rcs:1,tanks:1},
+ combat:{hardpoints:1,intakes:1,rcs:1},
+ security:{antenna:1,hardpoints:1,rcs:1},
+ pirate:{hardpoints:1,rcs:1,junk:1},
+ freighter:{cargo:1,clamps:1,radiators:1},
+ prospector:{radiators:1,rcs:1},
+ tender:{clamps:1,rcs:1},
+ surveyor:{antenna:1,sensors:1,rcs:1}
 };
 
 const stroke=(pts,alpha=.55)=>({type:'stroke',pts,alpha});
@@ -76,6 +91,7 @@ export const NPC_KINDS=Object.keys(NPC_HULLS);
 export const PLAYER_HULL_IDS=Object.keys(HULL_DEFS);
 
 function artOf(classId){return CLASS_ART[classId]||CLASS_ART.explorer;}
+function kitOf(classId){return KIT[classId]||KIT.explorer;}
 
 function hexRgb(h){
  const n=String(h||'#88a').replace('#','');
@@ -97,8 +113,14 @@ function pathBody(ctx,body,size,ox=0,oy=0){
  body.forEach(([x,y],i)=>{const px=x*size+ox,py=y*size+oy;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});
  ctx.closePath();
 }
-
 function scaleBody(body,s){return body.map(([x,y])=>[x*s,y*s]);}
+function roundBox(ctx,x,y,w,h,r=1.6){
+ ctx.beginPath();
+ ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+ ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+ ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+ ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
 
 export function resolveHull(kind){
  if(kind&&NPC_HULLS[kind])return{def:NPC_HULLS[kind],classId:kind};
@@ -115,10 +137,10 @@ function drawFlames(ctx,def,size,thrust,boost,lite){
  const scale=def.nozzles.length>1?.85:1;
  for(const [nx,ny] of def.nozzles){
   const x=nx*size-1.5,y=ny*size;
-  ctx.fillStyle=mid;ctx.globalAlpha=.42;
-  ctx.beginPath();ctx.moveTo(x,y-2.2);ctx.lineTo(x-len*scale,y);ctx.lineTo(x,y+2.2);ctx.fill();
-  ctx.fillStyle=core;ctx.globalAlpha=.7;
-  ctx.beginPath();ctx.moveTo(x,y-1.1);ctx.lineTo(x-len*scale*.58,y);ctx.lineTo(x,y+1.1);ctx.fill();
+  ctx.fillStyle=mid;ctx.globalAlpha=.38;
+  ctx.beginPath();ctx.moveTo(x,y-1.8);ctx.lineTo(x-len*scale,y);ctx.lineTo(x,y+1.8);ctx.fill();
+  ctx.fillStyle=core;ctx.globalAlpha=.68;
+  ctx.beginPath();ctx.moveTo(x,y-.9);ctx.lineTo(x-len*scale*.56,y);ctx.lineTo(x,y+.9);ctx.fill();
  }
  if(boost){ctx.globalAlpha=.16;ctx.fillStyle=core;ctx.beginPath();ctx.arc(-size-len*.3,0,6+thrust*7,0,6.28);ctx.fill();}
  ctx.globalAlpha=1;
@@ -140,24 +162,21 @@ function drawExtrusion(ctx,body,size,tx,ty,fill){
 
 function drawBells(ctx,def,size,art,thrust){
  const hot=art.heat||[96,60,42];
- const hw=Math.max(5.2,size*.22),hh=Math.max(5.6,size*.24);
+ const hw=Math.max(5.6,size*.24),hh=Math.max(5.2,size*.22);
  for(const [nx,ny] of def.nozzles||[]){
-  const x=nx*size+(nx<0?1.2:0),y=ny*size;
-  ctx.fillStyle=rgbOf(mix(art.shadow,art.metal,.35));
-  ctx.fillRect(x,y-hh*.5,hw,hh);
-  ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1;
-  ctx.strokeRect(x,y-hh*.5,hw,hh);
-  ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.4));
-  ctx.fillRect(x+.6,y-hh*.5+.6,hw-1.2,1.3);
-  ctx.fillStyle=rgbOf(mix(hot,art.shadow,.2));
-  ctx.beginPath();ctx.ellipse(x,y,hw*.52,hh*.42,0,0,6.28);ctx.fill();
-  ctx.strokeStyle=rgbOf(mix(hot,[190,130,88],.4));ctx.stroke();
-  ctx.fillStyle='#0a0808';
-  ctx.beginPath();ctx.ellipse(x-.5,y,hw*.28,hh*.22,0,0,6.28);ctx.fill();
-  if(thrust>.04){
-   ctx.fillStyle=rgba([180,255,230],.4+thrust*.28);
-   ctx.beginPath();ctx.ellipse(x-.3,y,hw*.16,hh*.12,0,0,6.28);ctx.fill();
-  }
+  const x=nx*size+(nx<0?.6:0),y=ny*size;
+  ctx.fillStyle=rgbOf(mix(art.shadow,art.metal,.28));
+  roundBox(ctx,x-1,y-hh*.55,hw+1.6,hh,1.4);ctx.fill();
+  ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle=rgba(art.shadow,.55);
+  ctx.beginPath();ctx.ellipse(x,y,hw*.42,hh*.36,0,0,6.28);ctx.fill();
+  ctx.fillStyle=rgbOf(mix(hot,art.shadow,.15));
+  ctx.beginPath();ctx.ellipse(x,y,hw*.34,hh*.28,0,0,6.28);ctx.fill();
+  ctx.strokeStyle=rgbOf(mix(hot,[200,140,90],.45));ctx.stroke();
+  ctx.fillStyle='#080606';
+  ctx.beginPath();ctx.ellipse(x-.6,y,hw*.18,hh*.14,0,0,6.28);ctx.fill();
+  ctx.fillStyle=rgba([180,255,230],thrust>.04?.4+thrust*.3:.12);
+  ctx.beginPath();ctx.ellipse(x-.4,y,hw*.1,hh*.08,0,0,6.28);ctx.fill();
  }
 }
 
@@ -173,8 +192,8 @@ function drawParts(ctx,def,size,art){
    else ctx.fillStyle=rgbOf(art.metal);
    ctx.fillRect(x,y,w,h);
    ctx.strokeStyle=rgbOf(art.shadow);ctx.strokeRect(x,y,w,h);
-   ctx.strokeStyle=rgba(art.shadow,.4);ctx.lineWidth=.8;
-   ctx.beginPath();ctx.moveTo(x+w*.5,y);ctx.lineTo(x+w*.5,y+h);ctx.stroke();
+   ctx.strokeStyle=rgba(art.shadow,.45);ctx.lineWidth=.8;
+   ctx.beginPath();ctx.moveTo(x+w*.5,y);ctx.lineTo(x+w*.5,y+h);ctx.moveTo(x,y+h*.5);ctx.lineTo(x+w,y+h*.5);ctx.stroke();
   }
   else if(p.type==='poly'){
    pathBody(ctx,p.pts,size,1.2,1.5);ctx.fillStyle=rgbOf(art.shadow);ctx.fill();
@@ -196,39 +215,44 @@ function drawParts(ctx,def,size,art){
 function drawPanels(ctx,def,size,art,lite){
  ctx.save();
  pathBody(ctx,def.body,size);ctx.clip();
- ctx.strokeStyle=rgba(art.shadow,.5);ctx.lineWidth=1;
- ctx.beginPath();ctx.moveTo(size*.68,0);ctx.lineTo(-size*.5,0);ctx.stroke();
+ ctx.strokeStyle=rgba(art.shadow,.55);ctx.lineWidth=1.15;
+ ctx.beginPath();ctx.moveTo(size*.7,0);ctx.lineTo(-size*.48,0);ctx.stroke();
  if(!lite){
+  ctx.strokeStyle=rgba(art.shadow,.38);ctx.lineWidth=.8;
   ctx.beginPath();
-  ctx.moveTo(size*.28,-size*.2);ctx.lineTo(-size*.32,-size*.16);
-  ctx.moveTo(size*.28,size*.2);ctx.lineTo(-size*.32,size*.16);
-  ctx.moveTo(size*.18,-size*.58);ctx.lineTo(size*.18,size*.58);
-  ctx.moveTo(-size*.16,-size*.52);ctx.lineTo(-size*.16,size*.52);
+  ctx.moveTo(size*.3,-size*.18);ctx.lineTo(-size*.3,-size*.14);
+  ctx.moveTo(size*.3,size*.18);ctx.lineTo(-size*.3,size*.14);
+  ctx.moveTo(size*.2,-size*.55);ctx.lineTo(size*.2,size*.55);
+  ctx.moveTo(-size*.12,-size*.5);ctx.lineTo(-size*.12,size*.5);
   ctx.stroke();
-  const tw=size*.11,th=size*.16,x0=-size*.98,y0=-size*.48;
-  for(let col=0;col<3;col++)for(let row=0;row<5;row++){
-   const shade=.28+(col+row)%2*.12;
-   ctx.fillStyle=rgba(art.heat,shade);
-   ctx.fillRect(x0+col*tw,y0+row*th,tw-0.6,th-0.6);
+  ctx.strokeStyle=rgba(art.plate,.16);ctx.lineWidth=.6;
+  for(let i=0;i<6;i++){
+   const y=-size*.22+i*(size*.08);
+   ctx.beginPath();ctx.moveTo(-size*.35,y);ctx.lineTo(size*.45,y);ctx.stroke();
   }
-  ctx.strokeStyle=rgba(art.shadow,.45);ctx.lineWidth=.7;
-  for(let i=0;i<4;i++){
-   const x=x0+i*tw;
-   ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y0+th*5);ctx.stroke();
+  for(let i=0;i<9;i++){
+   ctx.fillStyle=rgba(art.shadow,.55);
+   ctx.fillRect(-size*.3+i*(size*.09),-1.1,1.2,1.2);
+   ctx.fillRect(-size*.3+i*(size*.09),size*.16,1.1,1.1);
+  }
+  const tw=size*.1,th=size*.14,x0=-size*.96,y0=-size*.42;
+  for(let col=0;col<3;col++)for(let row=0;row<5;row++){
+   ctx.fillStyle=rgba(art.heat,.26+(col+row)%2*.14);
+   ctx.fillRect(x0+col*tw,y0+row*th,tw-0.7,th-0.7);
   }
  }
  else{
-  ctx.fillStyle=rgba(art.heat,.32);
-  ctx.fillRect(-size*1.05,-size*.55,size*.36,size*1.1);
+  ctx.fillStyle=rgba(art.heat,.3);
+  ctx.fillRect(-size*1.02,-size*.5,size*.32,size);
  }
  ctx.restore();
 }
 
 function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
  const {x:tx,y:ty}=thickOf(size);
- ctx.fillStyle=rgba([0,0,0],.3);
- ctx.beginPath();ctx.ellipse(2,ty+2,size*1.08,size*.4,0,0,6.28);ctx.fill();
- drawExtrusion(ctx,def.body,size,tx,ty,rgbOf(mix(art.shadow,[8,10,12],.25)));
+ ctx.fillStyle=rgba([0,0,0],.34);
+ ctx.beginPath();ctx.ellipse(2.4,ty+3,size*1.12,size*.38,0,0,6.28);ctx.fill();
+ drawExtrusion(ctx,def.body,size,tx,ty,rgbOf(mix(art.shadow,[8,10,12],.22)));
  ctx.fillStyle=rgbOf(art.shadow);
  pathBody(ctx,def.body,size,tx,ty);ctx.fill();
  const hull=hostile?mix(art.metal,[78,28,30],.28):art.metal;
@@ -238,56 +262,131 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
  pathBody(ctx,def.body,size);ctx.clip();
  const beam=ctx.createLinearGradient?.(0,-size,0,size);
  if(beam?.addColorStop){
-  beam.addColorStop(0,rgba(art.shadow,.58));
-  beam.addColorStop(.3,rgba(art.plate,.5+sheen*.18));
+  beam.addColorStop(0,rgba(art.shadow,.52));
+  beam.addColorStop(.28,rgba(art.plate,.55+sheen*.16));
   beam.addColorStop(.52,rgba(hull,0));
-  beam.addColorStop(1,rgba(art.shadow,.74));
+  beam.addColorStop(1,rgba(art.shadow,.7));
   ctx.fillStyle=beam;ctx.fill();
  }
  const len=Math.hypot(lx,ly)||1,ux=lx/len,uy=ly/len;
  const sun=ctx.createLinearGradient?.(-ux*size,-uy*size,ux*size,uy*size);
  if(sun?.addColorStop){
-  sun.addColorStop(0,`rgba(255,255,255,${lite?.12:.2+sheen*.1})`);
-  sun.addColorStop(.42,'rgba(0,0,0,0)');
-  sun.addColorStop(1,`rgba(0,4,10,${lite?.28:.4})`);
+  sun.addColorStop(0,`rgba(255,255,255,${lite?.14:.24+sheen*.1})`);
+  sun.addColorStop(.18,`rgba(255,255,255,${lite?.04:.08})`);
+  sun.addColorStop(.45,'rgba(0,0,0,0)');
+  sun.addColorStop(1,`rgba(0,4,10,${lite?.26:.38})`);
   ctx.fillStyle=sun;ctx.fill();
  }
- const ao=ctx.createLinearGradient?.(0,0,tx*2,ty*2);
- if(ao?.addColorStop){
-  ao.addColorStop(0,'rgba(0,0,0,0)');
-  ao.addColorStop(1,'rgba(0,0,0,.12)');
-  ctx.fillStyle=ao;ctx.fill();
- }
- ctx.fillStyle=rgbOf(mix(hull,art.plate,.4));
- pathBody(ctx,scaleBody(def.body,.72),size,-.8,-1.1);ctx.globalAlpha=.5;ctx.fill();ctx.globalAlpha=1;
+ ctx.strokeStyle=rgba([230,240,248],lite?.12:.2);
+ ctx.lineWidth=1.1;
+ ctx.beginPath();ctx.moveTo(-size*.2,-size*.12);ctx.lineTo(size*.55,-size*.22);ctx.stroke();
+ ctx.fillStyle=rgbOf(mix(hull,art.plate,.38));
+ pathBody(ctx,scaleBody(def.body,.7),size,-.7,-1);ctx.globalAlpha=.42;ctx.fill();ctx.globalAlpha=1;
  ctx.restore();
- ctx.strokeStyle=rgbOf(mix(art.shadow,hull,.2));
- ctx.lineWidth=1.35;
+ ctx.strokeStyle=rgbOf(mix(art.shadow,hull,.18));
+ ctx.lineWidth=1.3;
  pathBody(ctx,def.body,size);ctx.stroke();
- ctx.save();
- pathBody(ctx,def.body,size);ctx.clip();
- ctx.strokeStyle=rgba(art.plate,.32+sheen*.08);ctx.lineWidth=1;
- ctx.beginPath();
- const rim=scaleBody(def.body,.9);
- rim.forEach(([x,y],i)=>{const px=x*size-1.2,py=y*size-1.5;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});
- ctx.closePath();ctx.stroke();
- ctx.restore();
 }
 
-function drawCanopy(ctx,def,size,art){
+function drawCanopy(ctx,def,size,art,lite){
  if(!def.cockpit)return;
- const c=def.cockpit,x=c.x*size,rx=c.rx,ry=c.ry;
- ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.35));
- ctx.beginPath();ctx.ellipse(x,0,rx+1.6,ry+1.35,0,0,6.28);ctx.fill();
+ const c=def.cockpit,x=c.x*size,rx=Math.max(c.rx,size*.16),ry=Math.max(c.ry*.9,size*.09);
+ const w=rx*2.15,h=ry*2.05;
+ ctx.fillStyle=rgba(art.shadow,.5);
+ ctx.beginPath();ctx.ellipse(x+1.3,1.6,rx+2.1,ry+1.7,0,0,6.28);ctx.fill();
+ ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.45));
+ roundBox(ctx,x-w/2,-h/2,w,h,1.8);ctx.fill();
  ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1.1;ctx.stroke();
  ctx.fillStyle=art.glass;
- ctx.beginPath();ctx.ellipse(x,0,rx,ry,0,0,6.28);ctx.fill();
- ctx.fillStyle=rgba([8,14,18],.45);
- ctx.beginPath();ctx.ellipse(x+rx*.12,ry*.12,rx*.82,ry*.72,0,0,6.28);ctx.fill();
- ctx.fillStyle=rgba([210,232,242],.2);
- ctx.beginPath();ctx.ellipse(x-rx*.28,-ry*.32,rx*.38,ry*.28,0,0,6.28);ctx.fill();
- ctx.strokeStyle=rgba(art.shadow,.55);ctx.lineWidth=.8;
- ctx.beginPath();ctx.moveTo(x-rx*.15,-ry*.85);ctx.lineTo(x+rx*.05,ry*.85);ctx.stroke();
+ roundBox(ctx,x-w/2+1.5,-h/2+1.2,w-3,h-2.4,1.3);ctx.fill();
+ ctx.fillStyle=rgba([6,10,14],.42);
+ roundBox(ctx,x-w/2+2.4,-h/2+2,w-5.2,h-3.8,1);ctx.fill();
+ if(!lite){
+  ctx.strokeStyle=rgba(art.shadow,.5);ctx.lineWidth=.7;
+  ctx.beginPath();ctx.moveTo(x-w*.12,-h/2+1.2);ctx.lineTo(x-w*.02,h/2-1.2);
+  ctx.moveTo(x+w*.18,-h/2+1.2);ctx.lineTo(x+w*.26,h/2-1.2);ctx.stroke();
+ }
+ ctx.fillStyle=rgba([220,236,246],.22);
+ ctx.beginPath();ctx.ellipse(x-w*.18,-h*.18,w*.16,h*.14,0,0,6.28);ctx.fill();
+}
+
+function drawKit(ctx,def,size,art,classId,lite){
+ const kit=kitOf(classId);
+ const plate=rgbOf(mix(art.metal,art.plate,.35)),shade=rgbOf(art.shadow);
+ if(kit.radiators){
+  for(const s of[-1,1]){
+   const x=-size*.22,y=s*size*.36,w=size*.42,h=Math.max(2.2,size*.07);
+   ctx.fillStyle=shade;ctx.fillRect(x+1,y+s*1.2,w,h);
+   ctx.fillStyle=rgbOf(mix(art.heat,art.metal,.55));ctx.fillRect(x,y,w,h);
+   ctx.strokeStyle=shade;ctx.strokeRect(x,y,w,h);
+   if(!lite){ctx.strokeStyle=rgba(art.shadow,.45);for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(x+w*i/4,y);ctx.lineTo(x+w*i/4,y+h);ctx.stroke();}}
+  }
+ }
+ if(kit.antenna){
+  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(-size*.12,1.2,2.2,0,6.28);ctx.fill();
+  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(-size*.18,0,2.1,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
+  ctx.strokeStyle=rgbOf(mix(art.plate,art.shadow,.3));ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(-size*.18,0);ctx.lineTo(-size*.05,-size*.48);ctx.stroke();
+  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(-size*.05,-size*.48,1.5,0,6.28);ctx.fill();
+ }
+ if(kit.sensors){
+  const ax=size*.12,ay=-size*.32,r=Math.max(2.6,size*.08);
+  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(ax+.7,ay+1,r,0,6.28);ctx.fill();
+  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(ax,ay,r,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
+  ctx.fillStyle=rgba([200,230,240],.2);ctx.beginPath();ctx.arc(ax-r*.25,ay-r*.28,r*.35,0,6.28);ctx.fill();
+ }
+ if(kit.cargo){
+  const x=-size*.42,y=-size*.26,w=size*.52,h=size*.52;
+  ctx.fillStyle=shade;ctx.fillRect(x+1.2,y+1.4,w,h);
+  ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.15));ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle=shade;ctx.strokeRect(x,y,w,h);
+  ctx.strokeStyle=rgba(art.shadow,.55);
+  ctx.beginPath();ctx.moveTo(x+w*.5,y);ctx.lineTo(x+w*.5,y+h);ctx.moveTo(x,y+h*.5);ctx.lineTo(x+w,y+h*.5);ctx.stroke();
+  if(!lite){ctx.fillStyle=rgbOf(mix(art.shadow,art.metal,.4));ctx.fillRect(x+2,y-2.2,4,2.4);ctx.fillRect(x+w-6,y-2.2,4,2.4);}
+ }
+ if(kit.clamps&&!lite){
+  for(const s of[-1,1]){
+   const x=size*.08,y=s*size*.42;
+   ctx.strokeStyle=plate;ctx.lineWidth=1.3;
+   ctx.beginPath();ctx.moveTo(x-3,y-s*3);ctx.lineTo(x-5,y);ctx.lineTo(x-3,y+s*3);ctx.stroke();
+  }
+ }
+ if(kit.hardpoints){
+  const ys=def.lights?.y||.55;
+  for(const s of[-1,1]){
+   const x=size*.08,y=s*ys*size;
+   ctx.fillStyle=shade;ctx.fillRect(x+1,y+s*1.2,size*.22,Math.max(2.4,size*.08));
+   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));ctx.fillRect(x,y,size*.22,Math.max(2.4,size*.08));
+   ctx.fillStyle=plate;ctx.fillRect(x+size*.2,y+1,size*.16,Math.max(1.4,size*.04));
+  }
+ }
+ if(kit.intakes&&!lite){
+  ctx.fillStyle=rgba(art.shadow,.65);
+  ctx.fillRect(size*.42,-size*.12,size*.16,size*.08);
+  ctx.fillRect(size*.42,size*.04,size*.16,size*.08);
+ }
+ if(kit.rcs){
+  const spots=[[.55,.28],[-.35,.3],[.55,-.28],[-.35,-.3]];
+  for(const [nx,ny] of spots){
+   ctx.fillStyle='#1a2026';ctx.fillRect(nx*size-1.4,ny*size-1.4,2.8,2.8);
+   ctx.fillStyle=rgbOf(mix(art.plate,art.shadow,.4));ctx.fillRect(nx*size-1,ny*size-1,2,2);
+  }
+ }
+ if(kit.nacelle){
+  ctx.fillStyle=shade;ctx.fillRect(-size*.25,1.2,size*.7,3.2);
+  ctx.fillStyle=plate;ctx.fillRect(-size*.3,-1.6,size*.7,3.2);
+  ctx.strokeStyle=shade;ctx.strokeRect(-size*.3,-1.6,size*.7,3.2);
+ }
+ if(kit.tanks&&!lite){
+  for(const s of[-1,1]){
+   ctx.fillStyle=shade;ctx.fillRect(-size*.55,s*size*.16+1,size*.28,size*.1);
+   ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.2));ctx.fillRect(-size*.58,s*size*.16,size*.28,size*.1);
+  }
+ }
+ if(kit.junk&&!lite){
+  ctx.fillStyle=rgbOf(mix(art.heat,art.shadow,.4));
+  ctx.fillRect(-size*.05,size*.3,size*.18,size*.1);
+ }
 }
 
 function drawNavLights(ctx,def,size,clock,opts){
@@ -304,9 +403,6 @@ function drawNavLights(ctx,def,size,clock,opts){
  }
 }
 
-/**
- * Draw a hull in local ship space (nose +X). Caller handles translate/rotate.
- */
 export function drawCraft(ctx,opts={}){
  const kind=opts.kind||opts.id||'wren';
  const {def,classId}=resolveHull(kind);
@@ -318,12 +414,13 @@ export function drawCraft(ctx,opts={}){
  drawVolume(ctx,def,size,art,lx,ly,art.sheen,lite,!!opts.hostile);
  drawPanels(ctx,def,size,art,lite);
  drawParts(ctx,def,size,art);
+ drawKit(ctx,def,size,art,opts.classId||classId,lite);
  drawBells(ctx,def,size,art,thrust);
- if(opts.drawCockpit!==false)drawCanopy(ctx,def,size,art);
+ if(opts.drawCockpit!==false)drawCanopy(ctx,def,size,art,lite);
  if(opts.drawLights!==false)drawNavLights(ctx,def,size,clock,opts);
  for(const a of def.accents||[]){
   if(def.lights?.pair&&a===def.accents[0])continue;
-  ctx.fillStyle=withAlpha(accent,.4);ctx.fillRect(a.x*size,a.y*size,a.w,Math.max(1.2,a.h*.65));
+  ctx.fillStyle=withAlpha(accent,.35);ctx.fillRect(a.x*size,a.y*size,a.w,Math.max(1.2,a.h*.6));
  }
 }
 
@@ -344,7 +441,57 @@ export function drawEnemyCraft(ctx,opts={}){
  drawCraft(ctx,{kind:'pirate',size:opts.size||20,color:opts.color||'#ee918b',accent:'#d47868',hostile:true,...opts});
 }
 
-/** Hangar SVG — extruded hull, deck, heat tiles, ceramic bells, framed glass. */
+function kitSvg(def,art,classId,ox,oy,sc,metal,plate,shadow,heat){
+ const kit=kitOf(classId);
+ const bits=[];
+ if(kit.radiators){
+  for(const s of[-1,1]){
+   const x=ox-sc*.22,y=oy+s*sc*.36,w=sc*.42,h=Math.max(3.2,sc*.07);
+   bits.push(`<g class="radiator"><rect x="${(x+1).toFixed(1)}" y="${(y+s*1.2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${mixHex(heat,metal,.55)}" stroke="${shadow}" stroke-width=".7"/>${[1,2,3].map(i=>`<line x1="${(x+w*i/4).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+w*i/4).toFixed(1)}" y2="${(y+h).toFixed(1)}" stroke="${shadow}" stroke-width=".6" opacity=".45"/>`).join('')}</g>`);
+  }
+ }
+ if(kit.antenna){
+  bits.push(`<g class="antenna"><circle cx="${(ox-sc*.12).toFixed(1)}" cy="${oy+1.2}" r="2.3" fill="${shadow}"/><circle cx="${(ox-sc*.18).toFixed(1)}" cy="${oy}" r="2.2" fill="${plate}" stroke="${shadow}"/><line x1="${(ox-sc*.18).toFixed(1)}" y1="${oy}" x2="${(ox-sc*.05).toFixed(1)}" y2="${(oy-sc*.48).toFixed(1)}" stroke="${plate}" stroke-width="1.3"/><circle cx="${(ox-sc*.05).toFixed(1)}" cy="${(oy-sc*.48).toFixed(1)}" r="1.7" fill="${metal}" stroke="${shadow}"/></g>`);
+ }
+ if(kit.sensors){
+  const ax=ox+sc*.12,ay=oy-sc*.32,r=Math.max(3.4,sc*.09);
+  bits.push(`<g class="sensor"><circle cx="${(ax+.8).toFixed(1)}" cy="${(ay+1.1).toFixed(1)}" r="${r.toFixed(1)}" fill="${shadow}"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${r.toFixed(1)}" fill="${plate}" stroke="${shadow}"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${(r*.2).toFixed(1)}" fill="${shadow}"/></g>`);
+ }
+ if(kit.cargo){
+  const x=ox-sc*.42,y=oy-sc*.26,w=sc*.52,h=sc*.52;
+  bits.push(`<g class="cargo-bay"><rect x="${(x+1.3).toFixed(1)}" y="${(y+1.5).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${metal}" stroke="${shadow}" stroke-width="1"/><line x1="${(x+w/2).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+w/2).toFixed(1)}" y2="${(y+h).toFixed(1)}" stroke="${shadow}" stroke-width="1"/><line x1="${x.toFixed(1)}" y1="${(y+h/2).toFixed(1)}" x2="${(x+w).toFixed(1)}" y2="${(y+h/2).toFixed(1)}" stroke="${shadow}" stroke-width=".8" opacity=".6"/><rect x="${(x+2).toFixed(1)}" y="${(y-2.4).toFixed(1)}" width="4.2" height="2.6" fill="${plate}" stroke="${shadow}"/><rect x="${(x+w-6.2).toFixed(1)}" y="${(y-2.4).toFixed(1)}" width="4.2" height="2.6" fill="${plate}" stroke="${shadow}"/></g>`);
+ }
+ if(kit.clamps){
+  for(const s of[-1,1]){
+   const x=ox+sc*.08,y=oy+s*sc*.42;
+   bits.push(`<path class="clamp" d="M${(x-3).toFixed(1)} ${(y-s*4).toFixed(1)} L${(x-6).toFixed(1)} ${y.toFixed(1)} L${(x-3).toFixed(1)} ${(y+s*4).toFixed(1)}" fill="none" stroke="${plate}" stroke-width="1.4"/>`);
+  }
+ }
+ if(kit.hardpoints){
+  const ys=(def.lights?.y||.55)*sc;
+  for(const s of[-1,1]){
+   const x=ox+sc*.08,y=oy+s*ys;
+   bits.push(`<g class="hardpoint"><rect x="${(x+1).toFixed(1)}" y="${(y+s).toFixed(1)}" width="${(sc*.22).toFixed(1)}" height="${Math.max(3,sc*.08).toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(sc*.22).toFixed(1)}" height="${Math.max(3,sc*.08).toFixed(1)}" fill="${metal}" stroke="${shadow}"/><rect x="${(x+sc*.2).toFixed(1)}" y="${(y+1.1).toFixed(1)}" width="${(sc*.18).toFixed(1)}" height="${Math.max(1.6,sc*.04).toFixed(1)}" fill="${plate}"/></g>`);
+  }
+ }
+ if(kit.intakes){
+  bits.push(`<g class="intake"><rect x="${(ox+sc*.42).toFixed(1)}" y="${(oy-sc*.12).toFixed(1)}" width="${(sc*.16).toFixed(1)}" height="${(sc*.08).toFixed(1)}" fill="${shadow}" rx="1"/><rect x="${(ox+sc*.42).toFixed(1)}" y="${(oy+sc*.04).toFixed(1)}" width="${(sc*.16).toFixed(1)}" height="${(sc*.08).toFixed(1)}" fill="${shadow}" rx="1"/></g>`);
+ }
+ if(kit.rcs){
+  for(const [nx,ny] of[[.55,.28],[-.35,.3],[.55,-.28],[-.35,-.3]]){
+   bits.push(`<g class="rcs"><rect x="${(ox+nx*sc-1.6).toFixed(1)}" y="${(oy+ny*sc-1.6).toFixed(1)}" width="3.2" height="3.2" fill="#1a2026"/><rect x="${(ox+nx*sc-1.1).toFixed(1)}" y="${(oy+ny*sc-1.1).toFixed(1)}" width="2.2" height="2.2" fill="${plate}"/></g>`);
+  }
+ }
+ if(kit.nacelle){
+  bits.push(`<g class="nacelle"><rect x="${(ox-sc*.25).toFixed(1)}" y="${oy+1.4}" width="${(sc*.7).toFixed(1)}" height="3.4" fill="${shadow}"/><rect x="${(ox-sc*.3).toFixed(1)}" y="${oy-1.7}" width="${(sc*.7).toFixed(1)}" height="3.4" rx="1.2" fill="${plate}" stroke="${shadow}"/></g>`);
+ }
+ if(kit.tanks){
+  for(const s of[-1,1])bits.push(`<rect class="tank" x="${(ox-sc*.58).toFixed(1)}" y="${(oy+s*sc*.16).toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${(sc*.1).toFixed(1)}" rx="1.4" fill="${metal}" stroke="${shadow}"/>`);
+ }
+ if(kit.junk)bits.push(`<rect class="junk" x="${(ox-sc*.05).toFixed(1)}" y="${(oy+sc*.3).toFixed(1)}" width="${(sc*.18).toFixed(1)}" height="${(sc*.1).toFixed(1)}" fill="${heat}" opacity=".7"/>`);
+ return bits.join('');
+}
+
 export function hullPreviewSvg(ship){
  const id=ship.id||'wren';
  const {def,classId}=resolveHull(id);
@@ -355,47 +502,58 @@ export function hullPreviewSvg(ship){
  const metal=rgbHex(...art.metal),plate=rgbHex(...art.plate),shadow=rgbHex(...art.shadow),heat=rgbHex(...(art.heat||[96,60,42]));
  const pt=([x,y],dx=0,dy=0)=>`${(ox+x*sc+dx).toFixed(1)},${(oy+y*sc+dy).toFixed(1)}`;
  const poly=(pts,dx=0,dy=0)=>pts.map(p=>pt(p,dx,dy)).join(' ');
- const deck=scaleBody(def.body,.72);
+ const deck=scaleBody(def.body,.7);
  const walls=def.body.map((p,i)=>{
   const q=def.body[(i+1)%def.body.length];
   return `<polygon class="hull-wall" points="${pt(p)} ${pt(q)} ${pt(q,tx,ty)} ${pt(p,tx,ty)}" fill="${shadow}"/>`;
  }).join('');
+ const cx=ox+(def.cockpit?.x||.4)*sc;
  const defs=`<defs>
   <linearGradient id="${gid}-cyl" x1="50%" y1="0%" x2="50%" y2="100%">
    <stop offset="0" stop-color="${shadow}"/>
-   <stop offset=".28" stop-color="${plate}"/>
-   <stop offset=".52" stop-color="${metal}"/>
+   <stop offset=".26" stop-color="${plate}"/>
+   <stop offset=".5" stop-color="${metal}"/>
    <stop offset="1" stop-color="${shadow}"/>
   </linearGradient>
-  <linearGradient id="${gid}-sun" x1="10%" y1="6%" x2="90%" y2="94%">
-   <stop offset="0" stop-color="#ffffff" stop-opacity=".32"/>
-   <stop offset=".4" stop-color="#ffffff" stop-opacity="0"/>
-   <stop offset="1" stop-color="#000810" stop-opacity=".4"/>
+  <linearGradient id="${gid}-sun" x1="8%" y1="4%" x2="92%" y2="96%">
+   <stop offset="0" stop-color="#ffffff" stop-opacity=".34"/>
+   <stop offset=".2" stop-color="#ffffff" stop-opacity=".1"/>
+   <stop offset=".45" stop-color="#ffffff" stop-opacity="0"/>
+   <stop offset="1" stop-color="#000810" stop-opacity=".42"/>
   </linearGradient>
-  <radialGradient id="${gid}-g" cx="34%" cy="28%" r="72%">
-   <stop offset="0" stop-color="#8eb8c4" stop-opacity=".28"/>
-   <stop offset=".42" stop-color="${art.glass}"/>
+  <linearGradient id="${gid}-spec" x1="20%" y1="30%" x2="80%" y2="20%">
+   <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+   <stop offset=".4" stop-color="#ffffff" stop-opacity=".22"/>
+   <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="${gid}-g" cx="32%" cy="26%" r="74%">
+   <stop offset="0" stop-color="#9ec4d0" stop-opacity=".32"/>
+   <stop offset=".4" stop-color="${art.glass}"/>
    <stop offset="1" stop-color="#061014"/>
   </radialGradient>
   <radialGradient id="${gid}-sh" cx="50%" cy="50%" r="50%">
-   <stop offset=".38" stop-color="#000" stop-opacity=".38"/>
+   <stop offset=".35" stop-color="#000" stop-opacity=".42"/>
    <stop offset="1" stop-color="#000" stop-opacity="0"/>
   </radialGradient>
   <clipPath id="${gid}-hull"><polygon points="${poly(def.body)}"/></clipPath>
  </defs>`;
- const shadowEl=`<ellipse cx="${ox+3}" cy="${oy+12}" rx="${(sc*1.18).toFixed(1)}" ry="${(sc*.36).toFixed(1)}" fill="url(#${gid}-sh)"/>`;
+ const shadowEl=`<ellipse cx="${ox+4}" cy="${oy+13}" rx="${(sc*1.2).toFixed(1)}" ry="${(sc*.34).toFixed(1)}" fill="url(#${gid}-sh)"/>`;
  const thick=`<polygon class="hull-thick" points="${poly(def.body,tx,ty)}" fill="${shadow}"/>`;
- const body=`<polygon points="${poly(def.body)}" fill="url(#${gid}-cyl)" stroke="${shadow}" stroke-width="1.35"/>`;
+ const body=`<polygon points="${poly(def.body)}" fill="url(#${gid}-cyl)" stroke="${shadow}" stroke-width="1.3"/>`;
  const wash=`<polygon points="${poly(def.body)}" fill="url(#${gid}-sun)"/>`;
- const deckEl=`<polygon points="${poly(deck,-.8,-1.1)}" fill="${plate}" fill-opacity=".42"/>`;
- const spine=`<rect x="${ox-sc*.42}" y="${oy-2}" width="${(sc*1.02).toFixed(1)}" height="4" rx="1.3" fill="${metal}" stroke="${shadow}" stroke-width=".7"/>`;
- const seam=`<polyline points="${pt([.62,0])} ${pt([-.48,0])}" fill="none" stroke="${shadow}" stroke-width="0.85" opacity=".55"/>`;
+ const spec=`<polyline points="${pt([-.15,-.1])} ${pt([.55,-.2])}" fill="none" stroke="url(#${gid}-spec)" stroke-width="1.6"/>`;
+ const deckEl=`<polygon points="${poly(deck,-.7,-1)}" fill="${plate}" fill-opacity=".36"/>`;
+ const spine=`<rect x="${ox-sc*.4}" y="${oy-2}" width="${(sc*1).toFixed(1)}" height="4" rx="1.2" fill="${metal}" stroke="${shadow}" stroke-width=".7"/>`;
+ const seam=`<polyline points="${pt([.65,0])} ${pt([-.46,0])}" fill="none" stroke="${shadow}" stroke-width="1" opacity=".55"/>`;
+ const rivets=Array.from({length:8},(_,i)=>{
+  const x=ox-sc*.28+i*(sc*.1);
+  return `<rect x="${x.toFixed(1)}" y="${oy-1.2}" width="1.3" height="1.3" fill="${shadow}" opacity=".55"/><rect x="${x.toFixed(1)}" y="${oy+sc*.16}" width="1.2" height="1.2" fill="${shadow}" opacity=".4"/>`;
+ }).join('');
+ const brush=`<g clip-path="url(#${gid}-hull)" opacity=".18">${Array.from({length:7},(_,i)=>`<line x1="${ox-sc*.4}" y1="${oy-sc*.2+i*(sc*.07)}" x2="${ox+sc*.5}" y2="${oy-sc*.24+i*(sc*.07)}" stroke="${plate}" stroke-width=".7"/>`).join('')}</g>`;
  const tiles=`<g clip-path="url(#${gid}-hull)" class="heat-tiles">
-  <rect x="${ox-sc*1.02}" y="${oy-sc*.5}" width="${(sc*.38).toFixed(1)}" height="${(sc*1).toFixed(1)}" fill="${heat}" fill-opacity=".22"/>
   ${[0,1,2].map(col=>[0,1,2,3,4].map(row=>{
-   const x=ox-sc*.98+col*(sc*.11),y=oy-sc*.46+row*(sc*.16);
-   const op=.28+(col+row)%2*.12;
-   return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(sc*.1).toFixed(1)}" height="${(sc*.14).toFixed(1)}" fill="${heat}" fill-opacity="${op.toFixed(2)}"/>`;
+   const x=ox-sc*.96+col*(sc*.1),y=oy-sc*.42+row*(sc*.14);
+   return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(sc*.09).toFixed(1)}" height="${(sc*.12).toFixed(1)}" fill="${heat}" fill-opacity="${(.26+(col+row)%2*.14).toFixed(2)}"/>`;
   }).join('')).join('')}
  </g>`;
  const parts=(def.parts||[]).map(p=>{
@@ -406,17 +564,19 @@ export function hullPreviewSvg(ship){
   if(p.type==='scoop')return `<path d="M${(ox-.05*sc).toFixed(1)} ${(oy+.32*sc).toFixed(1)} Q${(ox-1.35*sc).toFixed(1)} ${oy} ${(ox-.05*sc).toFixed(1)} ${(oy-.32*sc).toFixed(1)}" fill="none" stroke="${heat}" stroke-width="1.3"/>`;
   return '';
  }).join('');
+ const kit=kitSvg(def,art,ship.class||classId,ox,oy,sc,metal,plate,shadow,heat);
  const flames=(def.nozzles||[]).map(([nx,ny],i)=>{
   const x=ox+nx*sc-2,y=oy+ny*sc;
-  return `<path d="M${x.toFixed(1)} ${(y-2.4).toFixed(1)} L${(x-11).toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${(y+2.4).toFixed(1)}Z" fill="${mixHex(a,'#4a6a68',.45)}" opacity="${i?'.22':'.32'}"/>`;
+  return `<path d="M${x.toFixed(1)} ${(y-2).toFixed(1)} L${(x-10).toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${(y+2).toFixed(1)}Z" fill="${mixHex(a,'#4a6a68',.5)}" opacity="${i?'.2':'.3'}"/>`;
  }).join('');
  const bells=(def.nozzles||[]).map(([nx,ny])=>{
-  const x=ox+nx*sc+1.1,y=oy+ny*sc;
-  return `<g class="engine-bell"><rect x="${x.toFixed(1)}" y="${(y-4.2).toFixed(1)}" width="7.4" height="8.4" fill="${metal}" stroke="${shadow}" stroke-width=".8"/><rect x="${(x+.5).toFixed(1)}" y="${(y-3.6).toFixed(1)}" width="6.4" height="1.3" fill="${plate}" opacity=".7"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.8" ry="2.7" fill="${heat}" stroke="${mixHex(heat,'#f0c090',.28)}" stroke-width=".8"/><ellipse cx="${(x-.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="1.8" ry="1.2" fill="#0a0808"/></g>`;
+  const x=ox+nx*sc+.4,y=oy+ny*sc;
+  return `<g class="engine-bell"><rect x="${(x-1).toFixed(1)}" y="${(y-4.6).toFixed(1)}" width="8.4" height="9.2" rx="1.6" fill="${metal}" stroke="${shadow}" stroke-width=".8"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.2" ry="2.5" fill="${shadow}"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="2.6" ry="2" fill="${heat}" stroke="${mixHex(heat,'#f0c090',.3)}"/><ellipse cx="${(x-.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="1.3" ry=".9" fill="#080606"/><ellipse cx="${(x-.3).toFixed(1)}" cy="${y.toFixed(1)}" rx=".7" ry=".45" fill="#b8fff0" opacity=".35"/></g>`;
  }).join('');
- const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(ox+def.cockpit.x*sc).toFixed(1)}" cy="${oy}" rx="6.4" ry="4.4" fill="${metal}" stroke="${shadow}" stroke-width="1.1"/><ellipse cx="${(ox+def.cockpit.x*sc).toFixed(1)}" cy="${oy}" rx="5.1" ry="3.4" fill="url(#${gid}-g)"/><path d="M${(ox+def.cockpit.x*sc-1).toFixed(1)} ${(oy-3.2).toFixed(1)} L${(ox+def.cockpit.x*sc+.4).toFixed(1)} ${(oy+3.2).toFixed(1)}" stroke="${shadow}" stroke-width=".7" opacity=".45"/></g>`:'';
- const accents=(def.accents||[]).map(bar=>`<rect x="${(ox+bar.x*sc).toFixed(1)}" y="${(oy+bar.y*sc).toFixed(1)}" width="${bar.w}" height="${Math.max(1.2,bar.h*.65)}" fill="${a}" opacity=".38"/>`).join('');
- return `<svg class="ship-preview" viewBox="0 0 140 88" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${deckEl}${spine}${seam}${tiles}${parts}${bells}${cockpit}${accents}</svg>`;
+ const cw=18,ch=11;
+ const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(cx+1.4).toFixed(1)}" cy="${oy+2}" rx="9" ry="6" fill="${shadow}" opacity=".45"/><rect x="${(cx-cw/2).toFixed(1)}" y="${(oy-ch/2).toFixed(1)}" width="${cw}" height="${ch}" rx="2.2" fill="${plate}" stroke="${shadow}" stroke-width="1.1"/><rect x="${(cx-cw/2+1.6).toFixed(1)}" y="${(oy-ch/2+1.3).toFixed(1)}" width="${cw-3.2}" height="${ch-2.6}" rx="1.5" fill="url(#${gid}-g)"/><rect x="${(cx-cw/2+2.8).toFixed(1)}" y="${(oy-ch/2+2.4).toFixed(1)}" width="${cw-6.2}" height="${ch-4.6}" rx="1" fill="#061014" opacity=".32"/><path d="M${(cx-2.2).toFixed(1)} ${(oy-ch/2+1.3).toFixed(1)} L${(cx-.4).toFixed(1)} ${(oy+ch/2-1.3).toFixed(1)}" stroke="${shadow}" stroke-width=".7" opacity=".5"/><path d="M${(cx+3.2).toFixed(1)} ${(oy-ch/2+1.3).toFixed(1)} L${(cx+4.6).toFixed(1)} ${(oy+ch/2-1.3).toFixed(1)}" stroke="${shadow}" stroke-width=".65" opacity=".4"/><ellipse cx="${(cx-3.4).toFixed(1)}" cy="${(oy-1.6).toFixed(1)}" rx="3.2" ry="1.8" fill="#d8e8f0" opacity=".22"/></g>`:'';
+ const accents=(def.accents||[]).map(bar=>`<rect x="${(ox+bar.x*sc).toFixed(1)}" y="${(oy+bar.y*sc).toFixed(1)}" width="${bar.w}" height="${Math.max(1.2,bar.h*.6)}" fill="${a}" opacity=".32"/>`).join('');
+ return `<svg class="ship-preview" viewBox="0 0 140 88" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${spec}${deckEl}${spine}${seam}${brush}${rivets}${tiles}${parts}${kit}${bells}${cockpit}${accents}</svg>`;
 }
 
 export function sampleShipColor(classId,nx=0,ny=0){

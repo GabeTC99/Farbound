@@ -23,7 +23,11 @@ for(const ship of SHIPS){
  assert.match(svg,/heat-tiles/);
  assert.match(svg,/engine-bell/);
  assert.match(svg,/canopy/);
+ assert.match(svg,/<rect /);
  assert.doesNotMatch(svg,/#d8fff8/);
+ if(ship.class==='explorer')assert.match(svg,/antenna|sensor|radiator/,ship.id+' explorer kit');
+ if(ship.class==='trader')assert.match(svg,/cargo-bay|clamp/,ship.id+' trader kit');
+ if(ship.class==='combat')assert.match(svg,/hardpoint/,ship.id+' combat kit');
  const fallback=hullSvg(ship);
  assert.match(fallback,/ship-preview/);
  assert.match(fallback,/<polygon /);
@@ -75,4 +79,4 @@ g.launch();
 assert(!g.s.docked);
 
 console.log('PASS Fleet atlas: 20 hulls, '+NPC_KINDS.length+' NPC kinds, grounded metal stays distinct');
-console.log('PASS Hangar previews use volume, heat tiles, and bells; exhaust still follows thrust');
+console.log('PASS Hangar previews use class kits, framed canopies, and recessed bells');

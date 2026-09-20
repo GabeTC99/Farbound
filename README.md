@@ -12,11 +12,16 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Farbound/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.15.1 lands, the welcome chip should read **Fleet Atlas 2.15.1**. Hard-refresh if an old service worker still shows 2.15.0 class-lit silhouettes. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.15.2 lands, the welcome chip should read **Fleet Atlas 2.15.2**. Hard-refresh if an old service worker still shows 2.15.1 extruded tokens. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
 ## Frontiers 2.15 — Fleet Atlas
+
+### Candidate 2.15.2
+
+- **Physical craft:** hangar cards and local-space hulls pick up class kits — framed canopies with depth, recessed engine bells, radiators, antennae, cargo-bay doors, docking clamps, and combat hardpoints — so a scout, hauler, and gunship no longer read as the same wedge.
+- Same 20 player hulls plus NPC/traffic/security. Flight, docking, hitboxes, and menus unchanged. Stars stay the 2.15.0 spectral pass.
 
 ### Candidate 2.15.1
 
@@ -166,7 +171,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.15.1). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.15.2). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

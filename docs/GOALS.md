@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 20, 2026: Candidate 2.15.2 Fleet Atlas craft pass (FB-025): class kits (canopy depth, recessed bells, radiators, antennae, cargo doors, hardpoints) so hulls read as distinct small spacecraft. Stars unchanged from 2.15.0. Rollback tag `v2.14.0`.
+
 - September 20, 2026: Candidate 2.15.1 Fleet Atlas craft pass (FB-025): volume, panel lines, heat tiles, physical engine bells, and framed glass so hulls read as small spacecraft rather than class-colored icons. Stars unchanged from 2.15.0. Rollback tag `v2.14.0`.
 
 - September 20, 2026: Candidate 2.15.0 Fleet Atlas (FB-025): class-driven ship materials and lighting for all 20 hulls plus NPC craft; spectral photospheres, corona, and limb darkening for O–M stars. Rollback tag `v2.14.0`.
