@@ -291,23 +291,21 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
 function drawCanopy(ctx,def,size,art,lite){
  if(!def.cockpit)return;
  const c=def.cockpit,x=c.x*size,rx=Math.max(c.rx,size*.16),ry=Math.max(c.ry*.9,size*.09);
- const w=rx*2.15,h=ry*2.05;
- ctx.fillStyle=rgba(art.shadow,.5);
- ctx.beginPath();ctx.ellipse(x+1.3,1.6,rx+2.1,ry+1.7,0,0,6.28);ctx.fill();
- ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.45));
- roundBox(ctx,x-w/2,-h/2,w,h,1.8);ctx.fill();
- ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1.1;ctx.stroke();
+ const w=rx*2.35,h=ry*2.2;
+ ctx.fillStyle=rgba(art.shadow,.55);
+ ctx.beginPath();ctx.ellipse(x+1.4,1.8,rx+2.4,ry+2,0,0,6.28);ctx.fill();
+ ctx.fillStyle=rgbOf(mix(art.plate,art.metal,.35));
+ roundBox(ctx,x-w/2,-h/2,w,h,2);ctx.fill();
+ ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1.25;ctx.stroke();
  ctx.fillStyle=art.glass;
- roundBox(ctx,x-w/2+1.5,-h/2+1.2,w-3,h-2.4,1.3);ctx.fill();
- ctx.fillStyle=rgba([6,10,14],.42);
- roundBox(ctx,x-w/2+2.4,-h/2+2,w-5.2,h-3.8,1);ctx.fill();
- if(!lite){
-  ctx.strokeStyle=rgba(art.shadow,.5);ctx.lineWidth=.7;
-  ctx.beginPath();ctx.moveTo(x-w*.12,-h/2+1.2);ctx.lineTo(x-w*.02,h/2-1.2);
-  ctx.moveTo(x+w*.18,-h/2+1.2);ctx.lineTo(x+w*.26,h/2-1.2);ctx.stroke();
- }
- ctx.fillStyle=rgba([220,236,246],.22);
- ctx.beginPath();ctx.ellipse(x-w*.18,-h*.18,w*.16,h*.14,0,0,6.28);ctx.fill();
+ roundBox(ctx,x-w/2+2,-h/2+1.6,w-4,h-3.2,1.2);ctx.fill();
+ ctx.fillStyle=rgba([8,16,20],.5);
+ roundBox(ctx,x-w/2+3.2,-h/2+2.6,w-6.6,h-5,1);ctx.fill();
+ ctx.strokeStyle=rgba(art.plate,.45);ctx.lineWidth=.8;
+ ctx.beginPath();ctx.moveTo(x-w*.1,-h/2+1.6);ctx.lineTo(x,h/2-1.6);
+ ctx.moveTo(x+w*.2,-h/2+1.6);ctx.lineTo(x+w*.28,h/2-1.6);ctx.stroke();
+ ctx.fillStyle=rgba([210,232,242],.28);
+ ctx.beginPath();ctx.ellipse(x-w*.2,-h*.2,w*.18,h*.16,0,0,6.28);ctx.fill();
 }
 
 function drawKit(ctx,def,size,art,classId,lite){
@@ -315,11 +313,11 @@ function drawKit(ctx,def,size,art,classId,lite){
  const plate=rgbOf(mix(art.metal,art.plate,.35)),shade=rgbOf(art.shadow);
  if(kit.radiators){
   for(const s of[-1,1]){
-   const x=-size*.22,y=s*size*.36,w=size*.42,h=Math.max(2.2,size*.07);
-   ctx.fillStyle=shade;ctx.fillRect(x+1,y+s*1.2,w,h);
-   ctx.fillStyle=rgbOf(mix(art.heat,art.metal,.55));ctx.fillRect(x,y,w,h);
+   const x=-size*.28,y=s*size*.4,w=size*.5,h=Math.max(2.6,size*.09);
+   ctx.fillStyle=shade;ctx.fillRect(x+1.1,y+s*1.3,w,h);
+   ctx.fillStyle=rgbOf(mix(art.heat,art.metal,.45));ctx.fillRect(x,y,w,h);
    ctx.strokeStyle=shade;ctx.strokeRect(x,y,w,h);
-   if(!lite){ctx.strokeStyle=rgba(art.shadow,.45);for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(x+w*i/4,y);ctx.lineTo(x+w*i/4,y+h);ctx.stroke();}}
+   if(!lite){ctx.strokeStyle=rgba(art.shadow,.5);for(let i=1;i<5;i++){ctx.beginPath();ctx.moveTo(x+w*i/5,y);ctx.lineTo(x+w*i/5,y+h);ctx.stroke();}}
   }
  }
  if(kit.antenna){
@@ -354,10 +352,10 @@ function drawKit(ctx,def,size,art,classId,lite){
  if(kit.hardpoints){
   const ys=def.lights?.y||.55;
   for(const s of[-1,1]){
-   const x=size*.08,y=s*ys*size;
-   ctx.fillStyle=shade;ctx.fillRect(x+1,y+s*1.2,size*.22,Math.max(2.4,size*.08));
-   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));ctx.fillRect(x,y,size*.22,Math.max(2.4,size*.08));
-   ctx.fillStyle=plate;ctx.fillRect(x+size*.2,y+1,size*.16,Math.max(1.4,size*.04));
+   const x=size*.02,y=s*ys*size;
+   ctx.fillStyle=shade;ctx.fillRect(x+1,y+s*1.2,size*.28,Math.max(2.6,size*.09));
+   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));ctx.fillRect(x,y,size*.28,Math.max(2.6,size*.09));
+   ctx.fillStyle=plate;ctx.fillRect(x+size*.26,y+1.1,size*.28,Math.max(1.5,size*.045));
   }
  }
  if(kit.intakes&&!lite){
@@ -446,7 +444,7 @@ function kitSvg(def,art,classId,ox,oy,sc,metal,plate,shadow,heat){
  const bits=[];
  if(kit.radiators){
   for(const s of[-1,1]){
-   const x=ox-sc*.22,y=oy+s*sc*.36,w=sc*.42,h=Math.max(3.2,sc*.07);
+   const x=ox-sc*.28,y=oy+s*sc*.4,w=sc*.5,h=Math.max(3.6,sc*.09);
    bits.push(`<g class="radiator"><rect x="${(x+1).toFixed(1)}" y="${(y+s*1.2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${mixHex(heat,metal,.55)}" stroke="${shadow}" stroke-width=".7"/>${[1,2,3].map(i=>`<line x1="${(x+w*i/4).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+w*i/4).toFixed(1)}" y2="${(y+h).toFixed(1)}" stroke="${shadow}" stroke-width=".6" opacity=".45"/>`).join('')}</g>`);
   }
  }
@@ -470,8 +468,8 @@ function kitSvg(def,art,classId,ox,oy,sc,metal,plate,shadow,heat){
  if(kit.hardpoints){
   const ys=(def.lights?.y||.55)*sc;
   for(const s of[-1,1]){
-   const x=ox+sc*.08,y=oy+s*ys;
-   bits.push(`<g class="hardpoint"><rect x="${(x+1).toFixed(1)}" y="${(y+s).toFixed(1)}" width="${(sc*.22).toFixed(1)}" height="${Math.max(3,sc*.08).toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(sc*.22).toFixed(1)}" height="${Math.max(3,sc*.08).toFixed(1)}" fill="${metal}" stroke="${shadow}"/><rect x="${(x+sc*.2).toFixed(1)}" y="${(y+1.1).toFixed(1)}" width="${(sc*.18).toFixed(1)}" height="${Math.max(1.6,sc*.04).toFixed(1)}" fill="${plate}"/></g>`);
+   const x=ox+sc*.02,y=oy+s*ys;
+   bits.push(`<g class="hardpoint"><rect x="${(x+1).toFixed(1)}" y="${(y+s).toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${Math.max(3.2,sc*.09).toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${Math.max(3.2,sc*.09).toFixed(1)}" fill="${metal}" stroke="${shadow}"/><rect x="${(x+sc*.26).toFixed(1)}" y="${(y+1.2).toFixed(1)}" width="${(sc*.3).toFixed(1)}" height="${Math.max(1.7,sc*.045).toFixed(1)}" fill="${plate}"/></g>`);
   }
  }
  if(kit.intakes){
@@ -573,8 +571,8 @@ export function hullPreviewSvg(ship){
   const x=ox+nx*sc+.4,y=oy+ny*sc;
   return `<g class="engine-bell"><rect x="${(x-1).toFixed(1)}" y="${(y-4.6).toFixed(1)}" width="8.4" height="9.2" rx="1.6" fill="${metal}" stroke="${shadow}" stroke-width=".8"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.2" ry="2.5" fill="${shadow}"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="2.6" ry="2" fill="${heat}" stroke="${mixHex(heat,'#f0c090',.3)}"/><ellipse cx="${(x-.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="1.3" ry=".9" fill="#080606"/><ellipse cx="${(x-.3).toFixed(1)}" cy="${y.toFixed(1)}" rx=".7" ry=".45" fill="#b8fff0" opacity=".35"/></g>`;
  }).join('');
- const cw=18,ch=11;
- const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(cx+1.4).toFixed(1)}" cy="${oy+2}" rx="9" ry="6" fill="${shadow}" opacity=".45"/><rect x="${(cx-cw/2).toFixed(1)}" y="${(oy-ch/2).toFixed(1)}" width="${cw}" height="${ch}" rx="2.2" fill="${plate}" stroke="${shadow}" stroke-width="1.1"/><rect x="${(cx-cw/2+1.6).toFixed(1)}" y="${(oy-ch/2+1.3).toFixed(1)}" width="${cw-3.2}" height="${ch-2.6}" rx="1.5" fill="url(#${gid}-g)"/><rect x="${(cx-cw/2+2.8).toFixed(1)}" y="${(oy-ch/2+2.4).toFixed(1)}" width="${cw-6.2}" height="${ch-4.6}" rx="1" fill="#061014" opacity=".32"/><path d="M${(cx-2.2).toFixed(1)} ${(oy-ch/2+1.3).toFixed(1)} L${(cx-.4).toFixed(1)} ${(oy+ch/2-1.3).toFixed(1)}" stroke="${shadow}" stroke-width=".7" opacity=".5"/><path d="M${(cx+3.2).toFixed(1)} ${(oy-ch/2+1.3).toFixed(1)} L${(cx+4.6).toFixed(1)} ${(oy+ch/2-1.3).toFixed(1)}" stroke="${shadow}" stroke-width=".65" opacity=".4"/><ellipse cx="${(cx-3.4).toFixed(1)}" cy="${(oy-1.6).toFixed(1)}" rx="3.2" ry="1.8" fill="#d8e8f0" opacity=".22"/></g>`:'';
+ const cw=20,ch=12;
+ const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(cx+1.5).toFixed(1)}" cy="${oy+2.2}" rx="10" ry="6.4" fill="${shadow}" opacity=".5"/><rect x="${(cx-cw/2).toFixed(1)}" y="${(oy-ch/2).toFixed(1)}" width="${cw}" height="${ch}" rx="2.4" fill="${plate}" stroke="${shadow}" stroke-width="1.2"/><rect x="${(cx-cw/2+2).toFixed(1)}" y="${(oy-ch/2+1.7).toFixed(1)}" width="${cw-4}" height="${ch-3.4}" rx="1.4" fill="url(#${gid}-g)"/><rect x="${(cx-cw/2+3.4).toFixed(1)}" y="${(oy-ch/2+2.8).toFixed(1)}" width="${cw-7.2}" height="${ch-5.4}" rx="1" fill="#061014" opacity=".4"/><path d="M${(cx-2).toFixed(1)} ${(oy-ch/2+1.7).toFixed(1)} L${(cx-.2).toFixed(1)} ${(oy+ch/2-1.7).toFixed(1)}" stroke="${plate}" stroke-width=".8" opacity=".55"/><path d="M${(cx+3.6).toFixed(1)} ${(oy-ch/2+1.7).toFixed(1)} L${(cx+5).toFixed(1)} ${(oy+ch/2-1.7).toFixed(1)}" stroke="${plate}" stroke-width=".75" opacity=".45"/><ellipse cx="${(cx-4).toFixed(1)}" cy="${(oy-1.8).toFixed(1)}" rx="3.6" ry="2" fill="#c8e0ea" opacity=".28"/></g>`:'';
  const accents=(def.accents||[]).map(bar=>`<rect x="${(ox+bar.x*sc).toFixed(1)}" y="${(oy+bar.y*sc).toFixed(1)}" width="${bar.w}" height="${Math.max(1.2,bar.h*.6)}" fill="${a}" opacity=".32"/>`).join('');
  return `<svg class="ship-preview" viewBox="0 0 140 88" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${spec}${deckEl}${spine}${seam}${brush}${rivets}${tiles}${parts}${kit}${bells}${cockpit}${accents}</svg>`;
 }
