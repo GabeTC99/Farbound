@@ -5,18 +5,18 @@
 import {HULL_DEFS,getHullDef} from './hull-defs.mjs';
 
 export const CLASS_ART={
- explorer:{metal:[62,74,82],plate:[108,126,136],shadow:[24,30,36],glass:'#14343c',sheen:.42,rim:'#7ad9c8',heat:[92,58,44]},
- scout:{metal:[60,74,64],plate:[104,124,100],shadow:[22,30,22],glass:'#1a3820',sheen:.36,rim:'#9bc978',heat:[88,62,40]},
- trader:{metal:[74,68,56],plate:[128,114,90],shadow:[30,26,20],glass:'#2a2418',sheen:.28,rim:'#c4a574',heat:[102,70,44]},
- miner:{metal:[72,64,52],plate:[120,104,80],shadow:[28,24,18],glass:'#282018',sheen:.22,rim:'#b8956a',heat:[110,68,40]},
- courier:{metal:[58,74,84],plate:[100,128,142],shadow:[22,30,36],glass:'#123440',sheen:.4,rim:'#6ebfd4',heat:[86,60,46]},
- combat:{metal:[76,60,60],plate:[128,96,92],shadow:[32,22,22],glass:'#2a1818',sheen:.46,rim:'#d47868',heat:[118,62,42]},
- security:{metal:[54,66,80],plate:[92,114,136],shadow:[20,26,34],glass:'#142836',sheen:.38,rim:'#3b8cff',heat:[80,56,48]},
- pirate:{metal:[80,56,58],plate:[132,88,88],shadow:[34,20,22],glass:'#2c1416',sheen:.34,rim:'#ee918b',heat:[120,58,40]},
- freighter:{metal:[76,68,54],plate:[130,114,86],shadow:[30,26,20],glass:'#2a2216',sheen:.24,rim:'#d2b48c',heat:[104,72,46]},
- prospector:{metal:[74,64,50],plate:[124,104,76],shadow:[30,24,18],glass:'#2a2014',sheen:.2,rim:'#d4a067',heat:[112,70,40]},
- tender:{metal:[70,64,54],plate:[122,108,84],shadow:[28,24,20],glass:'#282016',sheen:.26,rim:'#e0b07a',heat:[108,72,46]},
- surveyor:{metal:[58,76,74],plate:[100,130,124],shadow:[22,32,30],glass:'#143832',sheen:.36,rim:'#8fd6c2',heat:[84,62,44]}
+ explorer:{metal:[92,108,118],plate:[148,166,176],shadow:[30,36,42],glass:'#14343c',sheen:.42,rim:'#7ad9c8',heat:[108,68,50]},
+ scout:{metal:[88,106,90],plate:[140,160,132],shadow:[28,34,26],glass:'#1a3820',sheen:.36,rim:'#9bc978',heat:[102,72,46]},
+ trader:{metal:[108,96,78],plate:[168,148,116],shadow:[36,30,24],glass:'#2a2418',sheen:.28,rim:'#c4a574',heat:[118,80,50]},
+ miner:{metal:[104,90,72],plate:[158,136,104],shadow:[34,28,22],glass:'#282018',sheen:.22,rim:'#b8956a',heat:[124,78,46]},
+ courier:{metal:[84,106,118],plate:[136,166,180],shadow:[28,36,42],glass:'#123440',sheen:.4,rim:'#6ebfd4',heat:[100,70,52]},
+ combat:{metal:[112,84,82],plate:[170,128,122],shadow:[38,26,26],glass:'#2a1818',sheen:.46,rim:'#d47868',heat:[132,72,48]},
+ security:{metal:[80,96,114],plate:[128,150,172],shadow:[26,32,40],glass:'#142836',sheen:.38,rim:'#3b8cff',heat:[94,66,54]},
+ pirate:{metal:[118,80,80],plate:[174,118,116],shadow:[40,24,26],glass:'#2c1416',sheen:.34,rim:'#ee918b',heat:[136,68,46]},
+ freighter:{metal:[110,96,76],plate:[170,148,112],shadow:[36,30,24],glass:'#2a2216',sheen:.24,rim:'#d2b48c',heat:[120,82,52]},
+ prospector:{metal:[106,90,70],plate:[164,138,100],shadow:[36,28,22],glass:'#2a2014',sheen:.2,rim:'#d4a067',heat:[128,80,46]},
+ tender:{metal:[100,90,76],plate:[160,142,110],shadow:[34,28,24],glass:'#282016',sheen:.26,rim:'#e0b07a',heat:[124,82,52]},
+ surveyor:{metal:[84,110,106],plate:[136,170,162],shadow:[28,38,36],glass:'#143832',sheen:.36,rim:'#8fd6c2',heat:[98,72,50]}
 };
 
 export const HULL_CLASS={
@@ -247,15 +247,15 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
  const len=Math.hypot(lx,ly)||1,ux=lx/len,uy=ly/len;
  const sun=ctx.createLinearGradient?.(-ux*size,-uy*size,ux*size,uy*size);
  if(sun?.addColorStop){
-  sun.addColorStop(0,`rgba(255,255,255,${lite?.1:.16+sheen*.1})`);
+  sun.addColorStop(0,`rgba(255,255,255,${lite?.12:.2+sheen*.1})`);
   sun.addColorStop(.42,'rgba(0,0,0,0)');
-  sun.addColorStop(1,`rgba(0,4,10,${lite?.42:.6})`);
+  sun.addColorStop(1,`rgba(0,4,10,${lite?.28:.4})`);
   ctx.fillStyle=sun;ctx.fill();
  }
  const ao=ctx.createLinearGradient?.(0,0,tx*2,ty*2);
  if(ao?.addColorStop){
   ao.addColorStop(0,'rgba(0,0,0,0)');
-  ao.addColorStop(1,'rgba(0,0,0,.22)');
+  ao.addColorStop(1,'rgba(0,0,0,.12)');
   ctx.fillStyle=ao;ctx.fill();
  }
  ctx.fillStyle=rgbOf(mix(hull,art.plate,.4));
@@ -350,7 +350,7 @@ export function hullPreviewSvg(ship){
  const {def,classId}=resolveHull(id);
  const art=artOf(ship.class||classId);
  const a=ship.accent||art.rim;
- const ox=68,oy=40,sc=25,tx=2.6,ty=3.6;
+ const ox=70,oy=44,sc=32,tx=2.8,ty=3.8;
  const gid='h'+id.replace(/[^a-z0-9]/g,'');
  const metal=rgbHex(...art.metal),plate=rgbHex(...art.plate),shadow=rgbHex(...art.shadow),heat=rgbHex(...(art.heat||[96,60,42]));
  const pt=([x,y],dx=0,dy=0)=>`${(ox+x*sc+dx).toFixed(1)},${(oy+y*sc+dy).toFixed(1)}`;
@@ -368,9 +368,9 @@ export function hullPreviewSvg(ship){
    <stop offset="1" stop-color="${shadow}"/>
   </linearGradient>
   <linearGradient id="${gid}-sun" x1="10%" y1="6%" x2="90%" y2="94%">
-   <stop offset="0" stop-color="#ffffff" stop-opacity=".26"/>
+   <stop offset="0" stop-color="#ffffff" stop-opacity=".32"/>
    <stop offset=".4" stop-color="#ffffff" stop-opacity="0"/>
-   <stop offset="1" stop-color="#000810" stop-opacity=".58"/>
+   <stop offset="1" stop-color="#000810" stop-opacity=".4"/>
   </linearGradient>
   <radialGradient id="${gid}-g" cx="34%" cy="28%" r="72%">
    <stop offset="0" stop-color="#8eb8c4" stop-opacity=".28"/>
@@ -416,7 +416,7 @@ export function hullPreviewSvg(ship){
  }).join('');
  const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(ox+def.cockpit.x*sc).toFixed(1)}" cy="${oy}" rx="6.4" ry="4.4" fill="${metal}" stroke="${shadow}" stroke-width="1.1"/><ellipse cx="${(ox+def.cockpit.x*sc).toFixed(1)}" cy="${oy}" rx="5.1" ry="3.4" fill="url(#${gid}-g)"/><path d="M${(ox+def.cockpit.x*sc-1).toFixed(1)} ${(oy-3.2).toFixed(1)} L${(ox+def.cockpit.x*sc+.4).toFixed(1)} ${(oy+3.2).toFixed(1)}" stroke="${shadow}" stroke-width=".7" opacity=".45"/></g>`:'';
  const accents=(def.accents||[]).map(bar=>`<rect x="${(ox+bar.x*sc).toFixed(1)}" y="${(oy+bar.y*sc).toFixed(1)}" width="${bar.w}" height="${Math.max(1.2,bar.h*.65)}" fill="${a}" opacity=".38"/>`).join('');
- return `<svg class="ship-preview" viewBox="0 0 136 84" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${deckEl}${spine}${seam}${tiles}${parts}${bells}${cockpit}${accents}</svg>`;
+ return `<svg class="ship-preview" viewBox="0 0 140 88" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${deckEl}${spine}${seam}${tiles}${parts}${bells}${cockpit}${accents}</svg>`;
 }
 
 export function sampleShipColor(classId,nx=0,ny=0){
