@@ -44,15 +44,25 @@ function iHash(str,n){let h=n|0;for(let i=0;i<str.length;i++)h=(h*31+str.charCod
 
 function drawPlanetBackdrop(ctx,width,height,s){
  const pal=SURFACE_PALETTES[s.kindId]||SURFACE_PALETTES.mineral;
+ const kind=s.kindId||'mineral';
  const sky=ctx.createLinearGradient(0,0,0,height);
  sky.addColorStop(0,pal.sky0);sky.addColorStop(.45,pal.sky1);sky.addColorStop(1,pal.sky2);
  ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
+ if(kind==='toxic'){const fog=ctx.createLinearGradient(0,height*.2,0,height*.7);fog.addColorStop(0,pal.accent+'00');fog.addColorStop(.5,pal.accent+'22');fog.addColorStop(1,pal.accent+'00');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);}
+ if(kind==='volcanic'){const glow=ctx.createRadialGradient(width*.5,height*.78,20,width*.5,height*.82,width*.55);glow.addColorStop(0,'#ff6a2818');glow.addColorStop(1,'#0000');ctx.fillStyle=glow;ctx.fillRect(0,0,width,height);}
  ctx.fillStyle=pal.dust;
  for(let i=0;i<40;i++){const x=((i*131.7)%width),y=((i*71.3)%(height*.42));ctx.fillRect(x,y,1+(i%4===0?1:0),1);}
  ctx.fillStyle=pal.terrain+'ee';
  ctx.beginPath();ctx.moveTo(0,height*.72);
- for(let x=0;x<=width;x+=24)ctx.lineTo(x,height*.68+Math.sin(x*.02+iHash(s.title||'',x))*18);
+ const amp=kind==='ocean'?8:kind==='ice'?26:kind==='volcanic'?22:kind==='arid'?14:18;
+ const freq=kind==='arid'?.012:kind==='barren'?.035:kind==='ice'?.04:.02;
+ for(let x=0;x<=width;x+=16){
+  let y=height*.68+Math.sin(x*freq+iHash(s.title||'',x))*amp;
+  if(kind==='barren'&&iHash(s.title||'c',x)>.78)y-=10;
+  ctx.lineTo(x,y);
+ }
  ctx.lineTo(width,height);ctx.lineTo(0,height);ctx.closePath();ctx.fill();
+ if(kind==='ice'){ctx.fillStyle='#e8f4ff33';ctx.beginPath();ctx.moveTo(0,height*.74);for(let x=0;x<=width;x+=20)ctx.lineTo(x,height*.7+Math.sin(x*.05)*8);ctx.lineTo(width,height);ctx.lineTo(0,height);ctx.fill();}
 }
 
 function drawLandedSkiff(ctx,x,y,scale,accent){

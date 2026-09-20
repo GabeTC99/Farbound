@@ -24,7 +24,7 @@ export function pursuitObjective(game){
  return{text:`Follow ${p.name}'s wake to ${systemName(SYSTEMS[p.to],game.s)}`,kind:p.kind};
 }
 export {STATION_ROBOT,ROBOT_LINES,buildRobotContext,pickRobotLine,speakRobot,ensureRobotState} from './station-robot.mjs';
-export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,PLANET_KINDS,STAR_TYPES,advanceOrbits,applyOrbitPhase} from './system-layout.mjs';
+export {buildSystemLayout,surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,PLANET_KINDS,PLANET_KIND_IDS,STAR_TYPES,advanceOrbits,applyOrbitPhase,pickPlanetKind,findBodyOfKind} from './system-layout.mjs';
 export const VERSION=2;
 const shipIds=SHIPS.map(s=>s.id),factionIds=FACTIONS.map(f=>f.id),guildIds=GUILDS.map(g=>g.id),numeric=x=>Number.isFinite(x)&&x>=0&&x<=1e12;
 const beamDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1):0;return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy));};

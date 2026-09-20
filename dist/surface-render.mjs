@@ -7,6 +7,9 @@ export const SURFACE_PALETTES={
  ice:{sky0:'#0a1420',sky1:'#1a3048',sky2:'#4a6a80',terrain:'#152030',stroke:'#c8e0f0',hills:['#101c28','#1e3040'],dust:'#d8ecff66',skiff:'#1a2838',skiffLine:'#d0e8f8',floor:'#152030',accent:'#c8e0f0'},
  metal:{sky0:'#0a0c10',sky1:'#1a2030',sky2:'#3a4450',terrain:'#1a2028',stroke:'#a8b0b8',hills:['#141820','#242a34'],dust:'#c8d0d866',skiff:'#2a3038',skiffLine:'#d0d8e0',floor:'#1a2028',accent:'#a8b0b8'},
  mineral:{sky0:'#07131f',sky1:'#183141',sky2:'#3a4545',terrain:'#142c31',stroke:'#87b3ac',hills:['#233f49','#2a474e'],dust:'#bbd5e066',skiff:'#25444f',skiffLine:'#b7eee0',floor:'#142c31',accent:'#87b3ac'},
+ volcanic:{sky0:'#180808',sky1:'#3a1810',sky2:'#6a2a18',terrain:'#2a1410',stroke:'#ff7040',hills:['#241008','#3a1c10'],dust:'#ff8a4055',skiff:'#3a2018',skiffLine:'#ffb080',floor:'#2a1410',accent:'#ff7040'},
+ barren:{sky0:'#080808',sky1:'#141414',sky2:'#2a2824',terrain:'#1c1a18',stroke:'#b0a898',hills:['#161412','#242220'],dust:'#c8c0b055',skiff:'#2a2824',skiffLine:'#d0c8bc',floor:'#1c1a18',accent:'#b0a898'},
+ toxic:{sky0:'#101408',sky1:'#2a3010',sky2:'#4a5820',terrain:'#222810',stroke:'#d4e060',hills:['#1a2010','#2e3414'],dust:'#d8e07066',skiff:'#2a3018',skiffLine:'#e8f090',floor:'#222810',accent:'#d4e060'},
  gas:{sky0:'#120818',sky1:'#2a1840',sky2:'#4a3860',terrain:'#1a1428',stroke:'#b8a0d8',hills:['#221830','#2e2040'],dust:'#d0b8f055',skiff:'#2a2038',skiffLine:'#e0d0f8',floor:'#1a1428',accent:'#b8a0d8'},
  icegiant:{sky0:'#081018',sky1:'#183048',sky2:'#3a5870',terrain:'#142030',stroke:'#88b8d0',hills:['#101c28','#1e3040'],dust:'#a8d0e066',skiff:'#1a2838',skiffLine:'#c0e0f0',floor:'#142030',accent:'#88b8d0'}
 };
@@ -26,6 +29,25 @@ export function renderSurface(ctx,width,height,s,clock,stats){
  ctx.beginPath();ctx.moveTo(0,height);for(let x=0;x<=width+8;x+=8){const wx=cameraX+(x-width/2)/scale;ctx.lineTo(x,sy(terrainAt(wx,s.seed)));}ctx.lineTo(width,height);ctx.closePath();ctx.fillStyle=pal.terrain;ctx.fill();
  ctx.strokeStyle=pal.stroke;ctx.lineWidth=2.6;ctx.beginPath();
  for(let x=0;x<=width+8;x+=8){const wx=cameraX+(x-width/2)/scale;if(x===0)ctx.moveTo(x,sy(terrainAt(wx,s.seed)));else ctx.lineTo(x,sy(terrainAt(wx,s.seed)));}ctx.stroke();
+ // Kind cues on the landing plane — same terrain math, different surface language
+ if(s.kindId==='volcanic'){
+  ctx.strokeStyle='#ff6a2888';ctx.lineWidth=1.6;
+  for(let i=0;i<5;i++){const wx=cameraX+(i/4-.1)*width/scale+((s.seed+i*31)%60);const gx=sx(wx),gy=sy(terrainAt(wx,s.seed));ctx.beginPath();ctx.moveTo(gx-18,gy-2);ctx.lineTo(gx+4,gy-16);ctx.lineTo(gx+22,gy);ctx.stroke();}
+  const glow=ctx.createLinearGradient(0,height*.55,0,height);glow.addColorStop(0,'#0000');glow.addColorStop(1,'#ff4a1818');ctx.fillStyle=glow;ctx.fillRect(0,0,width,height);
+ }else if(s.kindId==='arid'){
+  ctx.strokeStyle=pal.stroke+'55';ctx.lineWidth=1.2;
+  for(let i=0;i<7;i++){const y=height*.62+i*10;ctx.beginPath();for(let x=0;x<=width;x+=18)ctx.lineTo(x,y+Math.sin(x*.03+i+s.seed)*3);ctx.stroke();}
+ }else if(s.kindId==='ice'){
+  ctx.fillStyle='#e8f4ff55';
+  for(let i=0;i<8;i++){const wx=cameraX+(i/7-.05)*width/scale+((s.seed+i*17)%40);const gx=sx(wx),gy=sy(terrainAt(wx,s.seed));ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx-5,gy-14-(i%3)*4);ctx.lineTo(gx+6,gy);ctx.fill();}
+ }else if(s.kindId==='ocean'){
+  const sheen=ctx.createLinearGradient(0,height*.38,0,height*.52);sheen.addColorStop(0,'#0000');sheen.addColorStop(.5,'#9ad4d822');sheen.addColorStop(1,'#0000');ctx.fillStyle=sheen;ctx.fillRect(0,0,width,height);
+ }else if(s.kindId==='toxic'){
+  const fog=ctx.createLinearGradient(0,0,0,height);fog.addColorStop(0,'#d4e06014');fog.addColorStop(1,'#8a9a4022');ctx.fillStyle=fog;ctx.fillRect(0,0,width,height);
+ }else if(s.kindId==='barren'||s.kindId==='metal'){
+  ctx.strokeStyle=pal.stroke+'66';ctx.lineWidth=1.3;
+  for(let i=0;i<6;i++){const wx=cameraX+(i/5-.08)*width/scale+((s.seed+i*41)%50);const gx=sx(wx),gy=sy(terrainAt(wx,s.seed));ctx.beginPath();ctx.ellipse(gx,gy-2,10+(i%3)*3,4,0,0,Math.PI*2);ctx.stroke();}
+ }
  // Sparse rock notches along the ground line
  ctx.fillStyle=pal.stroke+'88';
  for(let i=0;i<9;i++){

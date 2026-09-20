@@ -1,0 +1,15 @@
+{
+  "release": "2.14.0",
+  "name": "Planet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Local-space worlds use kind-driven albedo instead of one globe with a tint swap: continents and ice caps, dune/canyon desert, cratered barren and metal, lava cracks, toxic cloud decks, and banded giants with storms.",
+    "Atlas kinds: earth-like, ocean, arid, ice, metal-rich, mineral, volcanic, barren, toxic, gas giant, and ice giant. Classification still follows orbit and star class — no Earth-like gas giants.",
+    "Atmosphere limbs, star-facing terminators, and two-band rings. Surface and on-foot sites pick up type cues. Flight, docking, and landing rules are unchanged.",
+    "DEV → Planet atlas hops to a body of each kind for review."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

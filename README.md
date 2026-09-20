@@ -12,9 +12,18 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Farbound/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.13.2 lands, the welcome chip should read **Living Concourse 2.13.2**. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.14.0 lands, the welcome chip should read **Planet Atlas 2.14.0**. Hard-refresh if an old service worker still shows Living Concourse 2.13.2. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
+
+## Frontiers 2.14 — Planet Atlas
+
+### Candidate 2.14.0
+
+- **Kind-driven globes:** local-space planets are no longer one shaded disk with a tint. Each kind has its own albedo — continents and clouds, dune belts, ice cracks, crater fields, lava, toxic decks, and banded giants with storms.
+- **Atlas roster:** earth-like, ocean, arid, ice, metal-rich, mineral, volcanic, barren, toxic, gas giant, and ice giant. Orbit and star class still gate the pick (habitable-band terra around F/G/K only; inner volcanic/toxic/metal; outer ice/barren/giants). Gas and ice giants stay non-landable.
+- **Atmosphere and light:** colored limb haze by kind, star-facing terminator, two-band rings. Surface flight and on-foot sites pick up matching sky/terrain cues.
+- Same docking, landing flare, and survey loop. DEV → Planet atlas hops to a world of each kind.
 
 ## Frontiers 2.13 — Living Concourse
 
@@ -62,7 +71,7 @@ Godot-shell cohesion on the GitHub Pages beta (same loops, tighter instruments):
 
 ### Candidate 2.8.0
 
-- **Alive worlds (FB-003):** earth-like, ocean, arid, ice, metal-rich, mineral, gas giant, and ice giant bodies. Terrestrials draw seeded landmasses; only giants keep atmospheric banding. Physics-tied density, mass, gravity, temperature band, atmosphere, and composition.
+- **Alive worlds (FB-003 / 2.14 Planet Atlas):** earth-like, ocean, arid, ice, metal-rich, mineral, volcanic, barren, toxic, gas giant, and ice giant bodies. Each kind has its own albedo, limb, and surface cues — not a tint swap. Physics-tied density, mass, gravity, temperature band, atmosphere, and composition.
 - **Moons:** some planets host one or two rocky/ice/metal moons. Moons are surveyable and landable; gas and ice giants are labeled **non-landable** and refuse landing.
 - **Spectrum Scanner:** after the Discovery Pulse, target a body and **SCAN** from long range to analyze it (~2.5s). The body dossier shows class, landable status, gravity, temp, atmosphere, composition, rings, and moon count. Approach and slow below 100 m/s for the detailed cartographics survey (bonus if already spectrum-scanned).
 - **Orbital groundwork (FB-015):** bodies store orbit radius/angle, host star, mass, and period for a future orbital-mechanics update; local space positions stay fixed in 2.8.
@@ -144,7 +153,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.13.2). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.14.0). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -178,6 +187,7 @@ node --check dist/app.js
 node tests/gameplay.mjs
 node tests/frontiers.mjs
 node tests/exploration.mjs
+node tests/planets.mjs
 node tests/cloud-sync.mjs
 node tests/offline.mjs
 ```

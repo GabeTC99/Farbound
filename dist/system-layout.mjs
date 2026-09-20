@@ -4,17 +4,21 @@
  * Planetary Rework 2.8 — physics-constrained kinds, moons, orbital groundwork fields.
  */
 export const PLANET_KINDS={
- earthlike:{label:'Earth-like world',class:'terrestrial',landable:true,colors:['#3a7a9a','#4a8f6a','#2f6f88','#5a9a78'],r:[150,215],value:[950,1700],density:[.95,1.2],atmosphere:'breathable',composition:['silicate','water','nitrogen'],temp:'temperate'},
- ocean:{label:'Ocean world',class:'terrestrial',landable:true,colors:['#3d7a9a','#559dac','#2f6f88','#4a8fb0'],r:[150,230],value:[700,1400],density:[.85,1.05],atmosphere:'dense',composition:['water','salt','silicate'],temp:'temperate'},
+ earthlike:{label:'Earth-like world',class:'terrestrial',landable:true,colors:['#2f6f88','#3d8a6a','#1e5a7a','#4a8f6a'],r:[150,215],value:[950,1700],density:[.95,1.2],atmosphere:'breathable',composition:['silicate','water','nitrogen'],temp:'temperate'},
+ ocean:{label:'Ocean world',class:'terrestrial',landable:true,colors:['#156080','#2a7a9a','#0c4068','#4aa0b8'],r:[150,230],value:[700,1400],density:[.85,1.05],atmosphere:'dense',composition:['water','salt','silicate'],temp:'temperate'},
  arid:{label:'Arid world',class:'terrestrial',landable:true,colors:['#c5755f','#b8895a','#9a6b48','#d4a574'],r:[140,210],value:[650,1250],density:[.9,1.15],atmosphere:'thin',composition:['silicate','iron oxide'],temp:'hot'},
  ice:{label:'Ice world',class:'terrestrial',landable:true,colors:['#a8c4d8','#8eb0c8','#c5d8e6','#7a9bb0'],r:[130,200],value:[750,1350],density:[.7,.95],atmosphere:'thin',composition:['water ice','ammonia','silicate'],temp:'frozen'},
  metal:{label:'Metal-rich world',class:'terrestrial',landable:true,colors:['#8a9098','#6a7080','#a8a0a0','#5a6870'],r:[120,185],value:[900,1650],density:[1.35,1.9],atmosphere:'none',composition:['iron','nickel','heavy metals'],temp:'hot'},
  mineral:{label:'Mineral world',class:'terrestrial',landable:true,colors:['#c68864','#aaa6c6','#bfa976','#8a7a6a'],r:[145,220],value:[800,1500],density:[1.0,1.35],atmosphere:'thin',composition:['silicate','basalt','ore'],temp:'cool'},
- gas:{label:'Gas giant',class:'giant',landable:false,colors:['#c4a06a','#8b6fa8','#d4b896','#6a8a9a'],r:[240,360],value:[900,1600],density:[.12,.28],atmosphere:'hydrogen',composition:['hydrogen','helium','methane'],temp:'cold'},
+ volcanic:{label:'Volcanic world',class:'terrestrial',landable:true,colors:['#4a2018','#6a2818','#3a1810','#8a3820'],r:[130,200],value:[800,1500],density:[.95,1.3],atmosphere:'thin',composition:['basalt','sulfur','silicate'],temp:'scorching'},
+ barren:{label:'Barren world',class:'terrestrial',landable:true,colors:['#8a8580','#6a6864','#9a948c','#5a5854'],r:[110,180],value:[500,1000],density:[.8,1.2],atmosphere:'none',composition:['silicate','regolith']},
+ toxic:{label:'Toxic world',class:'terrestrial',landable:true,colors:['#8a9a40','#c4b86a','#6a8848','#a8a050'],r:[140,210],value:[700,1300],density:[.9,1.2],atmosphere:'corrosive',composition:['carbon dioxide','sulfuric acid','nitrogen'],temp:'hot'},
+ gas:{label:'Gas giant',class:'giant',landable:false,colors:['#c4a06a','#b07a48','#d4b896','#9a7048'],r:[240,360],value:[900,1600],density:[.12,.28],atmosphere:'hydrogen',composition:['hydrogen','helium','methane'],temp:'cold'},
  icegiant:{label:'Ice giant',class:'giant',landable:false,colors:['#6a9ab8','#7a88b0','#5a88a8','#88a8c0'],r:[210,300],value:[850,1500],density:[.2,.4],atmosphere:'hydrogen',composition:['hydrogen','helium','water ice','methane'],temp:'frozen'}
 };
 
-const MOON_KINDS=['mineral','ice','metal','arid'];
+export const PLANET_KIND_IDS=Object.keys(PLANET_KINDS);
+const MOON_KINDS=['barren','ice','metal','mineral'];
 const MOON_LETTERS=['a','b','c'];
 
 /** Spectral classes — weighted pick; colors + heat scale scoop/damage feel. */
@@ -65,6 +69,16 @@ export function isLandableBody(p){
 }
 export const isLandablePlanet=isLandableBody;
 
+/** First planet (else moon) of a kind across the chart — DEV / atlas hops. */
+export function findBodyOfKind(kindId,systems){
+ for(const sys of systems||[]){
+  const layout=buildSystemLayout(sys);
+  const body=layout.planets.find(p=>p.kindId===kindId)||(layout.moons||[]).find(p=>p.kindId===kindId);
+  if(body)return{sys,body,layout};
+ }
+ return null;
+}
+
 function pickStarCount(r){
  const roll=r();
  if(roll<.05)return 3;
@@ -97,35 +111,37 @@ function pickStationCount(r,sys){
 /**
  * Physics-constrained kind pick from orbital index, star class, and RNG.
  * orbitFrac: 0 = innermost, 1 = outermost among this system's planets.
+ * Same r() count per branch — layout positions stay stable when pools change.
  */
-function pickKind(r,index,count,spectral){
+export function pickPlanetKind(r,index,count,spectral){
  const orbitFrac=count<=1?0.45:index/(count-1);
  const hotStar=spectral==='O'||spectral==='B'||spectral==='A';
  const mildStar=spectral==='F'||spectral==='G'||spectral==='K';
  const coolStar=spectral==='M';
- // Outer worlds: giants more likely
+ // Outer worlds: giants more likely — never terrestrials dressed as giants
  if(count>1&&index===count-1&&r()<(mildStar?.32:coolStar?.38:.22)){
   return r()<.55?'gas':'icegiant';
  }
  if(orbitFrac>.72&&r()<.4)return r()<.5?'gas':'icegiant';
- // Inner: metal / arid / mineral
+ // Inner: volcanic / metal / arid / toxic / barren — too hot for terra
  if(orbitFrac<.28){
-  const pool=hotStar?['metal','mineral','arid','arid']:['metal','mineral','arid','mineral'];
+  const pool=hotStar?['volcanic','metal','arid','toxic']:['metal','barren','volcanic','arid'];
   return pool[Math.floor(r()*pool.length)];
  }
- // Habitable-band mid orbits near F/G/K
+ // Habitable-band mid orbits near F/G/K only
  if(orbitFrac>=.28&&orbitFrac<=.58&&mildStar&&r()<.62){
   return r()<.55?'earthlike':'ocean';
  }
  if(orbitFrac>=.28&&orbitFrac<=.58&&coolStar&&r()<.35)return r()<.5?'ocean':'ice';
  // Mid-outer rocky / ice
  if(orbitFrac>.55){
-  const pool=['ice','mineral','arid','ice'];
+  const pool=['ice','barren','mineral','ice'];
   return pool[Math.floor(r()*pool.length)];
  }
- const mid=['mineral','arid','ocean','earthlike'];
+ const mid=['mineral','toxic','ocean','earthlike'];
  return mid[Math.floor(r()*mid.length)];
 }
+const pickKind=pickPlanetKind;
 
 /** Collapse IEEE -0 so position asserts and physics stay stable. */
 function nz(v){return v+0;}
@@ -149,6 +165,13 @@ function pickStarClass(r,isPrimary){
 }
 
 function tempBandFor(kindId,def,orbitFrac){
+ if(kindId==='volcanic')return orbitFrac<.4?'scorching':'hot';
+ if(kindId==='barren'){
+  if(orbitFrac<.25)return 'scorching';
+  if(orbitFrac<.5)return 'hot';
+  if(orbitFrac<.7)return 'cool';
+  return 'frozen';
+ }
  if(def.temp)return def.temp;
  if(orbitFrac<.25)return 'scorching';
  if(orbitFrac<.5)return 'hot';
