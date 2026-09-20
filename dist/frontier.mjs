@@ -6,7 +6,7 @@ import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan,eventObjective,salvageDerelict,createWreckLayout} from './dynamic-events.mjs';
-import {speakRobot,ensureRobotState} from './station-robot.mjs';
+import {speakRobot,ensureRobotState,STATION_ROBOT} from './station-robot.mjs';
 import {surveyWorldIds,systemLayoutMeta,isLandablePlanet,isLandableBody,advanceOrbits,applyOrbitPhase} from './system-layout.mjs';
 export * from './core.mjs';
 export {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
@@ -219,12 +219,16 @@ export class Game extends FlightGame{
  enterStationDeck(){
   if(!this.s.docked||!this.sys.hasStation){this.onfoot=null;return null;}
   const dock=this.station||this.stations?.find(s=>s.type==='station');
+  const fac=FACTIONS.find(f=>f.id===this.sys.faction);
   const layout=createStationLayout({
    name:dock?.name||this.sys.station,
    roleLabel:dock?.roleLabel||(this.sys.prison?'PRISON BARGE':'ORBITAL STATION'),
    prison:!!this.sys.prison,detained:!!this.s.detained,
    dockId:this.s.dockId||dock?.id||'station',
-   seed:this.s.system*97+(this.s.dockId||'station').length*13
+   seed:this.s.system*97+(this.s.dockId||'station').length*13,
+   faction:fac?.id||this.sys.faction||null,
+   factionColor:fac?.color||null,
+   robotName:STATION_ROBOT.nameFor(this.sys)
   });
   this.onfoot=createOnFoot(layout,this.s.stationPos);
   return this.onfoot;
@@ -521,7 +525,7 @@ export class Game extends FlightGame{
  refreshRoute(){if(this.s.route)this.s.route.path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range)||[];}
  jumpNext(){if(!this.s.route)return false;const path=findRoute(this.s.system,this.s.route.destination,getStats(this.s).range);if(!path?.length){this.notify('Route complete.');return false;}this.s.route.path=path;return this.jumpTo(path[0]);}
  jumpTo(id){if(this.surface){this.notify('Return to orbit before jumping.');return false;}const ok=super.jumpTo(id);if(ok){this.scooping=false;this.discoveryScan=null;this.spectrumScan=null;}return ok;}
- dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.s.heat=25;this.s.stationPos=null;this.enterStationDeck();const st=getStats(this.s),needService=this.s.fuel<st.fuel*.92||this.s.hull<st.hull*.95;if(!this.s.briefed){this.s.briefed=true;this.s.tutorial=Math.max(this.s.tutorial,3);this.notify(pending||this.s.records.length?'Exploration data is at Cartographics. Fuel and hull top off at Market — first two buttons on the counter.':'Docking complete. Walk to Market for refuel and repair, then Contracts for work.');}else if(pending||this.s.records.length)this.notify('Exploration data ready for review at Cartographics. Walk the deck to Cartographics.');else if(needService)this.notify('Market counter: Refuel and Repair are the two buttons at the top of the desk.');else this.notify('Docking complete. Walk the station deck to visit services.');speakRobot(this,'greeting');}else if(ok&&!this.onfoot)this.enterStationDeck();return ok;}
+ dock(){if(this.jump){this.notify('Wait for the fold jump to finish.');return false;}if(this.surface){this.notify('Return to orbit first.');return false;}if(!this.sys.hasStation){this.notify('No station here. Scoop fuel at the star, or plot a route to a relay.');return false;}const wasDocked=this.s.docked,pending=this.s.data;this.s.data=0;const ok=super.dock();this.s.data=pending;if(ok&&!wasDocked){this.scooping=false;this.scoopRate=0;this.discoveryScan=null;this.spectrumScan=null;this.s.heat=25;this.s.stationPos=null;this.enterStationDeck();const st=getStats(this.s),needService=this.s.fuel<st.fuel*.92||this.s.hull<st.hull*.95;if(!this.s.briefed){this.s.briefed=true;this.s.tutorial=Math.max(this.s.tutorial,3);this.notify(pending||this.s.records.length?'Exploration data is at Cartographics. Fuel and hull top off at Market — first two buttons on the counter.':'Docking complete. Walk to Market for refuel and repair, then Contracts for work.');}else if(pending||this.s.records.length)this.notify('Exploration data ready for review at Cartographics. Walk the deck to Cartographics.');else if(needService)this.notify('Market counter: Refuel and Repair are the two buttons at the top of the desk.');else this.notify('Docking complete. Walk the concourse to visit services.');speakRobot(this,'greeting');}else if(ok&&!this.onfoot)this.enterStationDeck();return ok;}
  talkRobot(mode='talk'){if(!this.s.docked){this.notify('Dock before chatting with station services.');return null;}return speakRobot(this,mode==='tip'?'tip':mode==='greeting'?'greeting':'talk');}
  service(kind){const ok=super.service(kind);if(ok)this.s.tutorial=Math.max(this.s.tutorial||0,4);return ok;}
  get visiblePlanets(){return this.planets.filter(p=>!this.sys.uncharted||this.s.systemScans?.includes(this.s.system)||this.s.scanned.includes(p.id)||(this.s.spectrumScanned||[]).includes(p.id));}

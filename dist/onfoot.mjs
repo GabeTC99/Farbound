@@ -1,4 +1,4 @@
-import {pointInHull} from './station-layout.mjs';
+import {pointInHull,pickStationChat} from './station-layout.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
@@ -21,8 +21,11 @@ export function createOnFoot(layout,saved=null){
   walls:layout.walls||[],
   windows:layout.windows||[],
   signs:layout.signs||[],
+  props:layout.props||[],
+  faction:layout.faction||null,
+  factionColor:layout.factionColor||null,
   zones:layout.zones,
-  npcs:layout.npcs.map(n=>({...n,phase:n.phase||0,facing:0,walk:0,moving:0,pause:0})),
+  npcs:layout.npcs.map(n=>({...n,phase:n.phase||0,facing:n.facing||0,walk:0,moving:0,pause:n.pause||0,line:n.line||null,lineUntil:n.lineUntil||0})),
   spawn:layout.spawn,
   x,y,vx:0,vy:0,facing:layout.spawn.facing||0,radius:12,throttle:0,walk:0
  };
@@ -80,9 +83,29 @@ export function updateOnFoot(s,dt,input={}){
  if(Math.abs(moved.y-s.y)<.01)s.vy=0;
  s.x=moved.x;s.y=moved.y;
  for(const n of s.npcs){
+  if((n.lineUntil||0)>0){n.lineUntil-=dt;if(n.lineUntil<=0)n.line=null;}
   const path=n.path||[];
-  if(path.length<2)continue;
-  if((n.pause||0)>0){n.pause-=dt;n.moving=0;continue;}
+  if(path.length<2){
+   n.moving=0;
+   n.walk=(n.walk||0)+dt*.35;
+   if(n.role==='talker'||n.role==='robot'||n.role==='clerk'||n.role==='tech'||n.role==='sitter'){
+    if((n.lineUntil||0)<=0&&((n.phase=(n.phase||0)+dt)>2.4)){
+     n.phase=0;
+     n.line=pickStationChat(n,s.x+s.y+(n.x||0));
+     n.lineUntil=2.2+(n.id||'').length%3;
+    }
+    if(n.role==='clerk'&&s)n.facing=Math.atan2(s.y-n.y,s.x-n.x);
+   }
+   continue;
+  }
+  if((n.pause||0)>0){
+   n.pause-=dt;n.moving=0;
+   if((n.lineUntil||0)<=0&&n.pause>0.15&&n.pause<0.35){
+    n.line=pickStationChat(n,n.phase||0);
+    n.lineUntil=1.8;
+   }
+   continue;
+  }
   n.phase=(n.phase||0)+dt*(n.speed||.22);
   const t=n.phase%path.length;
   const i=Math.floor(t)%path.length,j=(i+1)%path.length,f=t-Math.floor(t);
