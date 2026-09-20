@@ -136,8 +136,15 @@ export function drawHullDef(ctx,def,size,color,accent,opts={}){
   if(boost){ctx.globalAlpha=.28;ctx.beginPath();ctx.arc(-size-len*.35,0,8+thrust*10,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
  }
- ctx.fillStyle='#152833';ctx.strokeStyle=color;ctx.lineWidth=1.8;
- pathBody(ctx,def.body,size);ctx.fill();ctx.stroke();
+ const metal=opts.metal||'#1a303c';
+ ctx.fillStyle=metal;ctx.strokeStyle=color;ctx.lineWidth=1.8;
+ pathBody(ctx,def.body,size);ctx.fill();
+ ctx.save();pathBody(ctx,def.body,size);ctx.clip();
+ const lx=opts.lightX??-1,ly=opts.lightY??-.7,len=Math.hypot(lx,ly)||1;
+ const g=ctx.createLinearGradient(-lx/len*size,-ly/len*size,lx/len*size,ly/len*size);
+ g.addColorStop(0,'#ffffff2e');g.addColorStop(.4,'#0000');g.addColorStop(.72,'#00040c66');g.addColorStop(1,'#00040cc4');
+ ctx.fillStyle=g;ctx.fill();ctx.restore();
+ pathBody(ctx,def.body,size);ctx.stroke();
  for(const p of def.parts||[]){
   ctx.globalAlpha=p.alpha??.55;ctx.strokeStyle=color;ctx.fillStyle='#152833';
   if(p.type==='stroke'){ctx.beginPath();p.pts.forEach(([x,y],i)=>{const px=x*size,py=y*size;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});ctx.stroke();}
@@ -162,25 +169,35 @@ export function drawHullDef(ctx,def,size,color,accent,opts={}){
  }
 }
 
+function hexRgb(h){
+ const n=String(h||'#88a').replace('#','');
+ const s=n.length===3?n.split('').map(ch=>ch+ch).join(''):n;
+ return[parseInt(s.slice(0,2),16)||0,parseInt(s.slice(2,4),16)||0,parseInt(s.slice(4,6),16)||0];
+}
+function rgbHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v|0)).toString(16).padStart(2,'0')).join('');}
+function mixHex(a,b,t){const A=hexRgb(a),B=hexRgb(b);return rgbHex(A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,A[2]+(B[2]-A[2])*t);}
+
 /** Hangar SVG preview built from the same hull def. */
 export function hullPreviewSvg(ship){
  const def=getHullDef(ship.id),c=ship.color||'#b7f0e4',a=ship.accent||c;
- const ox=62,oy=36,sc=26;
+ const ox=62,oy=36,sc=26,gid='p'+(ship.id||'wren');
+ const metal=mixHex(c,'#102028',.78),hi=mixHex(c,'#ffffff',.28),lo=mixHex(c,'#05080c',.82);
  const pt=([x,y])=>`${(ox+x*sc).toFixed(1)},${(oy+y*sc).toFixed(1)}`;
  const poly=pts=>pts.map(pt).join(' ');
- const body=`<polygon points="${poly(def.body)}" fill="#142833" stroke="${c}" stroke-width="2"/>`;
+ const defs=`<defs><linearGradient id="${gid}" x1="10%" y1="5%" x2="90%" y2="95%"><stop offset="0" stop-color="${hi}"/><stop offset=".4" stop-color="${metal}"/><stop offset="1" stop-color="${lo}"/></linearGradient></defs>`;
+ const body=`<polygon points="${poly(def.body)}" fill="url(#${gid})" stroke="${c}" stroke-width="2"/>`;
  const parts=(def.parts||[]).map(p=>{
   if(p.type==='stroke')return `<polyline points="${poly(p.pts)}" fill="none" stroke="${a}" stroke-width="1.4" opacity="${p.alpha??.55}"/>`;
-  if(p.type==='rect')return `<rect x="${(ox+p.x*sc).toFixed(1)}" y="${(oy+p.y*sc).toFixed(1)}" width="${(p.w*sc).toFixed(1)}" height="${(p.h*sc).toFixed(1)}" fill="none" stroke="${a}" stroke-width="1.3" opacity="${p.alpha??.5}"/>`;
-  if(p.type==='poly')return `<polygon points="${poly(p.pts)}" fill="#142833" stroke="${c}" stroke-width="1.5"/>`;
-  if(p.type==='arc')return `<circle cx="${(ox+p.x*sc).toFixed(1)}" cy="${(oy+p.y*sc).toFixed(1)}" r="${(p.r*sc).toFixed(1)}" fill="${c}" fill-opacity=".2" stroke="${a}" stroke-width="1.3"/>`;
+  if(p.type==='rect')return `<rect x="${(ox+p.x*sc).toFixed(1)}" y="${(oy+p.y*sc).toFixed(1)}" width="${(p.w*sc).toFixed(1)}" height="${(p.h*sc).toFixed(1)}" fill="${metal}" fill-opacity=".3" stroke="${a}" stroke-width="1.3" opacity="${p.alpha??.5}"/>`;
+  if(p.type==='poly')return `<polygon points="${poly(p.pts)}" fill="${metal}" stroke="${c}" stroke-width="1.5"/>`;
+  if(p.type==='arc')return `<circle cx="${(ox+p.x*sc).toFixed(1)}" cy="${(oy+p.y*sc).toFixed(1)}" r="${(p.r*sc).toFixed(1)}" fill="${c}" fill-opacity=".22" stroke="${a}" stroke-width="1.3"/>`;
   return '';
  }).join('');
- const cockpit=def.cockpit?`<circle cx="${(ox+def.cockpit.x*sc).toFixed(1)}" cy="${oy}" r="4" fill="#d8fff8"/>`:'';
+ const cockpit=def.cockpit?`<ellipse cx="${(ox+def.cockpit.x*sc).toFixed(1)}" cy="${oy}" rx="5" ry="3.4" fill="#d8fff8"/>`:'';
  const flames=(def.nozzles||[]).map(([nx,ny],i)=>{
   const x=ox+nx*sc,y=oy+ny*sc,op=i?'.4':'.65';
   return `<path d="M${x.toFixed(1)} ${(y-5).toFixed(1)} L${(x-14).toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${(y+5).toFixed(1)}Z" fill="${a}" opacity="${op}"/>`;
  }).join('');
  const accents=(def.accents||[]).map(bar=>`<rect x="${(ox+bar.x*sc).toFixed(1)}" y="${(oy+bar.y*sc).toFixed(1)}" width="${bar.w}" height="${bar.h}" fill="${a}" opacity=".7"/>`).join('');
- return `<svg class="ship-preview" viewBox="0 0 120 72" aria-hidden="true">${body}${parts}${cockpit}${flames}${accents}</svg>`;
+ return `<svg class="ship-preview" viewBox="0 0 120 72" aria-hidden="true">${defs}${body}${parts}${cockpit}${flames}${accents}</svg>`;
 }

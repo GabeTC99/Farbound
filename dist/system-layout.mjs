@@ -69,6 +69,18 @@ export function isLandableBody(p){
 }
 export const isLandablePlanet=isLandableBody;
 
+export const STAR_CLASS_IDS=Object.keys(STAR_TYPES);
+
+/** First star of a spectral class across the chart — DEV / atlas hops. */
+export function findStarOfClass(spectral,systems){
+ for(const sys of systems||[]){
+  const layout=buildSystemLayout(sys);
+  const star=layout.stars.find(s=>s.spectral===spectral);
+  if(star)return{sys,star,layout};
+ }
+ return null;
+}
+
 /** First planet (else moon) of a kind across the chart — DEV / atlas hops. */
 export function findBodyOfKind(kindId,systems){
  for(const sys of systems||[]){

@@ -1,0 +1,15 @@
+{
+  "release": "2.15.0",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Every flyable hull, hangar preview, and local-space NPC craft (security, pirate, courier, freighter, prospector, tender, surveyor) uses class-driven metal, lighting, and silhouette cues instead of a flat one-tint dart.",
+    "Stars paint spectral photospheres — granulation, limb darkening, corona, and class-colored chromospheres for O through M — so a blue giant no longer reads as a yellow disc.",
+    "DEV → Fleet atlas hops a hull into local space; DEV → Stellar atlas sits off each spectral class. Flight, docking, hitboxes, and menus are unchanged.",
+    "Service worker cache bumped to farbound-v2.15.0 so Pages picks up the new render modules."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

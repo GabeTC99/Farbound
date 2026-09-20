@@ -1,6 +1,6 @@
 import {SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,jumpDistance,jumpCost,findRoute,systemName,guildProgress,operationDetails,FACTIONS,GUILDS,MODULES,moduleSlots,systemLayoutMeta,systemSky,marketBulletin,systemPresence,bestExport} from './frontier.mjs';
 import {STATION_ROBOT,ensureRobotState} from './station-robot.mjs';
-import {hullPreviewSvg} from './hull-defs.mjs';
+import {hullPreviewSvg} from './ship-render.mjs';
 const fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),row=(a,b)=>`<div class="data-row"><span>${a}</span>${b}</div>`;
 function robotFaceSvg(expression='neutral'){
  return `<svg class="robot-portrait" viewBox="0 0 148 104" aria-hidden="true">
