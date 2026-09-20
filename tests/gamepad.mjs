@@ -99,15 +99,17 @@ const app = await readFile(path.join(root, 'app.js'), 'utf8');
 assert.match(app, /pollGamepad\(\)/);
 assert.match(app, /xboxHelpRow\(\)/);
 assert.match(app, /Install app/);
+assert.match(app, /Game update/);
+assert.match(app, /data-action="update-app"/);
 assert.equal(/Install on Android/.test(app), false);
 assert.match(app, /TOUCH \+ KEYBOARD \+ CONTROLLER/);
 
 const release = await readFile(path.join(root, 'release.mjs'), 'utf8');
-assert.match(release, /export const RELEASE='2\.15\.5'/);
+assert.match(release, /export const RELEASE='2\.15\.6'/);
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 assert.match(sw, /gamepad\.mjs/);
-assert.match(sw, /farbound-v2\.15\.5'/);
+assert.match(sw, /farbound-v2\.15\.6'/);
 
 assert.match(app, /function scrollPanelBy/);
 assert.match(app, /function revealInPanel/);

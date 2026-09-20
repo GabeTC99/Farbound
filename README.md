@@ -12,11 +12,16 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Farbound/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.15.5 lands, the welcome chip should read **Fleet Atlas 2.15.5**. Hard-refresh if an old service worker still shows 2.15.4 hitchy flight or a blurry Solace primary. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. After 2.15.6 lands, the welcome chip should read **Fleet Atlas 2.15.6**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
 ## Frontiers 2.15 — Fleet Atlas
+
+### Candidate 2.15.6
+
+- **Update from Flight menu:** one tap unregisters the service worker, clears stale `farbound-*` caches, and reloads onto the newly deployed Pages build. A waiting worker or a newer `release.mjs` chip highlights the button as **Update available**.
+- Offline play of the current build is unchanged until you tap Update. Flight, docking, and atlas art are unchanged from 2.15.5.
 
 ### Candidate 2.15.5
 
@@ -187,7 +192,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.15.5). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.15.6). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -210,7 +215,7 @@ Frontiers writes **farbound-save-v2**. On first launch it copies and migrates a 
 - **Optional cloud sync:** when the build’s Supabase keys are filled in (`docs/CLOUD_SYNC.md`), Flight menu → Cloud sync can email-sign-in and upload/download the pilot. Local autosave still runs first; download confirms and keeps a checkpoint.
 - A complete server-side rollback can redeploy the saved original release recorded in `releases/v1.0.0.json`. The original source revision and deployment artifact remain preserved. This changes the game served at the existing URL; it does not delete local saves.
 
-When updating an installed game, open it online, wait for its offline files to update, then close and reopen or reload it. A complete release is cached before the new worker activates, including the original-game fallback. Check the menu’s offline readiness message before relying on offline play.
+When updating an installed game, open it online and tap **Flight menu → Update**. That unregisters the old service worker, clears stale farbound caches, and reloads so the welcome chip shows the new RELEASE. A complete release is cached before the new worker activates, including the original-game fallback. Check the menu’s offline readiness message before relying on offline play.
 
 ## Development
 
@@ -226,6 +231,7 @@ node tests/fleet.mjs
 node tests/stars.mjs
 node tests/flight-loop.mjs
 node tests/cloud-sync.mjs
+node tests/sw-update.mjs
 node tests/offline.mjs
 ```
 

@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 20, 2026: Candidate 2.15.6 Flight menu Update button: one tap unregisters the service worker, clears stale farbound caches, and reloads onto the latest Pages build. Offline play of the current build is unchanged until Update is tapped. Rollback tag `v2.14.0`.
+
 - September 20, 2026: Candidate 2.15.5 flight pacing: fixed 60 Hz sim, time-based camera, stable star-cache sizes, and a high-DPR pixel budget so local-space flight stays continuous on phones and foldables. Atlas art unchanged. Rollback tag `v2.14.0`.
 
 - September 20, 2026: Candidate 2.15.4 Fleet Atlas star sharpness (FB-025): photosphere cache, cellular granulation, hard limb, and a tight corona so primaries read crisp at game zoom. Ships and planets unchanged. Rollback tag `v2.14.0`.
