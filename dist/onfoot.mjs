@@ -2,6 +2,16 @@ import {pointInHull,pickStationChat} from './station-layout.mjs';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
+/** 2:1 isometric — screen right = world +X−Y, screen down = world +X+Y. */
+export const STATION_ISO={ix:1,iy:.5};
+
+export function isoWalkAxes(ax,ay){
+ const stick=Math.hypot(ax,ay);
+ if(stick<1e-6)return{ax:0,ay:0};
+ const wx=ax+ay,wy=ay-ax,mag=Math.hypot(wx,wy);
+ return{ax:wx/mag*stick,ay:wy/mag*stick};
+}
+
 export function createOnFoot(layout,saved=null){
  const pad=14;
  let x=layout.spawn.x,y=layout.spawn.y;
@@ -71,6 +81,7 @@ export function updateOnFoot(s,dt,input={}){
  let ax=0,ay=0;
  if(input.aim!=null){ax=Math.cos(input.aim)*(input.thrust||0);ay=Math.sin(input.aim)*(input.thrust||0);}
  else{ax=input.turn||0;ay=(input.brake?1:0)-(input.thrust||0);}
+ if(s.kind==='station'){const iso=isoWalkAxes(ax,ay);ax=iso.ax;ay=iso.ay;}
  const sprint=input.boost?1.7:1;
  s.throttle=Math.min(1,Math.hypot(ax,ay));
  const speed=560*sprint;

@@ -1,0 +1,14 @@
+{
+  "release": "2.13.1",
+  "name": "Living Concourse",
+  "date": "2026-09-20",
+  "notes": [
+    "Station concourse uses a true 2:1 isometric camera: raised deck sides, spoke corridors with volume, and a lit hub disc instead of a flat floor plan.",
+    "Crew, kiosks, shuttle, and furniture share that camera and depth-sort with the hull. Stick and WASD walk in screen space so down on the stick still moves down the view.",
+    "Planet sites stay overhead. Hull collision and desks are unchanged. Rollback: git checkout v2.12.1 for the bird’s-eye station."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
