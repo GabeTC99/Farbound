@@ -1,0 +1,14 @@
+{
+  "release": "2.15.6",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Flight menu adds an Update button that unregisters the service worker, clears stale farbound caches, and reloads onto the latest Pages beta build.",
+    "A waiting worker or a newer release.mjs chip highlights the button as Update available. Offline play of the current build is left alone until you tap Update.",
+    "Service worker cache bumped to farbound-v2.15.6 so Pages picks up the helper and menu control."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
