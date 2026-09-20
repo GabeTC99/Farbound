@@ -1,3 +1,3 @@
 /** Player-facing release label. Bump on every shipped change: 2.1.1, 2.1.2, or 2.1.1b for tiny fixes. */
-export const RELEASE='2.15.4';
+export const RELEASE='2.15.5';
 export const RELEASE_NAME='Fleet Atlas';

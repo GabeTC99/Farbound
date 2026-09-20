@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 20, 2026: Candidate 2.15.5 flight pacing: fixed 60 Hz sim, time-based camera, stable star-cache sizes, and a high-DPR pixel budget so local-space flight stays continuous on phones and foldables. Atlas art unchanged. Rollback tag `v2.14.0`.
+
 - September 20, 2026: Candidate 2.15.4 Fleet Atlas star sharpness (FB-025): photosphere cache, cellular granulation, hard limb, and a tight corona so primaries read crisp at game zoom. Ships and planets unchanged. Rollback tag `v2.14.0`.
 
 - September 20, 2026: Candidate 2.15.3 Fleet Atlas attach pass (FB-025): engines, weapons, antennae, radiators, clamps, and dishes sit on reshaped hulls instead of floating off dart notches and wing tips. Stars unchanged from 2.15.0. Rollback tag `v2.14.0`.

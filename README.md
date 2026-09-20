@@ -12,11 +12,17 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Farbound/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.15.4 lands, the welcome chip should read **Fleet Atlas 2.15.4**. Hard-refresh if an old service worker still shows 2.15.3 attached craft or a blurry Solace primary. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.15.5 lands, the welcome chip should read **Fleet Atlas 2.15.5**. Hard-refresh if an old service worker still shows 2.15.4 hitchy flight or a blurry Solace primary. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
 ## Frontiers 2.15 — Fleet Atlas
+
+### Candidate 2.15.5
+
+- **Smoother local-space flight:** physics steps at a fixed 60 Hz with display interpolation. The chase camera follows in real time, so a late frame or a 120 Hz foldable no longer makes the ship hitch on screen.
+- **Fewer hot-path spikes:** star photospheres stay on the sharp 384 px Fleet Atlas cache (no zoom/DPR rebake), sky washes are cached, radar is throttled, and huge high-DPR canvases stay on a pixel budget. Planet Atlas / Fleet Atlas art is unchanged.
+- **How to verify on a Fold / phone:** install the PWA, fly in Solace with FLIGHT ASSIST and the stick, then unfold / refold. Motion should stay continuous. Optional: Chrome → Performance, record 5 s of cruise; frame times should cluster near 8 ms (120 Hz) or 16 ms (60 Hz) without 40–80 ms spikes when you are not jumping systems. Desktop keyboard flight should feel the same, just steadier.
 
 ### Candidate 2.15.4
 
@@ -181,7 +187,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.15.4). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.15.5). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -218,6 +224,7 @@ node tests/exploration.mjs
 node tests/planets.mjs
 node tests/fleet.mjs
 node tests/stars.mjs
+node tests/flight-loop.mjs
 node tests/cloud-sync.mjs
 node tests/offline.mjs
 ```

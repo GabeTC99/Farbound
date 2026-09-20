@@ -133,27 +133,50 @@ function paintPhotosphere(canvas,spectral,seed,size){
 }
 
 export function texSizeFor(p,lite,pixelScale){
+ // pixelScale is kept for callers (game zoom * dpr). Size is stable so a
+ // fold resize or approach no longer rebakes 192→256→384→512 mid-flight.
  if(lite)return STAR_TEX.lite;
- const dest=Math.ceil((p?.r||80)*2*Math.max(.65,pixelScale||1));
- if(dest>420)return 512;
- if(dest>280)return STAR_TEX.full;
- if(dest>180)return 256;
- return 192;
+ return STAR_TEX.full;
 }
 
-function textureFor(p,lite,pixelScale){
- const spectral=p.spectral||'G';
- const seed=seedNum(p.seed||p.id||spectral);
- const size=texSizeFor(p,lite,pixelScale);
- const key=spectral+'|'+seed+'|'+size;
+function cacheKey(spectral,seed,size){return spectral+'|'+seed+'|'+size;}
+
+function cachedTex(spectral,seed,size){
+ const exact=cache.get(cacheKey(spectral,seed,size));
+ if(exact){cache.delete(cacheKey(spectral,seed,size));cache.set(cacheKey(spectral,seed,size),exact);return exact;}
+ let best=null;
+ for(const [k,tex] of cache){
+  if(!k.startsWith(spectral+'|'+seed+'|'))continue;
+  if(!best||tex.width>best.width)best=tex;
+ }
+ return best;
+}
+
+function bakeTex(spectral,seed,size){
+ const key=cacheKey(spectral,seed,size);
  const hit=cache.get(key);
- if(hit){cache.delete(key);cache.set(key,hit);return hit;}
+ if(hit)return hit;
  const canvas=makeCanvas(size);
  if(!canvas)return null;
  paintPhotosphere(canvas,spectral,seed,size);
  cache.set(key,canvas);
  if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);
  return canvas;
+}
+
+function textureFor(p,lite,pixelScale){
+ const spectral=p.spectral||'G';
+ const seed=seedNum(p.seed||p.id||spectral);
+ const size=texSizeFor(p,lite,pixelScale);
+ const have=cachedTex(spectral,seed,size);
+ if(have&&have.width>=size)return have;
+ return bakeTex(spectral,seed,size)||have;
+}
+
+/** Paint a star's photosphere off the hot path (after a jump or on launch). */
+export function warmStarTexture(p,lite=false){
+ if(!p)return null;
+ return textureFor(p,!!lite,1);
 }
 
 export function clearStarTextures(){cache.clear();}

@@ -1,0 +1,15 @@
+{
+  "release": "2.15.5",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Local-space flight uses a fixed 60 Hz physics step with display interpolation, so the ship no longer jumps when a frame is late.",
+    "The chase camera follows in real time instead of a per-frame 0.09 lerp, so 30 / 60 / 120 Hz panels keep the same on-screen lag.",
+    "Star photospheres stay at the sharp 384 px Fleet Atlas cache and no longer rebuild 192→512 when zoom or DPR changes. Sky washes are cached; huge high-DPR canvases stay on a pixel budget.",
+    "Planet Atlas, Fleet Atlas, docking, scooping, and combat are unchanged. Service worker cache bumped to farbound-v2.15.5."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
