@@ -1,0 +1,14 @@
+{
+  "release": "2.15.7",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Distant stars and the Milky Way band now use the same interpolated camera as the ship, so the starfield no longer stair-steps while the hull glides.",
+    "Sky wash cache is static per system. The old 4 Hz / rounded-camera rebake was hitching mid-cruise and, on a desynchronized opaque canvas, presenting an uninitialized white frame. Resize and leave-station now paint a dark fill immediately; #space has a matching CSS background.",
+    "Flight pacing, planets, ships, and the Flight menu Update button are unchanged. Service worker cache bumped to farbound-v2.15.7."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

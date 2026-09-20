@@ -3,7 +3,9 @@ import {readFileSync} from 'node:fs';
 import {
  FIXED_DT,MAX_FRAME_DT,MAX_STEPS,CAM_FOLLOW,PIXEL_BUDGET,
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
- lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer
+ lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
+ wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,
+ SKY_PARALLAX,SPACE_CLEAR
 } from '../dist/flight-loop.mjs';
 import {texSizeFor,STAR_TEX} from '../dist/star-render.mjs';
 
@@ -89,16 +91,54 @@ assert.match(app,/from '\.\/flight-loop\.mjs'/);
 assert.match(app,/beginFrame\(/);
 assert.match(app,/followCam\(/);
 assert.match(app,/canvasScale\(/);
+assert.match(app,/starScreenPos\(/);
+assert.match(app,/skyParallax\(/);
+assert.match(app,/skyCacheKey\(/);
+assert.match(app,/fillSpaceClear\(/);
+assert.match(app,/paintGalaxyBand\(/);
 assert.match(app,/desynchronized:\s*true/);
 assert.match(app,/warmStarTexture/);
 assert.ok(!/cam\.x\+=\(desiredX-cam\.x\)\*\.09/.test(app),'old frame-rate camera lerp is gone');
+assert.ok(!/Math\.round\(\(\(s\.x\*width/.test(app),'starfield no longer snaps to whole pixels');
+assert.ok(!/Math\.floor\(clock\*4\),cx=Math\.round\(cam\.x/.test(app),'sky cache no longer rebakes on cam/4Hz');
+assert.ok(!/cam\.x\*\.012/.test(app),'galaxy band uses skyParallax, not a baked cam*.012');
+
+const style=readFileSync(new URL('../dist/style.css',import.meta.url),'utf8');
+assert.match(style,/#space\{[^}]*background:#060c16/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.15\.6/);
+assert.match(sw,/farbound-v2\.15\.7/);
+
+// Camera-linked star offsets: leftover display alpha interpolates stars with the ship pose.
+const star={x:.4,y:.35,depth:.05};
+const s0=starScreenPos(star,0,0,800,600);
+const s1=starScreenPos(star,120,40,800,600);
+assert.ok(Math.abs((s0.x-s1.x)-120*star.depth)<1e-9);
+assert.ok(Math.abs((s0.y-s1.y)-40*star.depth)<1e-9);
+const midCam=lerp(80,180,.25);
+const p0=starScreenPos(star,80,0,800,600);
+const p1=starScreenPos(star,180,0,800,600);
+const pi=starScreenPos(star,midCam,0,800,600);
+assert.ok(Math.abs(pi.x-lerp(p0.x,p1.x,.25))<1e-9,'interpolated cam interpolates star x');
+assert.ok(Math.abs(pi.x-Math.round(pi.x))>1e-9,'fractional leftover is not snapped away');
+assert.equal(wrapUnit(-20,800),780);
+const par=skyParallax(200,-50);
+assert.ok(Math.abs(par.x-200*SKY_PARALLAX)<1e-12);
+assert.ok(Math.abs(par.y+50*SKY_PARALLAX)<1e-12);
+const k0=skyCacheKey({seed:1,kind:'clear'},800,600,false,false);
+assert.equal(k0,skyCacheKey({seed:1,kind:'clear'},800,600,false,false));
+assert.equal(k0,skyCacheKey({seed:1,kind:'clear'},800,600,false,false));
+assert.notEqual(skyCacheKey({seed:1,kind:'nebula'},800,600,false,false),k0);
+assert.ok(!Object.values({cam:999,clock:12.5}).some(v=>String(k0).split('|').includes(String(v))),'cache key ignores cam/clock');
+const fills=[];
+fillSpaceClear({setTransform(){},fillRect(x,y,w,h){fills.push({x,y,w,h,color:this.fillStyle});},fillStyle:''},2,400,300);
+assert.equal(fills[0].color,SPACE_CLEAR);
+assert.deepEqual(fills[0],{x:0,y:0,w:400,h:300,color:SPACE_CLEAR});
 
 console.log('PASS Fixed 60 Hz steps, hitch clamp, and leftover alpha');
 console.log('PASS Time-based camera lag is stable at 30/60/120 Hz (old lerp is not)');
 console.log(`PASS Camera offset spread time=${timeSpread.toFixed(2)} vs frame-lerp=${frameSpread.toFixed(2)}`);
 console.log('PASS Pixel budget caps huge fold CSS sizes without dropping typical phones');
 console.log('PASS Star photosphere size no longer tracks zoom/DPR on the hot path');
+console.log('PASS Starfield and sky parallax track interpolated camera without 4 Hz wash rebake');

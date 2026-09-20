@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.15\.6'/);
+ assert.match(release,/export const RELEASE='2\.15\.7'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
  assert.match(app,/data-action="update-app"/);
@@ -150,8 +150,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.15\.6/);
- assert.match(sw,/release:'2\.15\.6'/);
+ assert.match(sw,/farbound-v2\.15\.7/);
+ assert.match(sw,/release:'2\.15\.7'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -405,6 +405,8 @@ test('Wanted escalation and system skies are available for testing',()=>{
  assert.match(app,/WANTED · HEAT/);assert.match(app,/spawnResponseTeam\(\{force:true\}\)/);
  assert.match(app,/Soft ion curtains/);
  assert.match(app,/Procedural gas washes/);
+ assert.match(app,/paintGalaxyBand/);
+ assert.match(app,/starScreenPos/);
  assert.match(app,/Soft Milky Way band/);
  assert.ok(!/drawImage\(nebula/.test(app));
  assert.ok(!/lineTo\(x\+10\+i\*2\.5,height\)/.test(app));
