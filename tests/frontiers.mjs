@@ -6,6 +6,8 @@ import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} fr
 import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
 import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
 import {createStationLayout,pickStationChat,pointInHull} from '../dist/station-layout.mjs';
+import {isoWalkAxes,STATION_ISO} from '../dist/onfoot.mjs';
+import {makeStationProjector} from '../dist/onfoot-render.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
 function roundtrip(g){const s=validateSave(JSON.parse(JSON.stringify(g.serialize())));assert(s,'Saved pilot must validate');return new Game(s);}
@@ -330,7 +332,7 @@ test('Station space legs: dock enters deck, desks open services, hangar launches
  assert(!h.s.detained);
  assert(h.launch());
 });
-test('Living concourse: standing crew, props, speech, and 2.5D station renderer',()=>{
+test('Living concourse: standing crew, props, speech, and isometric station renderer',()=>{
  const g=new Game();
  assert.equal(g.onfoot.kind,'station');
  assert.equal(g.onfoot.faction,'concord');
@@ -353,6 +355,9 @@ test('Living concourse: standing crew, props, speech, and 2.5D station renderer'
  g.onfoot.x=hangar.x;g.onfoot.y=hangar.y;
  ticks(g,.4,{aim:-Math.PI/2,thrust:1});
  assert(pointInHull(g.onfoot.hull,g.onfoot.x,g.onfoot.y,14));
+ const office=g.onfoot.zones.find(z=>z.service==='shipyard'&&!z.launch);
+ assert(office);g.onfoot.x=office.x;g.onfoot.y=office.y;
+ assert.equal(g.interactStation().service,'shipyard');
  const prison=createStationLayout({prison:true,detained:true,name:'Prison barge',robotName:'Picket-3'});
  assert(prison.zones.some(z=>z.service==='detention'));
  assert(!prison.zones.some(z=>z.service==='contracts'));
@@ -364,6 +369,28 @@ test('Living concourse: standing crew, props, speech, and 2.5D station renderer'
  assert.match(render,/drawStandingCrew/);
  assert.match(render,/drawRobotUnit/);
  assert.match(render,/drawKiosk/);
+ assert.match(render,/drawIsoDisc/);
+ assert.match(render,/drawIsoPrism/);
+ assert.match(render,/makeStationProjector/);
+ assert.match(render,/drawFloorPanels/);
+ assert.match(render,/drawDoorFrame/);
+ assert.match(render,/drawRailing/);
+ assert.match(render,/drawContactShadow/);
+ assert.match(render,/drawHubCurb/);
+ assert.match(render,/drawDeckRim/);
+ assert.match(render,/drawRimWindows/);
+ assert.match(render,/along=hull\.hubR/);
+ assert.equal(STATION_ISO.ix,1);assert.equal(STATION_ISO.iy,.5);
+ const right=isoWalkAxes(1,0);
+ assert.ok(right.ax>0&&right.ay<0,'stick right should walk world +X −Y (screen east)');
+ const down=isoWalkAxes(0,1);
+ assert.ok(down.ax>0&&down.ay>0,'stick down should walk world +X +Y (toward camera)');
+ const proj=makeStationProjector({x:office.x,y:office.y},390,844);
+ const hub=proj.p(g.onfoot.hull.cx,g.onfoot.hull.cy,0);
+ const rim=proj.p(g.onfoot.hull.cx+g.onfoot.hull.hubR,g.onfoot.hull.cy,0);
+ const {rx,ry}=proj.radii(g.onfoot.hull.hubR);
+ assert.ok(rx>ry*1.6,'hub floor must project as a wide isometric ellipse, not a circle');
+ assert.ok(Math.abs((rim.x-hub.x)/rx)<1.05);
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/CONCOURSE/);
  assert.match(app,/step onto the concourse/);

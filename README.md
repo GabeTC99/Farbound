@@ -12,11 +12,21 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Farbound/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.13.0 lands, the welcome chip should read **Living Concourse 2.13.0**. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above; hard-refresh (or clear site data) if an old service worker sticks. After 2.13.2 lands, the welcome chip should read **Living Concourse 2.13.2**. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
 ## Frontiers 2.13 — Living Concourse
+
+### Candidate 2.13.2
+
+- **Polished isometric interiors:** metal floor plates, hub curb and rim light, door frames at the hub–spoke junction, corridor walls, hangar mouth, and metal railings. Directional light, contact shadows, and grounded crew/prop silhouettes.
+- Same desks, hangar launch, hull collision, and screen-space walking. Planet sites stay overhead. Rollback: `git checkout v2.12.1`.
+
+### Candidate 2.13.1
+
+- **Isometric concourse:** the station wheel is a raised 2:1 isometric deck — hub sides, spoke corridors with volume, lighting/shadows — not a tilted floor plan. Crew, kiosks, and the shuttle share that camera. Stick/WASD follow the screen so walking still feels like the view.
+- Planet sites stay overhead. Same desks, hangar launch, and hull collision. Rollback: `git checkout v2.12.1`.
 
 ### Candidate 2.13.0
 
@@ -127,14 +137,14 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **192 deterministic systems:** all systems retain their identities, with coordinates now arranged around the circular core. Charted space now has 64 systems, with another **128 systems in the Uncharted Reach**. Unknown catalog codes reveal their names and economy on your first visit. Discovery pulses award exploration data.
 - **Contract navigation:** active contracts have a Plot destination route button. Nearby destinations use a direct jump; farther destinations use a route of legal jumps. Survey routes return to the issuing station after both worlds are recorded. The chart supports search, filters, pan, pinch/wheel zoom, locate-me, overview, and route fuel estimates. Jump next executes one leg at a time.
 - **Planetary expeditions:** approach either world, slow below 100 m/s, and select Land. Pilot a skiff in a side view over procedural terrain tinted by world kind. Each world has six persistent anomalies: mineral veins, relics, biosignatures, and radio echoes. Hover to scan; ping a beacon when you need a bearing. Return to orbit and dock to sell the recorded signals. Hard impacts damage the skiff, and emergency ascent loses the current expedition’s unsold signals.
-- **Station decks:** docking drops you onto a 2.5D concourse. Visit service desks on foot; closing a desk keeps you aboard. Leave through the hangar bay.
+- **Station decks:** docking drops you onto an isometric concourse. Visit service desks on foot; closing a desk keeps you aboard. Leave through the hangar bay.
 - **Four guilds:** Trading, Miners, Freelancer, and Explorers. Join any or all at station desks. Each guild offers three sequential commissions with unique module rewards. Accept commissions before doing the work; return to a desk to claim rewards. Supply commissions consume the requested cargo.
 - **Three factions:** Orion Concord, Cinder Directorate, and Outer Freeholds. Relief and combat operations improve standing. Pledging lets friendly patrols assist nearby combat; attacking a faction worsens relations and can make its patrols hostile. Standing also affects local prices.
 - **Physical modules and owned ships:** twenty hulls stay in the hangar when purchased. Each hull has its own loadout, condition, and fuel. At a station, remove modules to storage, switch ships, and install them; Move here transfers a module directly from another owned ship. Slot limits and category limits make loadouts a choice. Cargo stays with the pilot and capacity checks prevent losses.
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.13.0). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.13.2). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
