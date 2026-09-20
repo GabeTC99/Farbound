@@ -1,0 +1,16 @@
+{
+  "release": "2.12.1",
+  "name": "Frontier Instruments",
+  "date": "2026-09-19",
+  "notes": [
+    "Radar contacts stay aligned with local space so the dish no longer spins when you turn. The mint chevron is still your nose; the lock ring and flight-mode chip are unchanged.",
+    "Market commodities and the Galaxy Best export row plot a jump to the highest legal payout on your charts.",
+    "Galaxy dots tint to faction colors; the side panel shows Friendly, Hostile, Contested, or Lawless.",
+    "Solace keeps Nellby-9; other stations get a seeded concierge name.",
+    "Buy price stays above sell on plotted trade hops."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

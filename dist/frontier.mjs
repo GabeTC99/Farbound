@@ -126,11 +126,9 @@ export function systemPresence(sys,save){
  else status=['Secure','Patrolled'][sys.danger]||'Held';
  return{label:faction.name+' · '+status,status,tone:rep<=-20?'danger':rep>=20?'safe':'',color:faction.color,faction:faction.id};
 }
-/** Heading-up radar blip. Canvas +Y is down; returned −Y is ahead of the ship nose. */
-export function radarBlip(px,py,ox,oy,angle,scale=.054){
- const a=(angle||0)+Math.PI/2,c=Math.cos(a),s=Math.sin(a);
- const dx=(ox-px)*scale,dy=(oy-py)*scale;
- return{x:dx*c+dy*s,y:-dx*s+dy*c};
+/** Screen-up radar blip. Matches local space (+X right, +Y down). Heading does not rotate contacts. */
+export function radarBlip(px,py,ox,oy,scale=.054){
+ return{x:(ox-px)*scale,y:(oy-py)*scale};
 }
 export function missionDestination(s,m){return m.type==='delivery'?m.destination:m.type==='survey'&&!surveyWorldIds(m.destination,SYSTEMS[m.destination]).every(id=>s.scanned.includes(id))?m.destination:m.origin;}
 const COMPANY_POOL={
