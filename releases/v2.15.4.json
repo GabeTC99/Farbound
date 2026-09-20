@@ -1,0 +1,14 @@
+{
+  "release": "2.15.4",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Star photospheres paint at higher cached resolution with cellular granulation and a hard limb, so a close G-class primary reads as a crisp disk instead of a soft orange smear.",
+    "Corona and chromosphere are a tight atmospheric skin. O flares stay, just shorter and sharper. Distant background stars snap to whole pixels.",
+    "Spectral class colors, scoop zones, ships, planets, and concourse are unchanged. Service worker cache bumped to farbound-v2.15.4 so Pages picks up the sharper stars."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

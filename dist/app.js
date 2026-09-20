@@ -653,7 +653,7 @@ function label(text,x,y,color='#a1bdc8',size=14){ctx.font=`${size}px system-ui`;
 function drawStation(s=game.station){if(!s||s.type==='beacon')return;const scale=s.r/65,lite=liteFX();ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);ctx.lineWidth=2;circle(0,0,64,'#527d8c',true);circle(0,0,51,'#29434f',true);for(let i=0;i<(lite?3:6);i++){ctx.save();ctx.rotate(i*Math.PI/(lite?1.5:3));ctx.fillStyle='#18303e';ctx.strokeStyle='#6a94a3';ctx.fillRect(35,-9,45,18);ctx.strokeRect(35,-9,45,18);if(!lite){ctx.fillStyle='#82d7c2';ctx.fillRect(68,-3,7,6);}ctx.restore();}circle(0,0,22,'#132833');circle(0,0,22,'#7db9bd',true);ctx.restore();if(!lite){ctx.setLineDash([9,13]);circle(s.x,s.y,125*scale,'#4c8c8740',true);ctx.setLineDash([]);}label(s.name,s.x,s.y-100*scale,'#94c7cd');if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-78*scale,'#608592',12);}
 function drawStar(p=game.star){
  const col=p.color||'#e9be82';
- drawStarBody(ctx,p,{lite:liteFX(),clock});
+ drawStarBody(ctx,p,{lite:liteFX(),clock,pixelScale:cam.zoom*dpr});
  label(p.name+(p.spectralLabel?' · '+p.spectralLabel:''),p.x,p.y+p.r+45,col);
  if(p.primary!==false&&p.id==='star'){
   if(!liteFX()){circle(p.x,p.y,p.r+600,'#ecc08533',true);circle(p.x,p.y,p.r+150,'#ff777722',true);label('FUEL SCOOPING ZONE · WATCH HEAT',p.x,p.y+p.r+70,'#987c62',12);}
@@ -746,11 +746,13 @@ function drawSkyBackdrop(){
   if(lite&&((starI++)&3))continue;else if(!lite&&soft&&((starI++)&1))continue;
   if(sky.kind==='nebula'&&(s.r<1&&(Math.floor(s.x*100)%3)))continue;
   if(sky.kind==='deep'&&(Math.floor(s.x*80+s.y*40)%4))continue;
-  const x=((s.x*width-cam.x*s.depth)%width+width)%width,y=((s.y*height-cam.y*s.depth)%height+height)%height;
-  const tw=s.bright?(.85+.15*Math.sin(clock*2.2+s.x*20)):1;
+  const x=Math.round(((s.x*width-cam.x*s.depth)%width+width)%width);
+  const y=Math.round(((s.y*height-cam.y*s.depth)%height+height)%height);
+  const tw=s.bright?(.88+.12*Math.sin(clock*2.2+s.x*20)):1;
   ctx.globalAlpha=s.a*starMul*tw;ctx.fillStyle=s.bright?sky.tint:sky.star;
-  const sz=s.r*starSize*(s.bright?1.35:1);
+  const sz=s.bright?Math.max(2,Math.round(s.r*starSize)):1;
   ctx.fillRect(x,y,sz,sz);
+  if(s.bright&&!lite){ctx.globalAlpha=s.a*starMul*tw*.5;ctx.fillRect(x-1,y,sz+2,1);ctx.fillRect(x,y-1,1,sz+2);}
  }
  ctx.globalAlpha=1;
  if(!lite&&sky.lightning&&((clock*(sky.kind==='storm'?2.4:1.7))%2.6)<.1){

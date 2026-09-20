@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {SYSTEMS,STAR_TYPES,STAR_CLASS_IDS,findStarOfClass,Game} from '../dist/frontier.mjs';
-import {STAR_ART,sampleStarColor,meanStarColor,colorDistance,luma,starLimb,starCorona} from '../dist/star-render.mjs';
+import {STAR_ART,STAR_TEX,sampleStarColor,meanStarColor,colorDistance,luma,starLimb,starCorona,texSizeFor} from '../dist/star-render.mjs';
 
 assert.deepEqual(STAR_CLASS_IDS,['O','B','A','F','G','K','M']);
 for(const id of STAR_CLASS_IDS){
@@ -24,9 +24,17 @@ assert(luma(means.A)>luma(means.K),'A reads brighter than K');
 assert(STAR_ART.O.flare>STAR_ART.G.flare);
 assert(STAR_ART.M.spots>STAR_ART.A.spots);
 assert(STAR_ART.O.coronaScale>STAR_ART.M.coronaScale);
+assert(STAR_ART.O.coronaScale<=1.85,'O corona stays tight');
+assert(STAR_ART.M.coronaScale<=1.4,'M corona stays tight');
+assert(STAR_ART.G.coronaScale<=1.45,'G corona is not a blur ball');
+assert(STAR_TEX.full>=320);
+assert.equal(texSizeFor({r:40},true,1),STAR_TEX.lite);
+assert(texSizeFor({r:180},false,1.5)>=STAR_TEX.full);
 
 const edge=sampleStarColor('G',3,.92,0),core=sampleStarColor('G',3,0,0);
 assert(luma(core)>luma(edge)+8,'G stars limb-darken');
+const gA=sampleStarColor('G',3,.12,.08),gB=sampleStarColor('G',3,.22,.02);
+assert(colorDistance(gA,gB)>4,'G granulation stays readable');
 const spot=sampleStarColor('M',9,.2,-.15),disk=sampleStarColor('M',9,0,.6);
 assert(colorDistance(spot,disk)>=0);
 
@@ -35,6 +43,8 @@ assert.match(app,/dev-star/);
 assert.match(app,/Stellar atlas/);
 assert.match(app,/drawStarBody/);
 assert.match(app,/from '\.\/star-render\.mjs'/);
+assert.match(app,/pixelScale:cam\.zoom\*dpr/);
+assert.match(app,/Math\.round\(\(\(s\.x\*width/);
 assert.ok(!/const hot=p\.spectral==='M'/.test(app));
 
 const hit=findStarOfClass('M',SYSTEMS);
