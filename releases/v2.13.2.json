@@ -1,0 +1,14 @@
+{
+  "release": "2.13.2",
+  "name": "Living Concourse",
+  "date": "2026-09-20",
+  "notes": [
+    "Station interiors keep the 2:1 isometric camera but read as built architecture: metal floor panels, door frames, hangar mouth, railings, and rim light.",
+    "Kiosks, crates, benches, shuttle, and crew have clearer materials, contact shadows, and less of the toy-block silhouette.",
+    "Desks, hangar launch, hull collision, and screen-space walking are unchanged. Planet sites stay overhead."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
