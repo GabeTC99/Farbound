@@ -49,41 +49,43 @@ const accentBar=(x,y,w,h)=>({type:'accent',x,y,w,h,alpha:.7});
 
 export const NPC_HULLS={
  security:{
-  body:[[1.15,0],[.35,.38],[-.15,.88],[.05,.32],[-.85,.48],[-1,.18],[-.55,0],[-1,-.18],[-.85,-.48],[.05,-.32],[-.15,-.88],[.35,-.38]],
+  body:[[1.18,0],[.32,.36],[-.12,.82],[-.42,.74],[-.28,.36],[-1.0,.36],[-1.12,.2],[-1.12,-.2],[-1.0,-.36],[-.28,-.36],[-.42,-.74],[-.12,-.82],[.32,-.36]],
   parts:[stroke([[.55,0],[-.25,0]]),rect(-.2,-.1,.5,.2),stroke([[-.1,.4],[.2,.15]]),stroke([[-.1,-.4],[.2,-.15]])],
-  nozzles:[[-1,.22],[-1,-.22]],cockpit:{x:.35,rx:4.2,ry:2.8},lights:{y:.5,pair:['#ff3b4a','#3b8cff']},
+  nozzles:[[-1.12,.14],[-1.12,-.14]],cockpit:{x:.35,rx:4.2,ry:2.8},lights:{y:.72,pair:['#ff3b4a','#3b8cff']},
+  hardpoints:[[-.22,.66],[-.22,-.66]],
   accents:[accentBar(-.05,-.12,7,4.8)]
  },
  pirate:{
-  body:[[1.28,0],[.22,.42],[-.18,.9],[-.02,.3],[-1,.48],[-.52,0],[-1,-.48],[-.02,-.3],[-.18,-.9],[.22,-.42]],
+  body:[[1.26,0],[.28,.38],[-.14,.86],[-.44,.78],[-.3,.36],[-1.0,.38],[-1.12,.22],[-1.12,-.22],[-1.0,-.38],[-.3,-.36],[-.44,-.78],[-.14,-.86],[.28,-.38]],
   parts:[stroke([[.48,0],[-.22,0]]),rect(-.18,-.1,.48,.2),stroke([[.02,.52],[.26,.2]]),stroke([[.02,-.52],[.26,-.2]])],
-  nozzles:[[-1,.22],[-1,-.22]],cockpit:{x:.42,rx:4.2,ry:2.6},lights:{y:.55},
-  accents:[accentBar(.04,.68,6,1.8),accentBar(.04,-.68-1.8/18,6,1.8)]
+  nozzles:[[-1.12,.16],[-1.12,-.16]],cockpit:{x:.42,rx:4.2,ry:2.6},lights:{y:.74},
+  hardpoints:[[-.2,.7],[-.2,-.7]],
+  accents:[accentBar(-.04,.72,6,1.8),accentBar(-.04,-.72-1.8/18,6,1.8)]
  },
  courier:{
-  body:[[1.35,0],[-.15,.42],[-1,.28],[-.45,0],[-1,-.28],[-.15,-.42]],
+  body:[[1.4,0],[.22,.32],[-.62,.24],[-1.08,.12],[-1.08,-.12],[-.62,-.24],[.22,-.32]],
   parts:[stroke([[.7,0],[-.3,0]]),rect(-.2,-.08,.55,.16)],
-  nozzles:[[-1,0]],cockpit:{x:.48,rx:3.6,ry:2.2},lights:{y:.36},accents:[]
+  nozzles:[[-1.08,0]],cockpit:{x:.48,rx:3.6,ry:2.2},lights:{y:.26},accents:[]
  },
  freighter:{
-  body:[[1.05,0],[.2,.72],[-1,.78],[-.7,0],[-1,-.78],[.2,-.72]],
+  body:[[.98,0],[.28,.7],[-.4,.84],[-.95,.66],[-1.12,.46],[-1.12,.2],[-.82,.08],[-.82,-.08],[-1.12,-.2],[-1.12,-.46],[-.95,-.66],[-.4,-.84],[.28,-.7]],
   parts:[stroke([[-.15,-.4],[-.15,.4]]),stroke([[.25,-.35],[.25,.35]]),rect(-.45,-.42,.55,.84)],
-  nozzles:[[-1,.32],[-1,-.32]],cockpit:{x:.28,rx:5,ry:3.4},lights:{y:.55},accents:[]
+  nozzles:[[-1.12,.34],[-1.12,-.34]],cockpit:{x:.28,rx:5,ry:3.4},lights:{y:.62},accents:[]
  },
  prospector:{
-  body:[[1,0],[-.15,.68],[-1,.4],[-.55,0],[-1,-.4],[-.15,-.68]],
-  parts:[boom([[.2,.28],[.58,.42],[.48,.58],[.12,.48]]),stroke([[-.2,0],[-.7,0]]),rect(-.25,-.12,.4,.24)],
-  nozzles:[[-1,.2],[-1,-.2]],cockpit:{x:.22,rx:4.4,ry:3},lights:{y:.5},accents:[]
+  body:[[1.02,0],[.26,.62],[-.5,.7],[-.98,.5],[-1.1,.26],[-1.1,-.26],[-.98,-.5],[-.5,-.7],[.26,-.62]],
+  parts:[boom([[.16,.24],[.58,.42],[.48,.56],[.08,.4]]),stroke([[-.2,0],[-.7,0]]),rect(-.25,-.12,.4,.24)],
+  nozzles:[[-1.1,.16],[-1.1,-.16]],cockpit:{x:.22,rx:4.4,ry:3},lights:{y:.52},accents:[]
  },
  tender:{
-  body:[[1.1,0],[.15,.55],[-.75,.68],[-1,0],[-.75,-.68],[.15,-.55]],
+  body:[[1.08,0],[.22,.52],[-.48,.64],[-1.0,.42],[-1.12,.18],[-1.12,-.18],[-1.0,-.42],[-.48,-.64],[.22,-.52]],
   parts:[stroke([[.2,0],[-.55,0]]),rect(-.15,-.1,.42,.2),{type:'scoop',alpha:.7}],
-  nozzles:[[-1,.18],[-1,-.18]],cockpit:{x:.32,rx:4.6,ry:3},lights:{y:.48},accents:[]
+  nozzles:[[-1.12,.12],[-1.12,-.12]],cockpit:{x:.32,rx:4.6,ry:3},lights:{y:.5},accents:[]
  },
  surveyor:{
-  body:[[1.15,0],[-.15,.62],[-1,.35],[-.5,0],[-1,-.35],[-.15,-.62]],
-  parts:[stroke([[.55,0],[-.2,0]]),rect(-.15,-.08,.48,.16),dish(-.05,-.95,.4)],
-  nozzles:[[-1,.14],[-1,-.14]],cockpit:{x:.42,rx:4.4,ry:2.8},lights:{y:.42},accents:[]
+  body:[[1.18,0],[.22,.4],[-.1,.54],[-.06,.68],[-.32,.62],[-.36,.3],[-1.02,.28],[-1.12,.12],[-1.12,-.12],[-1.02,-.28],[-.36,-.3],[-.1,-.54],[.22,-.4]],
+  parts:[stroke([[.55,0],[-.2,0]]),rect(-.15,-.08,.48,.16),dish(-.16,.5,.14)],
+  nozzles:[[-1.12,.08],[-1.12,-.08]],cockpit:{x:.42,rx:4.4,ry:2.8},lights:{y:.5},accents:[]
  }
 };
 
@@ -114,6 +116,34 @@ function pathBody(ctx,body,size,ox=0,oy=0){
  ctx.closePath();
 }
 function scaleBody(body,s){return body.map(([x,y])=>[x*s,y*s]);}
+function hullHalfY(body,x){
+ let max=0,hit=false;
+ for(let i=0;i<body.length;i++){
+  const a=body[i],b=body[(i+1)%body.length];
+  const x0=a[0],x1=b[0],lo=Math.min(x0,x1),hi=Math.max(x0,x1);
+  if(x+1e-5<lo||x-1e-5>hi)continue;
+  hit=true;
+  if(Math.abs(x1-x0)<1e-5){max=Math.max(max,Math.abs(a[1]),Math.abs(b[1]));continue;}
+  const t=(x-x0)/(x1-x0);
+  max=Math.max(max,Math.abs(a[1]+(b[1]-a[1])*t));
+ }
+ if(!hit){
+  let best=1e9;
+  for(const [px,py] of body){
+   const d=Math.abs(px-x);
+   if(d<best){best=d;max=Math.abs(py);}
+   else if(Math.abs(d-best)<1e-6)max=Math.max(max,Math.abs(py));
+  }
+ }
+ return max;
+}
+function wingMounts(def){
+ if(def.hardpoints?.length)return def.hardpoints;
+ let tip=def.body[0];
+ for(const p of def.body)if(Math.abs(p[1])>Math.abs(tip[1]))tip=p;
+ const y=Math.abs(tip[1])*.82,x=tip[0]*.55+(-.18);
+ return[[x,y],[x,-y]];
+}
 function roundBox(ctx,x,y,w,h,r=1.6){
  ctx.beginPath();
  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
@@ -162,21 +192,31 @@ function drawExtrusion(ctx,body,size,tx,ty,fill){
 
 function drawBells(ctx,def,size,art,thrust){
  const hot=art.heat||[96,60,42];
- const hw=Math.max(5.6,size*.24),hh=Math.max(5.2,size*.22);
  for(const [nx,ny] of def.nozzles||[]){
-  const x=nx*size+(nx<0?.6:0),y=ny*size;
-  ctx.fillStyle=rgbOf(mix(art.shadow,art.metal,.28));
-  roundBox(ctx,x-1,y-hh*.55,hw+1.6,hh,1.4);ctx.fill();
+  const face=nx*size,y=ny*size;
+  const local=Math.max(3.2,hullHalfY(def.body,nx)*size*1.55);
+  const hh=Math.min(Math.max(3.6,size*.14),local);
+  const inset=Math.max(6.2,size*.28);
+  ctx.fillStyle=rgbOf(mix(art.shadow,art.metal,.42));
+  ctx.beginPath();
+  ctx.moveTo(face+inset,y-hh*.32);
+  ctx.lineTo(face+1.4,y-hh*.5);
+  ctx.lineTo(face+1.4,y+hh*.5);
+  ctx.lineTo(face+inset,y+hh*.32);
+  ctx.closePath();ctx.fill();
   ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));
+  ctx.fillRect(face-.55,y-hh*.46,Math.max(4.2,size*.16),hh*.92);
+  ctx.strokeStyle=rgbOf(art.shadow);ctx.strokeRect(face-.55,y-hh*.46,Math.max(4.2,size*.16),hh*.92);
   ctx.fillStyle=rgba(art.shadow,.55);
-  ctx.beginPath();ctx.ellipse(x,y,hw*.42,hh*.36,0,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.ellipse(face,y,hh*.42,hh*.36,0,0,6.28);ctx.fill();
   ctx.fillStyle=rgbOf(mix(hot,art.shadow,.15));
-  ctx.beginPath();ctx.ellipse(x,y,hw*.34,hh*.28,0,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.ellipse(face,y,hh*.34,hh*.28,0,0,6.28);ctx.fill();
   ctx.strokeStyle=rgbOf(mix(hot,[200,140,90],.45));ctx.stroke();
   ctx.fillStyle='#080606';
-  ctx.beginPath();ctx.ellipse(x-.6,y,hw*.18,hh*.14,0,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.ellipse(face-.55,y,hh*.18,hh*.14,0,0,6.28);ctx.fill();
   ctx.fillStyle=rgba([180,255,230],thrust>.04?.4+thrust*.3:.12);
-  ctx.beginPath();ctx.ellipse(x-.4,y,hw*.1,hh*.08,0,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.ellipse(face-.35,y,hh*.1,hh*.08,0,0,6.28);ctx.fill();
  }
 }
 
@@ -201,13 +241,24 @@ function drawParts(ctx,def,size,art){
   }
   else if(p.type==='arc'){
    const ax=p.x*size,ay=p.y*size,r=p.r*size;
+   const rootY=Math.sign(ay||1)*hullHalfY(def.body,p.x)*size*.72;
+   ctx.strokeStyle=rgbOf(mix(art.metal,art.shadow,.25));ctx.lineWidth=Math.max(1.6,size*.06);
+   ctx.beginPath();ctx.moveTo(ax,rootY);ctx.lineTo(ax,ay);ctx.stroke();
+   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.15));
+   ctx.beginPath();ctx.arc(ax,rootY,Math.max(1.4,r*.22),0,6.28);ctx.fill();
    ctx.beginPath();ctx.arc(ax+.8,ay+1.1,r,0,6.28);ctx.fillStyle=rgbOf(art.shadow);ctx.fill();
    ctx.beginPath();ctx.arc(ax,ay,r,0,6.28);ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.35));ctx.fill();
    ctx.strokeStyle=rgbOf(art.shadow);ctx.stroke();
    ctx.beginPath();ctx.arc(ax-r*.22,ay-r*.28,r*.32,0,6.28);ctx.fillStyle=rgba([220,236,248],.16);ctx.fill();
    ctx.beginPath();ctx.arc(ax,ay,r*.18,0,6.28);ctx.fillStyle=rgbOf(art.shadow);ctx.fill();
   }
-  else if(p.type==='scoop'){ctx.strokeStyle=rgbOf(mix(art.heat,art.metal,.35));ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-size*.05,size*.32);ctx.quadraticCurveTo(-size*1.35,0,-size*.05,-size*.32);ctx.stroke();}
+  else if(p.type==='scoop'){
+   const sx=-size*.72,sy=size*.22;
+   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));
+   ctx.beginPath();ctx.moveTo(-size*.2,sy);ctx.lineTo(sx,sy*.55);ctx.lineTo(sx,-sy*.55);ctx.lineTo(-size*.2,-sy);ctx.closePath();ctx.fill();
+   ctx.strokeStyle=rgbOf(mix(art.heat,art.metal,.35));ctx.lineWidth=1.4;
+   ctx.beginPath();ctx.moveTo(-size*.18,sy);ctx.quadraticCurveTo(sx-size*.08,0,-size*.18,-sy);ctx.stroke();
+  }
   ctx.globalAlpha=1;
  }
 }
@@ -312,29 +363,35 @@ function drawKit(ctx,def,size,art,classId,lite){
  const kit=kitOf(classId);
  const plate=rgbOf(mix(art.metal,art.plate,.35)),shade=rgbOf(art.shadow);
  if(kit.radiators){
+  const rx=-.22,w=size*.42,h=Math.max(2.4,size*.08);
+  const hy=hullHalfY(def.body,rx)*size;
   for(const s of[-1,1]){
-   const x=-size*.28,y=s*size*.4,w=size*.5,h=Math.max(2.6,size*.09);
-   ctx.fillStyle=shade;ctx.fillRect(x+1.1,y+s*1.3,w,h);
+   const x=rx*size,y=s*(hy-h*.45);
+   ctx.fillStyle=shade;ctx.fillRect(x+w*.32,y+(s>0?-1.6:h-.2),w*.22,1.8);
+   ctx.fillStyle=shade;ctx.fillRect(x+1.1,y+s*1.1,w,h);
    ctx.fillStyle=rgbOf(mix(art.heat,art.metal,.45));ctx.fillRect(x,y,w,h);
    ctx.strokeStyle=shade;ctx.strokeRect(x,y,w,h);
    if(!lite){ctx.strokeStyle=rgba(art.shadow,.5);for(let i=1;i<5;i++){ctx.beginPath();ctx.moveTo(x+w*i/5,y);ctx.lineTo(x+w*i/5,y+h);ctx.stroke();}}
   }
  }
  if(kit.antenna){
-  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(-size*.12,1.2,2.2,0,6.28);ctx.fill();
-  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(-size*.18,0,2.1,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
-  ctx.strokeStyle=rgbOf(mix(art.plate,art.shadow,.3));ctx.lineWidth=1.2;
-  ctx.beginPath();ctx.moveTo(-size*.18,0);ctx.lineTo(-size*.05,-size*.48);ctx.stroke();
-  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(-size*.05,-size*.48,1.5,0,6.28);ctx.fill();
+  const bx=-.14,hy=hullHalfY(def.body,bx)*size;
+  const tipY=-Math.min(hy*.82,size*.32);
+  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(bx*size+0.6,1.1,2.1,0,6.28);ctx.fill();
+  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(bx*size,0,2.2,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
+  ctx.strokeStyle=rgbOf(mix(art.plate,art.shadow,.3));ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(bx*size,0);ctx.lineTo(bx*size,tipY);ctx.stroke();
+  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(bx*size,tipY,1.5,0,6.28);ctx.fill();
  }
  if(kit.sensors){
-  const ax=size*.12,ay=-size*.32,r=Math.max(2.6,size*.08);
-  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(ax+.7,ay+1,r,0,6.28);ctx.fill();
-  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(ax,ay,r,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
-  ctx.fillStyle=rgba([200,230,240],.2);ctx.beginPath();ctx.arc(ax-r*.25,ay-r*.28,r*.35,0,6.28);ctx.fill();
+  const ax=.1,hy=hullHalfY(def.body,ax)*size,ay=-hy*.55,r=Math.max(2.4,size*.07);
+  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(ax*size+.6,ay+1,r,0,6.28);ctx.fill();
+  ctx.fillStyle=plate;ctx.beginPath();ctx.arc(ax*size,ay,r,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
+  ctx.fillStyle=rgba([200,230,240],.2);ctx.beginPath();ctx.arc(ax*size-r*.25,ay-r*.28,r*.35,0,6.28);ctx.fill();
  }
  if(kit.cargo){
-  const x=-size*.42,y=-size*.26,w=size*.52,h=size*.52;
+  const hx=hullHalfY(def.body,-.2)*size;
+  const h=Math.min(size*.5,hx*1.55),w=size*.48,x=-size*.4,y=-h/2;
   ctx.fillStyle=shade;ctx.fillRect(x+1.2,y+1.4,w,h);
   ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.15));ctx.fillRect(x,y,w,h);
   ctx.strokeStyle=shade;ctx.strokeRect(x,y,w,h);
@@ -343,31 +400,40 @@ function drawKit(ctx,def,size,art,classId,lite){
   if(!lite){ctx.fillStyle=rgbOf(mix(art.shadow,art.metal,.4));ctx.fillRect(x+2,y-2.2,4,2.4);ctx.fillRect(x+w-6,y-2.2,4,2.4);}
  }
  if(kit.clamps&&!lite){
+  const cx=.1,hy=hullHalfY(def.body,cx)*size;
   for(const s of[-1,1]){
-   const x=size*.08,y=s*size*.42;
-   ctx.strokeStyle=plate;ctx.lineWidth=1.3;
-   ctx.beginPath();ctx.moveTo(x-3,y-s*3);ctx.lineTo(x-5,y);ctx.lineTo(x-3,y+s*3);ctx.stroke();
+   const x=cx*size,y=s*hy*.88;
+   ctx.strokeStyle=plate;ctx.lineWidth=1.4;
+   ctx.beginPath();ctx.moveTo(x,y-s*2);ctx.lineTo(x-2,y-s*5);ctx.lineTo(x-5,y-s*2);ctx.stroke();
   }
  }
  if(kit.hardpoints){
-  const ys=def.lights?.y||.55;
-  for(const s of[-1,1]){
-   const x=size*.02,y=s*ys*size;
-   ctx.fillStyle=shade;ctx.fillRect(x+1,y+s*1.2,size*.28,Math.max(2.6,size*.09));
-   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));ctx.fillRect(x,y,size*.28,Math.max(2.6,size*.09));
-   ctx.fillStyle=plate;ctx.fillRect(x+size*.26,y+1.1,size*.28,Math.max(1.5,size*.045));
+  const mounts=wingMounts(def);
+  const bh=Math.max(2.4,size*.08),bw=size*.22,bar=size*.18;
+  for(const [mx,my] of mounts){
+   const x=mx*size,y=my*size,inY=y*.58;
+   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.25));
+   ctx.beginPath();ctx.moveTo(x+bw*.15,inY);ctx.lineTo(x-bw*.12,y-bh*.15);ctx.lineTo(x+bw*.55,y+bh*.15);ctx.closePath();ctx.fill();
+   ctx.fillStyle=shade;ctx.fillRect(x-bw*.12+1,y-bh/2+1.1,bw,bh);
+   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));ctx.fillRect(x-bw*.15,y-bh/2,bw,bh);
+   ctx.strokeStyle=shade;ctx.strokeRect(x-bw*.15,y-bh/2,bw,bh);
+   ctx.fillStyle=plate;ctx.fillRect(x+bw*.55,y-Math.max(1.2,size*.03)/2,bar,Math.max(1.2,size*.035));
   }
  }
  if(kit.intakes&&!lite){
+  const ix=.48,hy=hullHalfY(def.body,ix)*size;
+  const h=Math.min(size*.08,hy*.45);
   ctx.fillStyle=rgba(art.shadow,.65);
-  ctx.fillRect(size*.42,-size*.12,size*.16,size*.08);
-  ctx.fillRect(size*.42,size*.04,size*.16,size*.08);
+  ctx.fillRect(ix*size,-h-1.2,size*.16,h);
+  ctx.fillRect(ix*size,1.2,size*.16,h);
  }
  if(kit.rcs){
-  const spots=[[.55,.28],[-.35,.3],[.55,-.28],[-.35,-.3]];
+  const spots=[[.5,.22],[-.32,.24],[.5,-.22],[-.32,-.24]];
   for(const [nx,ny] of spots){
-   ctx.fillStyle='#1a2026';ctx.fillRect(nx*size-1.4,ny*size-1.4,2.8,2.8);
-   ctx.fillStyle=rgbOf(mix(art.plate,art.shadow,.4));ctx.fillRect(nx*size-1,ny*size-1,2,2);
+   const hy=hullHalfY(def.body,nx)*size*.82;
+   const y=Math.sign(ny)*Math.min(Math.abs(ny)*size,hy);
+   ctx.fillStyle='#1a2026';ctx.fillRect(nx*size-1.4,y-1.4,2.8,2.8);
+   ctx.fillStyle=rgbOf(mix(art.plate,art.shadow,.4));ctx.fillRect(nx*size-1,y-1,2,2);
   }
  }
  if(kit.nacelle){
@@ -376,14 +442,17 @@ function drawKit(ctx,def,size,art,classId,lite){
   ctx.strokeStyle=shade;ctx.strokeRect(-size*.3,-1.6,size*.7,3.2);
  }
  if(kit.tanks&&!lite){
+  const tx=-.4,hy=hullHalfY(def.body,tx)*size;
   for(const s of[-1,1]){
-   ctx.fillStyle=shade;ctx.fillRect(-size*.55,s*size*.16+1,size*.28,size*.1);
-   ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.2));ctx.fillRect(-size*.58,s*size*.16,size*.28,size*.1);
+   const y=s*Math.min(size*.16,hy*.55);
+   ctx.fillStyle=shade;ctx.fillRect(tx*size+1,y+1,size*.28,size*.1);
+   ctx.fillStyle=rgbOf(mix(art.metal,art.plate,.2));ctx.fillRect(tx*size,y,size*.28,size*.1);
   }
  }
  if(kit.junk&&!lite){
+  const hy=hullHalfY(def.body,-.05)*size;
   ctx.fillStyle=rgbOf(mix(art.heat,art.shadow,.4));
-  ctx.fillRect(-size*.05,size*.3,size*.18,size*.1);
+  ctx.fillRect(-size*.05,Math.min(size*.22,hy*.6),size*.18,size*.1);
  }
 }
 
@@ -443,50 +512,56 @@ function kitSvg(def,art,classId,ox,oy,sc,metal,plate,shadow,heat){
  const kit=kitOf(classId);
  const bits=[];
  if(kit.radiators){
+  const rx=-.22,w=sc*.42,h=Math.max(3.2,sc*.08),hy=hullHalfY(def.body,rx)*sc;
   for(const s of[-1,1]){
-   const x=ox-sc*.28,y=oy+s*sc*.4,w=sc*.5,h=Math.max(3.6,sc*.09);
-   bits.push(`<g class="radiator"><rect x="${(x+1).toFixed(1)}" y="${(y+s*1.2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${mixHex(heat,metal,.55)}" stroke="${shadow}" stroke-width=".7"/>${[1,2,3].map(i=>`<line x1="${(x+w*i/4).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+w*i/4).toFixed(1)}" y2="${(y+h).toFixed(1)}" stroke="${shadow}" stroke-width=".6" opacity=".45"/>`).join('')}</g>`);
+   const x=ox+rx*sc,y=oy+s*(hy-h*.45);
+   bits.push(`<g class="radiator"><rect x="${(x+w*.32).toFixed(1)}" y="${(y+(s>0?-1.6:h-.2)).toFixed(1)}" width="${(w*.22).toFixed(1)}" height="1.8" fill="${shadow}"/><rect x="${(x+1).toFixed(1)}" y="${(y+s*1.2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${mixHex(heat,metal,.55)}" stroke="${shadow}" stroke-width=".7"/>${[1,2,3].map(i=>`<line x1="${(x+w*i/4).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+w*i/4).toFixed(1)}" y2="${(y+h).toFixed(1)}" stroke="${shadow}" stroke-width=".6" opacity=".45"/>`).join('')}</g>`);
   }
  }
  if(kit.antenna){
-  bits.push(`<g class="antenna"><circle cx="${(ox-sc*.12).toFixed(1)}" cy="${oy+1.2}" r="2.3" fill="${shadow}"/><circle cx="${(ox-sc*.18).toFixed(1)}" cy="${oy}" r="2.2" fill="${plate}" stroke="${shadow}"/><line x1="${(ox-sc*.18).toFixed(1)}" y1="${oy}" x2="${(ox-sc*.05).toFixed(1)}" y2="${(oy-sc*.48).toFixed(1)}" stroke="${plate}" stroke-width="1.3"/><circle cx="${(ox-sc*.05).toFixed(1)}" cy="${(oy-sc*.48).toFixed(1)}" r="1.7" fill="${metal}" stroke="${shadow}"/></g>`);
+  const bx=ox-sc*.14,hy=hullHalfY(def.body,-.14)*sc,tip=oy-Math.min(hy*.82,sc*.32);
+  bits.push(`<g class="antenna"><circle cx="${(bx+.6).toFixed(1)}" cy="${oy+1.2}" r="2.3" fill="${shadow}"/><circle cx="${bx.toFixed(1)}" cy="${oy}" r="2.2" fill="${plate}" stroke="${shadow}"/><line x1="${bx.toFixed(1)}" y1="${oy}" x2="${bx.toFixed(1)}" y2="${tip.toFixed(1)}" stroke="${plate}" stroke-width="1.4"/><circle cx="${bx.toFixed(1)}" cy="${tip.toFixed(1)}" r="1.6" fill="${metal}" stroke="${shadow}"/></g>`);
  }
  if(kit.sensors){
-  const ax=ox+sc*.12,ay=oy-sc*.32,r=Math.max(3.4,sc*.09);
+  const hy=hullHalfY(def.body,.1)*sc,ax=ox+sc*.1,ay=oy-hy*.55,r=Math.max(3.2,sc*.08);
   bits.push(`<g class="sensor"><circle cx="${(ax+.8).toFixed(1)}" cy="${(ay+1.1).toFixed(1)}" r="${r.toFixed(1)}" fill="${shadow}"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${r.toFixed(1)}" fill="${plate}" stroke="${shadow}"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${(r*.2).toFixed(1)}" fill="${shadow}"/></g>`);
  }
  if(kit.cargo){
-  const x=ox-sc*.42,y=oy-sc*.26,w=sc*.52,h=sc*.52;
+  const hx=hullHalfY(def.body,-.2)*sc,h=Math.min(sc*.5,hx*1.55),w=sc*.48,x=ox-sc*.4,y=oy-h/2;
   bits.push(`<g class="cargo-bay"><rect x="${(x+1.3).toFixed(1)}" y="${(y+1.5).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${metal}" stroke="${shadow}" stroke-width="1"/><line x1="${(x+w/2).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x+w/2).toFixed(1)}" y2="${(y+h).toFixed(1)}" stroke="${shadow}" stroke-width="1"/><line x1="${x.toFixed(1)}" y1="${(y+h/2).toFixed(1)}" x2="${(x+w).toFixed(1)}" y2="${(y+h/2).toFixed(1)}" stroke="${shadow}" stroke-width=".8" opacity=".6"/><rect x="${(x+2).toFixed(1)}" y="${(y-2.4).toFixed(1)}" width="4.2" height="2.6" fill="${plate}" stroke="${shadow}"/><rect x="${(x+w-6.2).toFixed(1)}" y="${(y-2.4).toFixed(1)}" width="4.2" height="2.6" fill="${plate}" stroke="${shadow}"/></g>`);
  }
  if(kit.clamps){
+  const hy=hullHalfY(def.body,.1)*sc;
   for(const s of[-1,1]){
-   const x=ox+sc*.08,y=oy+s*sc*.42;
-   bits.push(`<path class="clamp" d="M${(x-3).toFixed(1)} ${(y-s*4).toFixed(1)} L${(x-6).toFixed(1)} ${y.toFixed(1)} L${(x-3).toFixed(1)} ${(y+s*4).toFixed(1)}" fill="none" stroke="${plate}" stroke-width="1.4"/>`);
+   const x=ox+sc*.1,y=oy+s*hy*.88;
+   bits.push(`<path class="clamp" d="M${x.toFixed(1)} ${(y-s*2).toFixed(1)} L${(x-2).toFixed(1)} ${(y-s*5).toFixed(1)} L${(x-5).toFixed(1)} ${(y-s*2).toFixed(1)}" fill="none" stroke="${plate}" stroke-width="1.4"/>`);
   }
  }
  if(kit.hardpoints){
-  const ys=(def.lights?.y||.55)*sc;
-  for(const s of[-1,1]){
-   const x=ox+sc*.02,y=oy+s*ys;
-   bits.push(`<g class="hardpoint"><rect x="${(x+1).toFixed(1)}" y="${(y+s).toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${Math.max(3.2,sc*.09).toFixed(1)}" fill="${shadow}"/><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${Math.max(3.2,sc*.09).toFixed(1)}" fill="${metal}" stroke="${shadow}"/><rect x="${(x+sc*.26).toFixed(1)}" y="${(y+1.2).toFixed(1)}" width="${(sc*.3).toFixed(1)}" height="${Math.max(1.7,sc*.045).toFixed(1)}" fill="${plate}"/></g>`);
+  const bh=Math.max(3,sc*.08),bw=sc*.22,bar=sc*.18;
+  for(const [mx,my] of wingMounts(def)){
+   const x=ox+mx*sc,y=oy+my*sc,inY=oy+my*sc*.58;
+   bits.push(`<g class="hardpoint"><polygon points="${(x+bw*.15).toFixed(1)},${inY.toFixed(1)} ${(x-bw*.12).toFixed(1)},${(y-bh*.15).toFixed(1)} ${(x+bw*.55).toFixed(1)},${(y+bh*.15).toFixed(1)}" fill="${shadow}"/><rect x="${(x-bw*.12+1).toFixed(1)}" y="${(y-bh/2+1).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${shadow}"/><rect x="${(x-bw*.15).toFixed(1)}" y="${(y-bh/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${metal}" stroke="${shadow}"/><rect x="${(x+bw*.55).toFixed(1)}" y="${(y-Math.max(1.4,sc*.03)/2).toFixed(1)}" width="${bar.toFixed(1)}" height="${Math.max(1.5,sc*.04).toFixed(1)}" fill="${plate}"/></g>`);
   }
  }
  if(kit.intakes){
-  bits.push(`<g class="intake"><rect x="${(ox+sc*.42).toFixed(1)}" y="${(oy-sc*.12).toFixed(1)}" width="${(sc*.16).toFixed(1)}" height="${(sc*.08).toFixed(1)}" fill="${shadow}" rx="1"/><rect x="${(ox+sc*.42).toFixed(1)}" y="${(oy+sc*.04).toFixed(1)}" width="${(sc*.16).toFixed(1)}" height="${(sc*.08).toFixed(1)}" fill="${shadow}" rx="1"/></g>`);
+  const hy=hullHalfY(def.body,.48)*sc,h=Math.min(sc*.08,hy*.45);
+  bits.push(`<g class="intake"><rect x="${(ox+sc*.48).toFixed(1)}" y="${(oy-h-1.2).toFixed(1)}" width="${(sc*.16).toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}" rx="1"/><rect x="${(ox+sc*.48).toFixed(1)}" y="${(oy+1.2).toFixed(1)}" width="${(sc*.16).toFixed(1)}" height="${h.toFixed(1)}" fill="${shadow}" rx="1"/></g>`);
  }
  if(kit.rcs){
-  for(const [nx,ny] of[[.55,.28],[-.35,.3],[.55,-.28],[-.35,-.3]]){
-   bits.push(`<g class="rcs"><rect x="${(ox+nx*sc-1.6).toFixed(1)}" y="${(oy+ny*sc-1.6).toFixed(1)}" width="3.2" height="3.2" fill="#1a2026"/><rect x="${(ox+nx*sc-1.1).toFixed(1)}" y="${(oy+ny*sc-1.1).toFixed(1)}" width="2.2" height="2.2" fill="${plate}"/></g>`);
+  for(const [nx,ny] of[[.5,.22],[-.32,.24],[.5,-.22],[-.32,-.24]]){
+   const hy=hullHalfY(def.body,nx)*sc*.82,y=oy+Math.sign(ny)*Math.min(Math.abs(ny)*sc,hy);
+   bits.push(`<g class="rcs"><rect x="${(ox+nx*sc-1.6).toFixed(1)}" y="${(y-1.6).toFixed(1)}" width="3.2" height="3.2" fill="#1a2026"/><rect x="${(ox+nx*sc-1.1).toFixed(1)}" y="${(y-1.1).toFixed(1)}" width="2.2" height="2.2" fill="${plate}"/></g>`);
   }
  }
  if(kit.nacelle){
   bits.push(`<g class="nacelle"><rect x="${(ox-sc*.25).toFixed(1)}" y="${oy+1.4}" width="${(sc*.7).toFixed(1)}" height="3.4" fill="${shadow}"/><rect x="${(ox-sc*.3).toFixed(1)}" y="${oy-1.7}" width="${(sc*.7).toFixed(1)}" height="3.4" rx="1.2" fill="${plate}" stroke="${shadow}"/></g>`);
  }
  if(kit.tanks){
-  for(const s of[-1,1])bits.push(`<rect class="tank" x="${(ox-sc*.58).toFixed(1)}" y="${(oy+s*sc*.16).toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${(sc*.1).toFixed(1)}" rx="1.4" fill="${metal}" stroke="${shadow}"/>`);
+  const hy=hullHalfY(def.body,-.4)*sc;
+  for(const s of[-1,1])bits.push(`<rect class="tank" x="${(ox-sc*.4).toFixed(1)}" y="${(oy+s*Math.min(sc*.16,hy*.55)).toFixed(1)}" width="${(sc*.28).toFixed(1)}" height="${(sc*.1).toFixed(1)}" rx="1.4" fill="${metal}" stroke="${shadow}"/>`);
  }
- if(kit.junk)bits.push(`<rect class="junk" x="${(ox-sc*.05).toFixed(1)}" y="${(oy+sc*.3).toFixed(1)}" width="${(sc*.18).toFixed(1)}" height="${(sc*.1).toFixed(1)}" fill="${heat}" opacity=".7"/>`);
+ if(kit.junk)bits.push(`<rect class="junk" x="${(ox-sc*.05).toFixed(1)}" y="${(oy+Math.min(sc*.22,hullHalfY(def.body,-.05)*sc*.6)).toFixed(1)}" width="${(sc*.18).toFixed(1)}" height="${(sc*.1).toFixed(1)}" fill="${heat}" opacity=".7"/>`);
  return bits.join('');
 }
 
@@ -558,8 +633,11 @@ export function hullPreviewSvg(ship){
   if(p.type==='stroke')return `<polyline points="${poly(p.pts)}" fill="none" stroke="${mixHex(plate,shadow,.35)}" stroke-width="1.05" opacity=".5"/>`;
   if(p.type==='rect')return `<g><rect x="${(ox+p.x*sc+1.2).toFixed(1)}" y="${(oy+p.y*sc+1.5).toFixed(1)}" width="${(p.w*sc).toFixed(1)}" height="${(p.h*sc).toFixed(1)}" fill="${shadow}"/><rect x="${(ox+p.x*sc).toFixed(1)}" y="${(oy+p.y*sc).toFixed(1)}" width="${(p.w*sc).toFixed(1)}" height="${(p.h*sc).toFixed(1)}" fill="${metal}" stroke="${shadow}" stroke-width="1"/></g>`;
   if(p.type==='poly')return `<g><polygon points="${poly(p.pts,1.2,1.5)}" fill="${shadow}"/><polygon points="${poly(p.pts)}" fill="${metal}" stroke="${shadow}" stroke-width="1.1"/></g>`;
-  if(p.type==='arc')return `<g><circle cx="${(ox+p.x*sc+.8).toFixed(1)}" cy="${(oy+p.y*sc+1.1).toFixed(1)}" r="${(p.r*sc).toFixed(1)}" fill="${shadow}"/><circle cx="${(ox+p.x*sc).toFixed(1)}" cy="${(oy+p.y*sc).toFixed(1)}" r="${(p.r*sc).toFixed(1)}" fill="${plate}" stroke="${shadow}" stroke-width="1.1"/><circle cx="${(ox+p.x*sc).toFixed(1)}" cy="${(oy+p.y*sc).toFixed(1)}" r="${(p.r*sc*.18).toFixed(1)}" fill="${shadow}"/></g>`;
-  if(p.type==='scoop')return `<path d="M${(ox-.05*sc).toFixed(1)} ${(oy+.32*sc).toFixed(1)} Q${(ox-1.35*sc).toFixed(1)} ${oy} ${(ox-.05*sc).toFixed(1)} ${(oy-.32*sc).toFixed(1)}" fill="none" stroke="${heat}" stroke-width="1.3"/>`;
+  if(p.type==='arc'){
+   const ax=ox+p.x*sc,ay=oy+p.y*sc,r=p.r*sc,root=oy+Math.sign(p.y||1)*hullHalfY(def.body,p.x)*sc*.72;
+   return `<g><line x1="${ax.toFixed(1)}" y1="${root.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="${mixHex(metal,shadow,.25)}" stroke-width="${Math.max(1.6,sc*.06).toFixed(1)}"/><circle cx="${ax.toFixed(1)}" cy="${root.toFixed(1)}" r="${Math.max(1.4,r*.22).toFixed(1)}" fill="${metal}"/><circle cx="${(ax+.8).toFixed(1)}" cy="${(ay+1.1).toFixed(1)}" r="${r.toFixed(1)}" fill="${shadow}"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${r.toFixed(1)}" fill="${plate}" stroke="${shadow}" stroke-width="1.1"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="${(r*.18).toFixed(1)}" fill="${shadow}"/></g>`;
+  }
+  if(p.type==='scoop')return `<g><polygon points="${(ox-.2*sc).toFixed(1)},${(oy+.22*sc).toFixed(1)} ${(ox-.72*sc).toFixed(1)},${(oy+.12*sc).toFixed(1)} ${(ox-.72*sc).toFixed(1)},${(oy-.12*sc).toFixed(1)} ${(ox-.2*sc).toFixed(1)},${(oy-.22*sc).toFixed(1)}" fill="${metal}"/><path d="M${(ox-.18*sc).toFixed(1)} ${(oy+.22*sc).toFixed(1)} Q${(ox-.8*sc).toFixed(1)} ${oy} ${(ox-.18*sc).toFixed(1)} ${(oy-.22*sc).toFixed(1)}" fill="none" stroke="${heat}" stroke-width="1.3"/></g>`;
   return '';
  }).join('');
  const kit=kitSvg(def,art,ship.class||classId,ox,oy,sc,metal,plate,shadow,heat);
@@ -568,8 +646,10 @@ export function hullPreviewSvg(ship){
   return `<path d="M${x.toFixed(1)} ${(y-2).toFixed(1)} L${(x-10).toFixed(1)} ${y.toFixed(1)} L${x.toFixed(1)} ${(y+2).toFixed(1)}Z" fill="${mixHex(a,'#4a6a68',.5)}" opacity="${i?'.2':'.3'}"/>`;
  }).join('');
  const bells=(def.nozzles||[]).map(([nx,ny])=>{
-  const x=ox+nx*sc+.4,y=oy+ny*sc;
-  return `<g class="engine-bell"><rect x="${(x-1).toFixed(1)}" y="${(y-4.6).toFixed(1)}" width="8.4" height="9.2" rx="1.6" fill="${metal}" stroke="${shadow}" stroke-width=".8"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.2" ry="2.5" fill="${shadow}"/><ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="2.6" ry="2" fill="${heat}" stroke="${mixHex(heat,'#f0c090',.3)}"/><ellipse cx="${(x-.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="1.3" ry=".9" fill="#080606"/><ellipse cx="${(x-.3).toFixed(1)}" cy="${y.toFixed(1)}" rx=".7" ry=".45" fill="#b8fff0" opacity=".35"/></g>`;
+  const face=ox+nx*sc,y=oy+ny*sc;
+  const local=Math.max(3.4,hullHalfY(def.body,nx)*sc*1.45);
+  const hh=Math.min(Math.max(4.2,sc*.12),local),inset=Math.max(7.2,sc*.26);
+  return `<g class="engine-bell"><polygon points="${(face+inset).toFixed(1)},${(y-hh*.3).toFixed(1)} ${(face+1.4).toFixed(1)},${(y-hh*.48).toFixed(1)} ${(face+1.4).toFixed(1)},${(y+hh*.48).toFixed(1)} ${(face+inset).toFixed(1)},${(y+hh*.3).toFixed(1)}" fill="${metal}" stroke="${shadow}" stroke-width=".6"/><rect x="${(face-1.2).toFixed(1)}" y="${(y-hh*.44).toFixed(1)}" width="${Math.max(4.4,sc*.14).toFixed(1)}" height="${(hh*.88).toFixed(1)}" rx="1.2" fill="${metal}" stroke="${shadow}" stroke-width=".7"/><ellipse cx="${face.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(hh*.36).toFixed(1)}" ry="${(hh*.3).toFixed(1)}" fill="${shadow}"/><ellipse cx="${face.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(hh*.28).toFixed(1)}" ry="${(hh*.22).toFixed(1)}" fill="${heat}" stroke="${mixHex(heat,'#f0c090',.3)}"/><ellipse cx="${(face-.5).toFixed(1)}" cy="${y.toFixed(1)}" rx="1.2" ry=".85" fill="#080606"/><ellipse cx="${(face-.3).toFixed(1)}" cy="${y.toFixed(1)}" rx=".65" ry=".4" fill="#b8fff0" opacity=".35"/></g>`;
  }).join('');
  const cw=20,ch=12;
  const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(cx+1.5).toFixed(1)}" cy="${oy+2.2}" rx="10" ry="6.4" fill="${shadow}" opacity=".5"/><rect x="${(cx-cw/2).toFixed(1)}" y="${(oy-ch/2).toFixed(1)}" width="${cw}" height="${ch}" rx="2.4" fill="${plate}" stroke="${shadow}" stroke-width="1.2"/><rect x="${(cx-cw/2+2).toFixed(1)}" y="${(oy-ch/2+1.7).toFixed(1)}" width="${cw-4}" height="${ch-3.4}" rx="1.4" fill="url(#${gid}-g)"/><rect x="${(cx-cw/2+3.4).toFixed(1)}" y="${(oy-ch/2+2.8).toFixed(1)}" width="${cw-7.2}" height="${ch-5.4}" rx="1" fill="#061014" opacity=".4"/><path d="M${(cx-2).toFixed(1)} ${(oy-ch/2+1.7).toFixed(1)} L${(cx-.2).toFixed(1)} ${(oy+ch/2-1.7).toFixed(1)}" stroke="${plate}" stroke-width=".8" opacity=".55"/><path d="M${(cx+3.6).toFixed(1)} ${(oy-ch/2+1.7).toFixed(1)} L${(cx+5).toFixed(1)} ${(oy+ch/2-1.7).toFixed(1)}" stroke="${plate}" stroke-width=".75" opacity=".45"/><ellipse cx="${(cx-4).toFixed(1)}" cy="${(oy-1.8).toFixed(1)}" rx="3.6" ry="2" fill="#c8e0ea" opacity=".28"/></g>`:'';

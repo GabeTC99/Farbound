@@ -1,0 +1,14 @@
+{
+  "release": "2.15.3",
+  "name": "Fleet Atlas",
+  "date": "2026-09-20",
+  "notes": [
+    "Attach pass: every player and NPC hull keeps engines, weapons, antennae, radiators, clamps, and dishes on the body. Dart stern notches and off-wing hardpoints are gone; planforms grew transoms, engine shoulders, and wing roots so fittings sit in or on the hull.",
+    "Hangar cards and local-space draws share the same attached geometry. Flight, docking, hitboxes, and menus are unchanged. Stars stay the 2.15.0 spectral pass.",
+    "Service worker cache bumped to farbound-v2.15.3 so Pages picks up the attached craft paint."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

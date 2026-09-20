@@ -54,6 +54,35 @@ assert.notEqual(sampleShipColor('pirate',-.4,-.4)[0],sampleShipColor('security',
 const bodies=SHIPS.map(s=>JSON.stringify(HULL_DEFS[s.id].body));
 assert.equal(new Set(bodies).size,20,'each player hull keeps a unique silhouette');
 
+function hullHalfY(body,x){
+ let max=0,hit=false;
+ for(let i=0;i<body.length;i++){
+  const a=body[i],b=body[(i+1)%body.length];
+  const lo=Math.min(a[0],b[0]),hi=Math.max(a[0],b[0]);
+  if(x+1e-5<lo||x-1e-5>hi)continue;
+  hit=true;
+  if(Math.abs(b[0]-a[0])<1e-5){max=Math.max(max,Math.abs(a[1]),Math.abs(b[1]));continue;}
+  const t=(x-a[0])/(b[0]-a[0]);
+  max=Math.max(max,Math.abs(a[1]+(b[1]-a[1])*t));
+ }
+ return hit?max:0;
+}
+function assertAttached(id,def){
+ for(const [nx,ny] of def.nozzles||[]){
+  const hy=hullHalfY(def.body,nx);
+  assert(hy+0.06>=Math.abs(ny),id+' nozzle '+ny+' off hull (half='+hy.toFixed(3)+')');
+ }
+ for(const [hx,hy] of def.hardpoints||[]){
+  const half=hullHalfY(def.body,hx);
+  assert(half+0.05>=Math.abs(hy),id+' hardpoint off hull');
+ }
+ for(const p of def.parts||[]){
+  if(p.type==='arc')assert(hullHalfY(def.body,p.x)+0.1>=Math.abs(p.y),id+' dish off hull');
+ }
+}
+for(const ship of SHIPS)assertAttached(ship.id,HULL_DEFS[ship.id]);
+for(const kind of NPC_KINDS)assertAttached(kind,NPC_HULLS[kind]);
+
 let flames=0;
 const ctx=new Proxy({},{get:(_,key)=>key==='lineTo'?((x)=>{if(x<-31)flames++;}):()=>{},set:()=>true});
 drawCraft(ctx,{kind:'eagle',size:26,thrust:0,lite:true,clock:0});
