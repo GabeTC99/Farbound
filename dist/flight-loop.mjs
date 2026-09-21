@@ -9,7 +9,51 @@ export const MAX_FRAME_DT=.1;
 export const MAX_STEPS=5;
 /** Matches the old per-frame 0.09 lerp at 60 Hz: 1-exp(-k/60) ≈ 0.09. */
 export const CAM_FOLLOW=5.66;
-export const PIXEL_BUDGET={high:6.2e6,balanced:3.2e6,performance:1.8e6};
+export const PIXEL_BUDGET={high:6.2e6,highHuge:3.8e6,balanced:3.2e6,performance:1.8e6};
+/** CSS area that counts as Fold/tablet-inner. High uses the tighter 120 Hz budget. */
+export const HUGE_CSS=2.2e6;
+/** Mode floors. High stays ≥0.75 so Fold High is not Performance-soft. */
+export const SCALE_FLOOR={high:.75,balanced:.6,performance:.5};
+export const STAR_LAYER_SPLITS=[.045,.07];
+export const STAR_LAYER_DEPTHS=[.032,.058,.086];
+
+export function pixelBudget(graphics='high',cssW=1,cssH=1){
+ const mode=graphics==='performance'||graphics==='balanced'?graphics:'high';
+ const huge=(cssW||1)*(cssH||1)>=HUGE_CSS;
+ if(mode==='high'&&huge)return PIXEL_BUDGET.highHuge;
+ return PIXEL_BUDGET[mode];
+}
+
+/** True when a world-space ring (orbit, scoop zone) crosses the view. */
+export function ringInView(x,y,r,camX,camY,viewR){
+ const d=Math.hypot((x||0)-(camX||0),(y||0)-(camY||0));
+ return Math.abs(d-(r||0))<(viewR||0);
+}
+
+export function starLayerIndex(depth){
+ const d=depth||.05;
+ if(d<STAR_LAYER_SPLITS[0])return 0;
+ if(d<STAR_LAYER_SPLITS[1])return 1;
+ return 2;
+}
+
+export function starLayerOffset(camX,camY,depth,width,height){
+ return {
+  x:wrapUnit(-(camX||0)*(depth||0),width||1),
+  y:wrapUnit(-(camY||0)*(depth||0),height||1)
+ };
+}
+
+/** Tile a baked star/galaxy layer so wrap-around parallax stays one blit set. */
+export function blitWrapped(ctx,layer,ox,oy,w,h){
+ if(!ctx||!layer)return;
+ const width=w||layer.width||1,height=h||layer.height||1;
+ const x=wrapUnit(ox,width),y=wrapUnit(oy,height);
+ ctx.drawImage(layer,x-width,y-height);
+ ctx.drawImage(layer,x,y-height);
+ ctx.drawImage(layer,x-width,y);
+ ctx.drawImage(layer,x,y);
+}
 
 export function createFrameClock(now=0){
  return {last:now,acc:0,ready:false};
@@ -199,12 +243,12 @@ export function canvasScale({cssW,cssH,dpr,graphics='high'}={}){
  const raw=Math.max(1,dpr||1);
  const cap=Math.min(raw,2);
  const mode=graphics==='performance'||graphics==='balanced'?graphics:'high';
- const budget=PIXEL_BUDGET[mode];
+ const budget=pixelBudget(mode,w,h);
+ const floor=SCALE_FLOOR[mode];
  const full=w*h*cap*cap;
  if(full<=budget)return cap;
  const scale=Math.sqrt(budget/(w*h));
- // Stay at least 0.75 so huge fold/tablet CSS sizes still paint, just softer.
- return Math.max(.75,Math.min(cap,scale));
+ return Math.max(floor,Math.min(cap,scale));
 }
 
 export function viewportSize(win=globalThis){

@@ -83,12 +83,16 @@ function assertAttached(id,def){
 for(const ship of SHIPS)assertAttached(ship.id,HULL_DEFS[ship.id]);
 for(const kind of NPC_KINDS)assertAttached(kind,NPC_HULLS[kind]);
 
-let flames=0;
-const ctx=new Proxy({},{get:(_,key)=>key==='lineTo'?((x)=>{if(x<-31)flames++;}):()=>{},set:()=>true});
+let flames=0,grads=0;
+const ctx=new Proxy({},{get:(_,key)=>key==='lineTo'?((x)=>{if(x<-31)flames++;}):key==='createLinearGradient'||key==='createRadialGradient'?(()=>{grads++;return{addColorStop(){}};}):()=>{},set:()=>true});
 drawCraft(ctx,{kind:'eagle',size:26,thrust:0,lite:true,clock:0});
 assert.equal(flames,0);
+assert.equal(grads,0,'performance ship paint must not allocate gradients');
 drawCraft(ctx,{kind:'eagle',size:26,thrust:1,lite:true,clock:0});
 assert(flames>=1);
+assert.equal(grads,0);
+drawCraft(ctx,{kind:'eagle',size:26,thrust:0,lite:false,clock:0});
+assert.ok(grads>=1,'high ship paint still uses lighting gradients');
 
 const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 assert.match(app,/dev-ship/);
