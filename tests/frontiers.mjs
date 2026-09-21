@@ -229,6 +229,17 @@ test('Wake pursuit persists, realizes after jump, and pays once on scan',()=>{
 test('Migration preserves the original save byte-for-byte; checkpoints recover damaged v2 saves',()=>{
  const storage=new MemoryStorage(),original=JSON.stringify(new ClassicGame().serialize());storage.setItem(ORIGINAL_KEY,original);const boot=readPilot(storage);assert(boot.migrated);writePilot(storage,boot.pilot,{now:1000});assert.equal(storage.getItem(ORIGINAL_KEY),original);const next=structuredClone(boot.pilot);next.credits+=100;writePilot(storage,next,{now:2000});assert.equal(readCheckpoint(storage).pilot.credits,2400);storage.setItem(SAVE_KEY,'corrupted');const recovered=readPilot(storage);assert(recovered.recovered);assert.equal(recovered.pilot.credits,2400);assert.equal(storage.getItem(ORIGINAL_KEY),original);writePilot(storage,next,{now:3000});const final=structuredClone(next);final.credits+=500;writePilot(storage,final,{checkpoint:true,now:4000});assert.equal(readCheckpoint(storage).pilot.credits,2500);assert.equal(readPilot(storage).pilot.credits,3000);assert(storage.getItem(BACKUP_KEY));
 });
+test('FPS meter toggle is off by default and survives a save roundtrip',()=>{
+ const g=new Game();
+ assert.equal(g.s.showFps,false);
+ const fresh=validateSave(g.serialize());
+ assert.equal(fresh.showFps,false);
+ g.s.showFps=true;
+ const kept=roundtrip(g);
+ assert.equal(kept.s.showFps,true);
+ const coerced=validateSave({...g.serialize(),showFps:'yes'});
+ assert.equal(coerced.showFps,false);
+});
 test('Malformed saves reject duplicate modules, duplicate rewards, overloads, and unknown entries',()=>{
  const g=new Game();const m=fit(g,'pathfinder'),base=g.serialize();for(const alter of [s=>s.modules.push({...m}),s=>s.loadouts.mule.push(m.uid),s=>s.cargo.food=999,s=>s.modules[0].kind='missing',s=>s.reputation.concord=101,s=>s.metrics.anomalies=-1,s=>s.surfaceScanned.push('planet-9999-0-a0'),s=>s.companies={'bad-id':{standing:1,completed:1}}]){const bad=structuredClone(base);alter(bad);assert.equal(validateSave(bad),null);}assert.equal(validateSave({}),null);
 });

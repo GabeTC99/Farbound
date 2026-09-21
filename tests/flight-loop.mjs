@@ -5,7 +5,7 @@ import {
  HUGE_CSS,pixelBudget,ringInView,starLayerIndex,starLayerOffset,blitWrapped,
  STAR_LAYER_DEPTHS,
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
- lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
+ lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,createFpsMeter,FPS_STALL_MS,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
  hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,strokeBand,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
@@ -106,6 +106,22 @@ assert.equal(stats.n,8);
 assert.ok(stats.avg>8&&stats.avg<11);
 assert.ok(stats.max>=16.8);
 
+const meter=createFpsMeter(16);
+assert.equal(meter.record(0),null);
+let now=0;
+for(let k=0;k<16;k++){now+=8.333;meter.record(now);}
+const fps=meter.snapshot();
+assert.ok(fps.n>=15);
+assert.ok(fps.fps>115&&fps.fps<125,'120 Hz RAF intervals should report ~120 FPS');
+assert.ok(fps.ms>8&&fps.ms<9);
+assert.ok(fps.low1>115);
+meter.reset();
+meter.record(0);
+meter.record(8.3);
+meter.record(8.3+400);
+assert.ok(FPS_STALL_MS<400);
+assert.equal(meter.snapshot().n,1,'tab-hide stalls must not pin 1% low');
+
 // Photospheres stay sharp (384) but no longer rebuild 192→512 when zoom/DPR changes.
 assert.equal(texSizeFor({r:40},true,1),STAR_TEX.lite);
 assert.equal(texSizeFor({r:40},false,.6),STAR_TEX.full);
@@ -114,6 +130,12 @@ assert.equal(texSizeFor({r:180},false,1.5),texSizeFor({r:80},false,.8));
 
 const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 assert.match(app,/from '\.\/flight-loop\.mjs'/);
+assert.match(app,/createFpsMeter\(/);
+assert.match(app,/data-action="dev-fps"/);
+assert.match(app,/id="fps-meter"/);
+assert.match(app,/case 'dev-fps'/);
+assert.match(app,/fpsMeter\.record\(now\)/);
+assert.match(app,/game\.s\.showFps===true/);
 assert.match(app,/beginFrame\(/);
 assert.match(app,/followCam\(/);
 assert.match(app,/canvasScale\(/);
@@ -164,7 +186,7 @@ assert.match(style,/#space\{[^}]*background:#060c16/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.4/);
+assert.match(sw,/farbound-v2\.16\.5/);
 const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
 assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
 assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);
@@ -271,6 +293,7 @@ for(let i=1;i<cruise.length;i++){
  assert.ok(cruise[i]<=cruise[i-1],'locked cam steps monotonically as the chase cam advances');
 }
 
+console.log('PASS RAF FPS meter reports ~120 Hz and ignores tab-hide stalls');
 console.log('PASS Fixed 60 Hz steps, hitch clamp, and leftover alpha');
 console.log('PASS Time-based camera lag is stable at 30/60/120 Hz (old lerp is not)');
 console.log(`PASS Camera offset spread time=${timeSpread.toFixed(2)} vs frame-lerp=${frameSpread.toFixed(2)}`);

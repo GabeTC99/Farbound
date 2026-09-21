@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 21, 2026: Candidate 2.16.5 FPS meter in Temporary DEV tools: live `requestAnimationFrame` overlay (smoothed FPS, frame ms, 1% low) so Fold PWA testing is not stuck at Game Booster 0. Off by default; persists as `showFps` on the pilot. Near-zero cost when disabled. 2.16.2–2.16.4 flash/AA/hitch path unchanged. Service worker cache bumped to `farbound-v2.16.5`. Rollback tag `v2.16.4`.
+
 - September 21, 2026: Candidate 2.16.4 High-mode Fold hitch (cover + inner): same stutter on the tiny outer cover and the large inner display, so the hot path was too expensive even at modest resolutions. High keeps AA/capsules/extrusion; dim stars and the galaxy band blit from caches, far orbit/scoop rings are culled, hull lighting gradients are reused. Performance LOD is optional. Bake-before-fill and transparent `#space` stay. Verify Full/High on the outer cover and again on the inner display — both must cruise without hitch; a cover hitch is not a pixel-budget problem. Service worker cache bumped to `farbound-v2.16.4`. Rollback tag `v2.16.3`.
 
 - September 21, 2026: Candidate 2.16.3 ship/station edges: Fold clip leftover is pixel crawl on hard un-antialiased edges (Anchorage spokes, NPC hulls, player chevron). Device-aware hairline + silhouette AA on ships/player; station arms are stroked capsules; keep transparent `#space` (white-flash) and synchronized presents; snap the world camera. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.

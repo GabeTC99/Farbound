@@ -1,0 +1,15 @@
+{
+  "release": "2.16.5",
+  "name": "Nullharbor",
+  "date": "2026-09-21",
+  "notes": [
+    "Temporary DEV tools now has an FPS meter toggle. It overlays a dark/mint readout of real requestAnimationFrame rate from the game loop (smoothed FPS, average frame ms, 1% low) so Fold PWA testing is not stuck at Samsung Game Booster 0.",
+    "Off by default. Persists on the pilot as showFps so Fold sessions keep the meter. Near-zero cost when disabled. Works in flight, on the concourse, and on the surface. 2.16.2–2.16.4 flash, AA, and hitch fixes are unchanged.",
+    "Verify: Flight menu → Temporary DEV tools → Show FPS, close the menu, cruise. The corner readout must be non-zero. Reload — the toggle stays on.",
+    "Service worker cache bumped to farbound-v2.16.5. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
