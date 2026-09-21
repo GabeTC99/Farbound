@@ -22,8 +22,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ### Candidate 2.16.3
 
-- **Ship/station edges:** Fold clip showed pixel crawl on hard 1 CSS-px hull and station spokes (sub-pixel stair-steps at Fold backing×zoom), not classic tearing. World strokes now keep a 1.4 device-pixel hairline with round joins. The chase camera still snaps to backing pixels; distant stars stay unsapped.
-- **White flash stays:** `#space` remains a transparent 2D canvas so a hitch still composites over the dark CSS background. It is no longer desynchronized.
+- **Ship/station edges:** Gabe’s Fold clip (Solace / Anchorage 01, ~107 fps) shows a horizontal shear of the whole `#space` canvas during cruise — station, NPCs, labels, and starfield move together — while the HUD stays locked. `#space` stays transparent (2.16.2 white-flash) but is no longer desynchronized. World strokes also keep a 1.4 device-pixel hairline; the chase camera snaps to backing pixels.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.3`.
 
 ### Candidate 2.16.2

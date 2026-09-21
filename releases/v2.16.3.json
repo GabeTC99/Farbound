@@ -3,9 +3,8 @@
   "name": "Nullharbor",
   "date": "2026-09-21",
   "notes": [
-    "Fold clip (Anchorage 01 / local traffic): the leftover artifact is pixel crawl on hard un-antialiased edges, not classic tearing. Station spokes and hull strokes were 1 CSS-px in world space; at Fold backing×zoom that is a sub-pixel stair-step that recrawls every frame (and worse when the hull or wheel rotates).",
-    "World strokes now keep a 1.4 device-pixel hairline (round joins) for ships and stations. The chase camera still snaps to backing pixels. Distant stars stay on the unsapped interpolated camera.",
-    "#space stays a transparent 2D canvas (2.16.2 Fold white-flash) but is no longer desynchronized, so Chrome cannot front-buffer under the HUD.",
+    "Fold clip (Solace / Anchorage 01, ~107 fps): leftover artifact is a horizontal shear of the whole #space canvas during cruise — station, NPC hulls, labels, and starfield offset together — while the HUD stays locked. No white flash. That is a desynchronized/front-buffer present on a 120 Hz Fold panel.",
+    "#space stays transparent (2.16.2 white-flash) but is no longer desynchronized. World strokes also keep a 1.4 device-pixel hairline so thin spokes/hulls do not crawl at Fold backing×zoom. Chase camera snaps to backing pixels; distant stars stay unsapped.",
     "Sky bake-before-fill, backing slack, and launch/jump art warmup from 2.16.2 are unchanged. Service worker cache bumped to farbound-v2.16.3. Save keys stay farbound-save-v2."
   ],
   "save_key": "farbound-save-v2",

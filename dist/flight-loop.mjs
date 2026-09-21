@@ -112,10 +112,12 @@ export const SPACE_CLEAR='#060c16';
  * on Android Chrome / Fold GPUs; 2.15.7's immediate fill could not win that
  * race when a hitch (sky bake, first NPC cluster) stalled the next GPU submit.
  *
- * Synchronized (desynchronized:false): Chrome's desync hint may front-buffer
- * and tear. Combined with alpha:true under the HUD overlay (`#game`), that
- * presented as vsync-off shredding on ship/station edges after 2.16.2.
- * Transparency stays so a rare uninitialized present is still dark CSS.
+ * Synchronized (desynchronized:false): Gabe's Fold clip (Solace / Anchorage 01,
+ * ~107 fps / 120 Hz panel) shows a horizontal shear across the whole game
+ * canvas during cruise — station, NPCs, labels, and starfield offset together
+ * — while the HUD overlay stays locked. That is a desync/front-buffer present,
+ * not a white flash. Transparency stays so a rare uninitialized present is
+ * still dark CSS.
  */
 export const SPACE_CONTEXT={alpha:true,desynchronized:false};
 /** Ignore 1–2 device-pixel visualViewport jitter so Fold chrome does not reset the buffer every frame. */
