@@ -1,7 +1,7 @@
 import {Game as FlightGame,newSave as v1Save,validateSave as v1Validate,SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,cargoUsed,jumpDistance,jumpCost,price,dist,clamp,angleDiff,rng,shipRadius,moduleSlots} from './core.mjs';
 import {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
 import {createSurface,nearestAnomaly,updateSurface,terrainAt} from './surface.mjs';
-import {createOnFoot,nearestZone,updateOnFoot,onFootSave} from './onfoot.mjs';
+import {createOnFoot,nearestZone,interactZone,updateOnFoot,onFootSave} from './onfoot.mjs';
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
@@ -12,7 +12,7 @@ export * from './core.mjs';
 export {FACTIONS,GUILDS,MODULES} from './catalog.mjs';
 export {moduleSlots} from './core.mjs';
 export {nearestAnomaly,terrainAt,surfaceAltitude} from './surface.mjs';
-export {nearestZone,createOnFoot,updateOnFoot,onFootSave} from './onfoot.mjs';
+export {nearestZone,interactZone,ZONE_INTERACT_RANGE,createOnFoot,updateOnFoot,onFootSave} from './onfoot.mjs';
 export {createStationLayout} from './station-layout.mjs';
 export {createPlanetLayout} from './planet-layout.mjs';
 export {systemSky,wantedTier} from './atmosphere.mjs';
@@ -236,7 +236,7 @@ export class Game extends FlightGame{
  interactStation(){
   if(!this.s.docked)return null;
   if(!this.onfoot)this.enterStationDeck();
-  const z=nearestZone(this.onfoot);
+  const z=interactZone(this.onfoot);
   if(!z){this.notify('Walk to a service desk or the hangar bay.');return null;}
   if(z.launch){if(this.launch())return{launch:true};return{service:'detention',blocked:true};}
   return{service:z.service,zone:z};
@@ -541,6 +541,7 @@ export class Game extends FlightGame{
   if(this.target?.type==='asteroid')return this.prospectRock();
   if(this.target?.pursued||(this.target?.type==='traffic'&&this.s.pursuit&&this.target.uid===this.s.pursuit.uid))return this.scanPursuit();
   if(this.target?.type==='wake')return this.target.scanned?this.followWake():this.scanWake();
+  if(this.target?.type==='signal'||this.target?.type==='derelict')return this.scanDynamic();
   if(!this.visiblePlanets.length)return this.discover();
   if(!this.visiblePlanets.includes(this.target))this.target=this.visiblePlanets.reduce((a,b)=>dist(this.player,a)<dist(this.player,b)?a:b);
   return super.scanTarget();

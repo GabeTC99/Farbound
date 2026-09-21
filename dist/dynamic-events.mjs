@@ -364,16 +364,23 @@ export const EVENT_DEFS={
   canStart:g=>g.derelicts.length<2,
   start(g,ev){
    const at=awayFrom(g,g.star||{x:0,y:0},1400+(Math.random()*600));
-   const d={id:uid('derelict'),type:'derelict',name:'Derelict hull',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,scanned:false,discovered:false,life:180,lootChance:.55+Math.random()*.35,salvaged:false,eventOwned:true};
+   const d={id:uid('derelict'),type:'derelict',name:'Derelict hull',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,scanned:false,discovered:true,life:180,lootChance:.55+Math.random()*.35,salvaged:false,eventOwned:true};
    g.derelicts.push(d);ev.derelictId=d.id;ev.spawned=[];ev.objective='Scan and salvage the derelict wreck';
-   if(Math.random()<.4){const p=spawnPirate(g,awayFrom(g,d,520),{name:'Wreck scavenger',hp:70,bounty:300});if(p){ev.spawned=[p.id];ev.pirateId=p.id;}}
-   if(nearbyPlayer(g,d,EVENT_CONFIG.signalRange+200)){d.discovered=true;g.notify('Unidentified contact detected.');}
+   ev.beacon={x:d.x,y:d.y};ev.alerted=true;
+   ev.maySpawnScavenger=Math.random()<.4;
+   g.target=d;
+   g.notify('Unidentified contact detected. Approach to scan and salvage the wreck.');
    log('start derelictWreck',d.id);return true;
   },
   update(g,ev){
    const d=g.derelicts.find(x=>x.id===ev.derelictId);
    if(!d){resolve(ev,'gone');return;}
-   if(!d.discovered&&nearbyPlayer(g,d,EVENT_CONFIG.signalRange+200)){d.discovered=true;g.notify('Unidentified contact detected.');}
+   if(!d.discovered){d.discovered=true;g.notify('Unidentified contact detected. Approach to scan and salvage the wreck.');}
+   if(ev.maySpawnScavenger&&!ev.pirateId&&nearbyPlayer(g,d,480)){
+    ev.maySpawnScavenger=false;
+    const a=d.angle||0,p=spawnPirate(g,{x:d.x+Math.cos(a)*70,y:d.y+Math.sin(a)*70,angle:a+Math.PI},{name:'Wreck scavenger',hp:70,bounty:300});
+    if(p){ev.spawned=[p.id];ev.pirateId=p.id;if(nearbyPlayer(g,p,700))g.notify('Scavengers at the wreck.','bad');}
+   }
    if(d.salvaged){ev.playerAssisted=true;resolve(ev,'salvaged');return;}
    if(d.scanned&&ev.age>d.life)resolve(ev,'expired');
    else if(!d.scanned&&ev.age>d.life)resolve(ev,'expired');

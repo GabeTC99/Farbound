@@ -41,9 +41,22 @@ export function createOnFoot(layout,saved=null){
  };
 }
 
-export function nearestZone(s,maxDist=62){
+/** Pad-edge slack for wayfinding — highlights the nearest desk from farther away. */
+export const ZONE_FOCUS_SLACK=62;
+/** Center distance required to use a station desk or hangar (walk-to-service). */
+export const ZONE_INTERACT_RANGE=24;
+
+export function zoneCenterDist(s,z){return Math.hypot(z.x-s.x,z.y-s.y);}
+
+export function nearestZone(s,maxDist=ZONE_FOCUS_SLACK){
  if(!s?.zones?.length)return null;
- return s.zones.map(z=>({z,d:Math.hypot(z.x-s.x,z.y-s.y)-(z.r||40)})).filter(e=>e.d<=maxDist).sort((a,b)=>a.d-b.d)[0]?.z||null;
+ return s.zones.map(z=>({z,d:zoneCenterDist(s,z)-(z.r||40)})).filter(e=>e.d<=maxDist).sort((a,b)=>a.d-b.d)[0]?.z||null;
+}
+
+/** Tight desk/hangar proximity — ignores the large painted pad radius. */
+export function interactZone(s,maxDist=ZONE_INTERACT_RANGE){
+ if(!s?.zones?.length)return null;
+ return s.zones.map(z=>({z,d:zoneCenterDist(s,z)})).filter(e=>e.d<=maxDist).sort((a,b)=>a.d-b.d)[0]?.z||null;
 }
 
 function overlaps(x,y,r,wall){

@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.16\.0'/);
+ assert.match(release,/export const RELEASE='2\.16\.1'/);
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
@@ -151,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.0a/);
- assert.match(sw,/release:'2\.16\.0'/);
+ assert.match(sw,/farbound-v2\.16\.1/);
+ assert.match(sw,/release:'2\.16\.1'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -553,11 +553,32 @@ test('Living Frontier interventions pay when the player assists',()=>{
  assert(h.s.credits>c0);assert((h.s.metrics.interventions||0)>=1);
  assert(eventObjective);assert.match(readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),/eventObjective\(/);
 });
+test('Derelict event acquires the wreck as the nav target',()=>{
+ const g=new Game();g.launch();
+ const world=g.visiblePlanets[0];if(world)g.target=world;
+ assert(g.triggerDynamicEvent('derelictWreck'));
+ const d=g.derelicts[0];assert(d);
+ assert.equal(g.target,d);
+ assert.equal(d.discovered,true);
+ assert.equal(d.type,'derelict');
+ g.player.x=d.x+800;g.player.y=d.y;g.player.vx=g.player.vy=0;
+ assert(!g.scanDynamic(),'scan stays gated until the wreck is close');
+ assert.equal(g.target,d);
+ assert(g.scanTarget()===false||g.target===d);
+ assert.equal(g.target.type,'derelict');
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ const css=readFileSync(new URL('../dist/style.css',import.meta.url),'utf8');
+ assert.match(app,/PING BEACON/);
+ assert.match(app,/Walk to '\+z\.label/);
+ assert.match(app,/interactZone/);
+ assert.match(css,/max-width:860px\) and \(min-width:651px\)/);
+});
 test('Derelict scan unlocks salvage loot and optional wreck boarding',()=>{
  const g=new Game();g.launch();
  assert(g.triggerDynamicEvent('derelictWreck'));
  const d=g.derelicts[0];assert(d);assert.equal(d.salvaged,false);
- g.target=d;g.player.x=d.x;g.player.y=d.y;g.player.vx=g.player.vy=0;
+ assert.equal(g.target,d);
+ g.player.x=d.x;g.player.y=d.y;g.player.vx=g.player.vy=0;
  assert(g.scanDynamic());assert(d.scanned);assert.equal(d.salvaged,false);
  const credits=g.s.credits,salvages=g.s.metrics.salvages||0;
  assert(g.scanDynamic());assert(d.salvaged);assert(g.s.credits>=credits);assert.equal(g.s.metrics.salvages,salvages+1);

@@ -108,7 +108,7 @@ assert.match(style,/#space\{[^}]*background:#060c16/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.0a/);
+assert.match(sw,/farbound-v2\.16\.1/);
 
 // Camera-linked star offsets: leftover display alpha interpolates stars with the ship pose.
 const star={x:.4,y:.35,depth:.05};
