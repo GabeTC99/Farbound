@@ -5,6 +5,7 @@ import {
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
+ hairline,worldStroke,HAIRLINE_DEVICE,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
 } from '../dist/flight-loop.mjs';
 import {texSizeFor,STAR_TEX} from '../dist/star-render.mjs';
@@ -99,6 +100,8 @@ assert.match(app,/paintGalaxyBand\(/);
 assert.match(app,/SPACE_CONTEXT/);
 assert.match(app,/getContext\('2d',SPACE_CONTEXT\)/);
 assert.match(app,/snapWorldCam\(/);
+assert.match(app,/worldStroke\(/);
+assert.match(app,/pixelScale:worldPx\(\)/);
 assert.match(app,/backingNeedsReset\(/);
 assert.match(app,/warmLocalArt\(/);
 assert.match(app,/warmPlanetTexture/);
@@ -108,6 +111,7 @@ assert.match(loopSrc,/desynchronized:\s*false/);
 assert.match(loopSrc,/alpha:\s*true/);
 assert.ok(!/desynchronized:\s*true/.test(loopSrc),'desync presents tear ship/station edges under the HUD');
 assert.ok(!/getContext\('2d',\{alpha:\s*false/.test(app),'opaque space context is the Fold white-flash path');
+assert.ok(!/function circle\([^)]*\)\{[^}]*ctx\.lineWidth=1;/.test(app),'station/ship circles no longer force a 1 CSS-px stroke');
 const worldXf=app.slice(app.indexOf('drawSkyBackdrop();'),app.indexOf('if(!softFX()){const orbitColor'));
 assert.ok(worldXf.includes('snapWorldCam(')&&worldXf.includes('translate(-view.x,-view.y)'),'world layer uses the pixel-locked camera');
 assert.ok(!worldXf.includes('translate(-cam.x,-cam.y)'),'unsapped cam must not drive ship/station edges');
@@ -171,6 +175,19 @@ assert.deepEqual(snapWorldCam(0,0,800,600,2,1),{x:0,y:0});
 const mid=snapWorldCam(10.01,0,801,600,1.5,.54);
 const midTx=1.5*(801*.5-mid.x*.54);
 assert.ok(Math.abs(midTx-Math.round(midTx))<1e-9,'odd CSS widths still lock to backing pixels');
+assert.equal(HAIRLINE_DEVICE,1.4);
+assert.ok(Math.abs(hairline(1)-1.4)<1e-12);
+assert.ok(Math.abs(hairline(2)-.7)<1e-12);
+const foldPx=.75*1.1;
+assert.ok(worldStroke(1,foldPx)>1,'Fold-scale 1px hull strokes must thicken past a device hairline');
+assert.ok(worldStroke(1,foldPx)*foldPx>=HAIRLINE_DEVICE-1e-9);
+assert.equal(worldStroke(2,2),2,'desktop 2x already-thick strokes stay put');
+const shipSrc=readFileSync(new URL('../dist/ship-render.mjs',import.meta.url),'utf8');
+assert.match(shipSrc,/worldStroke/);
+assert.match(shipSrc,/pixelScale/);
+assert.match(shipSrc,/lineJoin='round'/);
+assert.ok(!/ctx\.lineWidth=\.6/.test(shipSrc),'panel hairlines go through worldStroke');
+
 const cruise=[];
 let cx=0;
 for(let i=0;i<8;i++){
@@ -190,3 +207,4 @@ console.log('PASS Pixel budget caps huge fold CSS sizes without dropping typical
 console.log('PASS Star photosphere size no longer tracks zoom/DPR on the hot path');
 console.log('PASS Starfield and sky parallax track interpolated camera without 4 Hz wash rebake');
 console.log('PASS Space canvas stays transparent and synchronized; world cam locks to backing pixels');
+console.log('PASS Fold-scale hull/station strokes stay at least a 1.4 device-pixel hairline');

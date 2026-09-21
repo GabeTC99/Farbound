@@ -38,7 +38,7 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
-- September 21, 2026: Candidate 2.16.3 ship/station edges: keep transparent `#space` (Fold white-flash) but drop desynchronized presents; snap the world camera to backing pixels so hulls and stations lock during cruise. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.
+- September 21, 2026: Candidate 2.16.3 ship/station edges: Fold clip is pixel crawl on 1 CSS-px hull/station strokes at Fold backing×zoom; keep a 1.4 device-pixel hairline, snap the world camera, keep transparent `#space` (white-flash) but drop desynchronized presents. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.
 
 - September 21, 2026: Candidate 2.16.2 Fold white-flash: transparent `#space` context so an uninitialized desync swap is dark CSS, not #fff; sky bake then fill; resize slack; launch/jump art warmup. Service worker cache bumped to `farbound-v2.16.2`. Rollback tag `v2.16.1`.
 

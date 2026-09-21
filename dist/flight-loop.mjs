@@ -67,6 +67,20 @@ export function snapWorldCam(camX,camY,width,height,dpr,zoom){
  return {x:((width||0)*.5-tx/s)/z,y:((height||0)*.5-ty/s)/z};
 }
 
+/**
+ * Minimum device-pixel width for world-space strokes. Fold cruise (low
+ * backing scale × 0.54–0.75 zoom) turned 1 CSS-px hull/station lines into
+ * sub-pixel stair-steps that crawled every frame — the Fold clip, not tear.
+ */
+export const HAIRLINE_DEVICE=1.4;
+export function hairline(pixelScale,minDevice=HAIRLINE_DEVICE){
+ const s=pixelScale||1;
+ return (s>0)?minDevice/s:minDevice;
+}
+export function worldStroke(px,pixelScale,minDevice=HAIRLINE_DEVICE){
+ return Math.max(Number(px)||0,hairline(pixelScale,minDevice));
+}
+
 export function lerp(a,b,t){
  t=t<0?0:t>1?1:t;
  return a+(b-a)*t;

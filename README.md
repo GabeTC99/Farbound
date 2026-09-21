@@ -22,8 +22,8 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ### Candidate 2.16.3
 
-- **Ship/station edges:** `#space` stays a transparent 2D canvas so a hitch still composites over the dark CSS background (2.16.2 Fold flash fix), but it is no longer desynchronized. Chrome's desync hint can front-buffer and tear; under the HUD that read as vsync-off shredding on hull and station rims.
-- **Pixel-locked world camera:** ships and stations snap to whole backing pixels so they lock against the starfield during cruise. Distant stars still use the unsapped interpolated camera.
+- **Ship/station edges:** Fold clip showed pixel crawl on hard 1 CSS-px hull and station spokes (sub-pixel stair-steps at Fold backing×zoom), not classic tearing. World strokes now keep a 1.4 device-pixel hairline with round joins. The chase camera still snaps to backing pixels; distant stars stay unsapped.
+- **White flash stays:** `#space` remains a transparent 2D canvas so a hitch still composites over the dark CSS background. It is no longer desynchronized.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.3`.
 
 ### Candidate 2.16.2
