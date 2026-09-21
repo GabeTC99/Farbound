@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.16\.4'/);
+ assert.match(release,/export const RELEASE='2\.16\.5'/);
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
@@ -151,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.4/);
- assert.match(sw,/release:'2\.16\.4'/);
+ assert.match(sw,/farbound-v2\.16\.5/);
+ assert.match(sw,/release:'2\.16\.5'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -484,6 +484,8 @@ test('Dynamic events start, resolve, and reuse living NPCs',()=>{
  const d=h.derelicts[0];h.target=d;h.player.x=d.x;h.player.y=d.y;h.player.vx=h.player.vy=0;assert(h.scanDynamic());assert(d.scanned);
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/case 'dev-event'/);assert.match(app,/triggerDynamicEvent/);
+ assert.match(app,/case 'dev-fps'/);assert.match(app,/data-action="dev-fps"/);
+ assert.match(app,/id="fps-meter"/);assert.match(app,/createFpsMeter/);
  assert.match(app,/function drawEdgeArrow/);assert.match(app,/eventArrowTargets\(game\)/);
  assert.match(app,/gravityLens|radioStorm|silentRelic/);
 });

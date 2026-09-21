@@ -86,6 +86,13 @@
 .pad-chip{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;margin-right:6px;border:1px solid #3d8f7a;border-radius:999px;background:#12352f;color:#9eebd8;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .pad-chip[hidden]{display:none!important}
 
+.fps-meter{position:absolute;top:max(76px,calc(env(safe-area-inset-top) + 58px));right:max(18px,env(safe-area-inset-right));z-index:25;pointer-events:none;min-width:84px;padding:6px 10px;border:1px solid #2a5a52;border-radius:6px;background:#0b1a18d8;color:#9eebd8;font-variant-numeric:tabular-nums;text-align:right;box-shadow:0 8px 24px #0006}
+.fps-meter[hidden]{display:none!important}
+.fps-meter small{display:block;font-size:.65rem;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:#6db6ad}
+.fps-meter b{display:block;font-size:1.2rem;font-weight:600;color:#a7f0df;line-height:1.15;margin:2px 0}
+.fps-meter span{display:block;font-size:.7rem;color:#7aa89e;letter-spacing:.02em}
+@media(max-width:650px){.fps-meter{top:max(64px,calc(env(safe-area-inset-top) + 48px));right:max(10px,env(safe-area-inset-right));min-width:76px;padding:5px 8px}.fps-meter b{font-size:1.1rem}}
+
 /* 2.11 Frontier Presence — traffic board + market callout */
 .bulletin{margin:10px 0 16px;padding:12px 14px;border:1px solid #33565b;border-left:3px solid var(--mint);border-radius:6px;background:#81e3cd0c}
 .bulletin.shortage{border-color:#5e5143;border-left-color:var(--orange);background:#eeab6c0c}

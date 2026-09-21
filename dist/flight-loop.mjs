@@ -294,3 +294,37 @@ export function createPacer(windowSize=120){
   }
  };
 }
+
+/**
+ * RAF display-rate meter. Record only while the overlay is on.
+ * Samples requestAnimationFrame intervals (not CPU work time).
+ * Stalls over 250 ms (tab hide, first hitch after resume) are ignored
+ * so a Fold cover measurement is not pinned by one pause.
+ */
+export const FPS_STALL_MS=250;
+export function createFpsMeter(windowSize=120){
+ const times=new Float64Array(windowSize);
+ let i=0,n=0,last=0,ema=0,ready=false;
+ return {
+  reset(){i=0;n=0;last=0;ema=0;ready=false;},
+  record(now){
+   if(!ready){last=now;ready=true;return null;}
+   const dt=now-last;
+   last=now;
+   if(!(dt>0)||dt>FPS_STALL_MS)return null;
+   if(n<windowSize)n++;
+   times[i]=dt;i=(i+1)%windowSize;
+   const fps=1000/dt;
+   ema=ema?ema*.9+fps*.1:fps;
+   return fps;
+  },
+  snapshot(){
+   if(!n)return {fps:0,ms:0,low1:0,n:0};
+   let sum=0;
+   for(let k=0;k<n;k++)sum+=times[k];
+   const copy=Array.from(times.subarray(0,n)).sort((a,b)=>a-b);
+   const p99=copy[Math.min(n-1,Math.max(0,Math.ceil(n*.99)-1))];
+   return {fps:ema,ms:sum/n,low1:p99>0?1000/p99:0,n};
+  }
+ };
+}
