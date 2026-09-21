@@ -29,8 +29,8 @@ await atest('waitingWorker prefers a waiting then installing worker',()=>{
 });
 
 await atest('releaseUrl cache-busts against the game origin',()=>{
- assert.equal(releaseUrl({href:'https://gabetc99.github.io/Farbound/'},()=>99),'https://gabetc99.github.io/Farbound/release.mjs?t=99');
- assert.equal(releaseUrl({href:'https://gabetc99.github.io/Farbound/index.html'},()=>7),'https://gabetc99.github.io/Farbound/release.mjs?t=7');
+ assert.equal(releaseUrl({href:'https://gabetc99.github.io/Nullharbor/'},()=>99),'https://gabetc99.github.io/Nullharbor/release.mjs?t=99');
+ assert.equal(releaseUrl({href:'https://gabetc99.github.io/Nullharbor/index.html'},()=>7),'https://gabetc99.github.io/Nullharbor/release.mjs?t=7');
 });
 
 await atest('probeRemoteRelease uses no-store and parses the module',async()=>{

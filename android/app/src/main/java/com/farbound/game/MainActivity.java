@@ -86,7 +86,7 @@ public final class MainActivity extends Activity {
                 Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("application/json");
-                intent.putExtra(Intent.EXTRA_TITLE, "farbound-pilot.json");
+                intent.putExtra(Intent.EXTRA_TITLE, "nullharbor-pilot.json");
                 startActivityForResult(intent, EXPORT_FILE);
             });
         }

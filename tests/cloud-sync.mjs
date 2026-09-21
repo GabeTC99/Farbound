@@ -19,7 +19,7 @@ globalThis.sessionStorage={
  setItem:(k,v)=>mem.set('ss:'+k,String(v)),
  removeItem:k=>mem.delete('ss:'+k)
 };
-globalThis.window={location:{pathname:'/Farbound/',search:'',hash:'',origin:'https://gabetc99.github.io',href:'https://gabetc99.github.io/Farbound/'}};
+globalThis.window={location:{pathname:'/Nullharbor/',search:'',hash:'',origin:'https://gabetc99.github.io',href:'https://gabetc99.github.io/Nullharbor/'}};
 globalThis.location=window.location;
 globalThis.history={replaceState(a,b,url){if(typeof url==='string'){const u=new URL(url,'https://gabetc99.github.io');location.pathname=u.pathname;location.search=u.search;location.hash=u.hash;location.href=u.href;}}};
 function restoreCloud(){CLOUD.url=liveUrl;CLOUD.anonKey=liveKey;}
@@ -36,9 +36,9 @@ test('cloudConfigured reflects whether url and anon key are present',()=>{
  assert.equal(cloudConfigured(),!!(liveUrl&&liveKey));
 });
 
-test('Auth redirect always targets the Farbound Pages path',()=>{
- assert.equal(AUTH_REDIRECT,'https://gabetc99.github.io/Farbound/');
- assert.match(AUTH_REDIRECT,/\/Farbound\/$/);
+test('Auth redirect always targets the Nullharbor Pages path',()=>{
+ assert.equal(AUTH_REDIRECT,'https://gabetc99.github.io/Nullharbor/');
+ assert.match(AUTH_REDIRECT,/\/Nullharbor\/$/);
 });
 
 test('Autosync flag persists in localStorage',()=>{
@@ -133,7 +133,7 @@ await atest('PKCE redirect code is exchanged for a session',async()=>{
  CLOUD.anonKey='anon-key-for-tests-0123456789abcdef';
  sessionStorage.setItem('farbound-cloud-pkce','test-verifier');
  location.search='?code=auth-code-1';
- location.href='https://gabetc99.github.io/Farbound/?code=auth-code-1';
+ location.href='https://gabetc99.github.io/Nullharbor/?code=auth-code-1';
  const calls=[];
  globalThis.fetch=async(url,opts={})=>{
   calls.push({url:String(url),method:opts.method||'GET',body:opts.body?JSON.parse(opts.body):null});

@@ -9,7 +9,7 @@ export const SESSION_KEY='farbound-cloud-session';
 export const AUTOSYNC_KEY='farbound-cloud-autosync';
 const PKCE_KEY='farbound-cloud-pkce';
 /** Always return testers to the Pages game path — never the bare github.io host. */
-export const AUTH_REDIRECT='https://gabetc99.github.io/Farbound/';
+export const AUTH_REDIRECT='https://gabetc99.github.io/Nullharbor/';
 
 const jsonHeaders=()=>({
  'Content-Type':'application/json',
@@ -81,7 +81,7 @@ export async function consumeAuthRedirect(location=window.location){
  if(!code)return null;
  let verifier=null;
  try{verifier=sessionStorage.getItem(PKCE_KEY);}catch{}
- if(!verifier)throw Error('Sign-in link opened in a different browser. Request a new email and open the link in Chrome where Farbound is running.');
+ if(!verifier)throw Error('Sign-in link opened in a different browser. Request a new email and open the link in Chrome where Nullharbor is running.');
  const res=await fetch(`${CLOUD.url}/auth/v1/token?grant_type=pkce`,{
   method:'POST',headers:jsonHeaders(),
   body:JSON.stringify({auth_code:code,code_verifier:verifier,code})

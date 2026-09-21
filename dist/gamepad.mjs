@@ -1,4 +1,4 @@
-/** Xbox-focused Standard Gamepad helpers for Farbound (Chrome/Edge on PC + gamepads). */
+/** Xbox-focused Standard Gamepad helpers for Nullharbor (Chrome/Edge on PC + gamepads). */
 
 export const XB={
  A:0,B:1,X:2,Y:3,

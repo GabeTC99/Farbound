@@ -127,7 +127,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.15\.7'/);
+ assert.match(release,/export const RELEASE='2\.16\.0'/);
+ assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
  assert.match(app,/data-action="update-app"/);
@@ -150,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.15\.7/);
- assert.match(sw,/release:'2\.15\.7'/);
+ assert.match(sw,/farbound-v2\.16\.0/);
+ assert.match(sw,/release:'2\.16\.0'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -170,6 +171,29 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(sw,/station-layout\.mjs/);
  assert(sw.includes("'./release.mjs'"));
  const g=new Game();assert(g.s.docked);assert(g.onfoot);assert(g.launch());assert(!g.s.docked);assert.equal(g.onfoot,null);
+});
+test('Player-facing product strings are Nullharbor; save keys stay farbound',()=>{
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ const classic=readFileSync(new URL('../dist/classic/app.js',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
+ const classicHtml=readFileSync(new URL('../dist/classic/index.html',import.meta.url),'utf8');
+ const manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
+ const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
+ assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
+ assert.match(app,/SOLO SPACE SANDBOX · \$\{RELEASE_NAME\.toUpperCase\(\)\} \$\{RELEASE\}/);
+ assert.match(app,/<h1>NULLHARBOR/);
+ assert.match(app,/<span class="star">✦<\/span>NULLHARBOR/);
+ assert.match(app,/NULLHARBOR · v\$\{RELEASE\}/);
+ assert.match(app,/valid Nullharbor save/);
+ assert.equal((app.match(/FARBOUND/g)||[]).length,0);
+ assert.equal((classic.match(/FARBOUND/g)||[]).length,0);
+ assert.match(html,/Nullharbor · Frontiers/);
+ assert.match(classicHtml,/Nullharbor · The quiet frontier/);
+ assert.match(manifest,/"name":"Nullharbor"/);
+ assert.match(manifest,/"short_name":"Nullharbor"/);
+ assert.match(app,/FarboundAndroid/);
+ assert.equal(SAVE_KEY,'farbound-save-v2');
+ assert.match(app,/data-action="update-app"/);
 });
 test('Security cutters and prospector boom use dedicated hull geometry',async()=>{
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');

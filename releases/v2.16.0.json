@@ -1,0 +1,14 @@
+{
+  "release": "2.16.0",
+  "name": "Nullharbor",
+  "date": "2026-09-21",
+  "notes": [
+    "Player-facing title is Nullharbor. Welcome chip, HUD brand, flight menu, manuals, PWA name, and Pages path copy now read Nullharbor instead of Farbound. Voidwake Studios branding is unchanged.",
+    "RELEASE_NAME is Nullharbor on Fleet Atlas lineage 2.16.0. Save keys stay farbound-save-v2 / farbound-save-v2-checkpoint so existing pilots are not wiped.",
+    "Service worker cache bumped to farbound-v2.16.0 so Pages picks up the rename. Flight menu Update still clears farbound-* caches and reloads."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
