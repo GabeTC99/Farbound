@@ -185,6 +185,8 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  assert.match(app,/<span class="star">✦<\/span>NULLHARBOR/);
  assert.match(app,/NULLHARBOR · v\$\{RELEASE\}/);
  assert.match(app,/valid Nullharbor save/);
+ assert.match(app,/Import a Nullharbor save file/);
+ assert.equal((app.match(/Import a Farbound/g)||[]).length,0);
  assert.equal((app.match(/FARBOUND/g)||[]).length,0);
  assert.equal((classic.match(/FARBOUND/g)||[]).length,0);
  assert.match(html,/Nullharbor · Frontiers/);
