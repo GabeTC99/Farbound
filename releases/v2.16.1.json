@@ -1,0 +1,16 @@
+{
+  "release": "2.16.1",
+  "name": "Nullharbor",
+  "date": "2026-09-21",
+  "notes": [
+    "NH-001: Station OPEN CONTRACTS / LAUNCH and other desk actions require walking to the desk or hangar (24 m center range). HUD still names the nearest pad from farther away.",
+    "NH-002: Derelict wreck events acquire the wreck as the navigation target, mark it discovered, and hold scavengers until you approach. SCAN no longer snaps back to a planet.",
+    "NH-003: On-foot HUD at 800×600 reflows so INTERACT stays on-screen.",
+    "NH-004: Surface SCAN SIGNAL relabels to PING BEACON when the nearest signal is out of scan range.",
+    "Service worker cache bumped to farbound-v2.16.1. Save keys stay farbound-save-v2. Flight menu Update still clears farbound-* caches and reloads."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

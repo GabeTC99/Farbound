@@ -6,7 +6,7 @@ import {readPilot,writePilot,readCheckpoint,SAVE_KEY,BACKUP_KEY,ORIGINAL_KEY} fr
 import {moduleView,fleetView,guildView,factionView,mapView,systemMapView,robotStrip} from '../dist/frontier-views.mjs';
 import {STATION_ROBOT,buildRobotContext,pickRobotLine,ROBOT_LINES} from '../dist/station-robot.mjs';
 import {createStationLayout,pickStationChat,pointInHull} from '../dist/station-layout.mjs';
-import {isoWalkAxes,STATION_ISO} from '../dist/onfoot.mjs';
+import {isoWalkAxes,STATION_ISO,interactZone,ZONE_INTERACT_RANGE} from '../dist/onfoot.mjs';
 import {makeStationProjector} from '../dist/onfoot-render.mjs';
 const tests=[];function test(name,fn){tests.push([name,fn]);}
 function ticks(g,seconds,input={}){for(let i=0;i<Math.ceil(seconds*30);i++)g.update(1/30,input);}
@@ -288,6 +288,23 @@ test('Station robot Nellby-9 is configurable, greets on dock, and biases dialogu
  assert.match(app,/case 'robot-tip'/);
  assert(!app.includes("['concierge','Concierge']"));
  assert(!app.includes('robotView(game)'));
+});
+test('Station desks and hangar require walk-up proximity, not pad-radius range',()=>{
+ const g=new Game();
+ assert(g.onfoot,'new save starts docked on the station deck');
+ const hangar=g.onfoot.zones.find(z=>z.launch);
+ const contracts=g.onfoot.zones.find(z=>z.service==='contracts');
+ assert(hangar);assert(contracts);
+ const spawnD=Math.hypot(hangar.x-g.onfoot.x,hangar.y-g.onfoot.y);
+ assert(spawnD>ZONE_INTERACT_RANGE,'spawn sits off the hangar pad center');
+ assert.equal(interactZone(g.onfoot),null);
+ assert.equal(g.interactStation(),null);
+ assert(g.s.docked);
+ g.onfoot.x=contracts.x+50;g.onfoot.y=contracts.y;
+ assert(Math.hypot(50,0)>ZONE_INTERACT_RANGE);
+ assert.equal(g.interactStation(),null);
+ g.onfoot.x=contracts.x;g.onfoot.y=contracts.y;
+ assert.equal(g.interactStation().service,'contracts');
 });
 test('Station space legs: dock enters deck, desks open services, hangar launches, detention blocks',()=>{
  const g=new Game();
