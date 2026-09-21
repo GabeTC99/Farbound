@@ -1,0 +1,15 @@
+{
+  "release": "2.16.2",
+  "name": "Nullharbor",
+  "date": "2026-09-21",
+  "notes": [
+    "Fold white-flash: #space is a transparent desynchronized canvas so an uninitialized GPU swap composites over the dark CSS background instead of paper-white. 2.15.7 already filled after resize, but an opaque buffer still presented #fff for a frame when a hitch stalled the next submit.",
+    "Sky wash bake happens before the main-buffer fill. Allocating a full-viewport OffscreenCanvas (resize, leave-station, first cruise frame) can evict the main buffer; filling after that alloc closes the race that showed NPC ships on a white field.",
+    "Resize ignores 1–2 device-pixel visualViewport jitter. Launch / jump warms planet albedos and the sky layer so the first in-view traffic cluster is less likely to hitch.",
+    "Service worker cache bumped to farbound-v2.16.2. Save keys stay farbound-save-v2. Flight menu Update still clears farbound-* caches and reloads."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

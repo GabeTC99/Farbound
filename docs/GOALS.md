@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 21, 2026: Candidate 2.16.2 Fold white-flash: transparent `#space` context so an uninitialized desync swap is dark CSS, not #fff; sky bake then fill; resize slack; launch/jump art warmup. Service worker cache bumped to `farbound-v2.16.2`. Rollback tag `v2.16.1`.
+
 - September 21, 2026: Candidate 2.16.1 live-beta QA: station desk/hangar actions require walk-up range (NH-001); derelict events acquire the wreck as the nav target and SCAN no longer snaps to a world (NH-002); 800×600 HUD keeps INTERACT on-screen (NH-003); out-of-range surface SCAN SIGNAL relabels as PING BEACON (NH-004). Service worker cache bumped to `farbound-v2.16.1`. Rollback tag `v2.16.0`.
 
 - September 21, 2026: Candidate 2.16.0 Nullharbor rename: player-facing title, welcome chip, HUD brand, PWA name, and Pages URL copy are Nullharbor. PWA install icons use Social Media Manager’s Voidwake X avatar (teal star) at `dist/branding/x-profile.png`. Save keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.0a`. Rollback tag `v2.15.7`.

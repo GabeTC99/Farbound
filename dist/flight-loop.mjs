@@ -79,6 +79,26 @@ export const STAR_DEPTH_MAX=.11;
 /** Milky Way / sky-band drift vs interpolated camera. */
 export const SKY_PARALLAX=.012;
 export const SPACE_CLEAR='#060c16';
+/**
+ * Transparent so an uninitialized desynchronized swap composites over `#space`
+ * CSS (`#060c16`) instead of paper-white. Opaque (`alpha:false`) 2D buffers
+ * initialize to #fff on Android Chrome / Fold GPUs; 2.15.7's immediate fill
+ * could not win that race when a hitch (sky bake, first NPC cluster) stalled
+ * the next GPU submit.
+ */
+export const SPACE_CONTEXT={alpha:true,desynchronized:true};
+/** Ignore 1–2 device-pixel visualViewport jitter so Fold chrome does not reset the buffer every frame. */
+export const BACKING_SLACK=2;
+
+export function backingSize(cssW,cssH,dpr){
+ const scale=dpr||1;
+ return {w:Math.max(1,Math.round((cssW||1)*scale)),h:Math.max(1,Math.round((cssH||1)*scale))};
+}
+
+export function backingNeedsReset(curW,curH,nextW,nextH,slack=BACKING_SLACK){
+ if(!(curW>0)||!(curH>0))return true;
+ return Math.abs((curW||0)-(nextW||0))>slack||Math.abs((curH||0)-(nextH||0))>slack;
+}
 
 export function skyParallax(camX,camY,k=SKY_PARALLAX){
  return {x:(camX||0)*k,y:(camY||0)*k};
@@ -97,7 +117,7 @@ export function skyCacheKey(sky,width,height,lite,soft){
  return (sky?.seed||0)+'|'+(sky?.kind||'')+'|'+(width|0)+'|'+(height|0)+'|'+(lite?1:0)+'|'+(soft?1:0);
 }
 
-/** Immediate opaque fill so a resize or desynchronized swap never presents an uninitialized (white) buffer. */
+/** Immediate dark fill after a resize or GPU-buffer eviction so the compositor never presents white. */
 export function fillSpaceClear(ctx,dpr,width,height,color=SPACE_CLEAR){
  if(!ctx)return;
  ctx.setTransform(dpr||1,0,0,dpr||1,0,0);
