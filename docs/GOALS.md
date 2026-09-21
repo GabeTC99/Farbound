@@ -38,7 +38,7 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
-- September 21, 2026: Candidate 2.16.0 Nullharbor rename: player-facing title, welcome chip, HUD brand, PWA name, and Pages URL copy are Nullharbor. Save keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.0`. Rollback tag `v2.15.7`.
+- September 21, 2026: Candidate 2.16.0 Nullharbor rename: player-facing title, welcome chip, HUD brand, PWA name, and Pages URL copy are Nullharbor. PWA install icons use the Voidwake Studios site mark as a placeholder until `dist/branding/x-profile.png` lands. Save keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.0`. Rollback tag `v2.15.7`.
 
 - September 20, 2026: Candidate 2.15.7 smooth starfield + white-flash fix: distant stars and the Milky Way track the interpolated camera; sky wash cache is static so a desynchronized canvas no longer presents a white frame mid-cruise or on resize. Rollback tag `v2.14.0`.
 

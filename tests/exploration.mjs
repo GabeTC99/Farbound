@@ -197,6 +197,25 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  assert.equal(SAVE_KEY,'farbound-save-v2');
  assert.match(app,/data-action="update-app"/);
 });
+test('PWA icons are the Voidwake mark, not the old Farbound F',()=>{
+ const icon=readFileSync(new URL('../dist/icon.svg',import.meta.url),'utf8');
+ const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
+ const classicHtml=readFileSync(new URL('../dist/classic/index.html',import.meta.url),'utf8');
+ const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
+ assert.match(icon,/aria-label="Voidwake Studios"/);
+ assert.match(icon,/stroke="#c9a36a"/);
+ assert.equal((icon.match(/M150 352V156H365/g)||[]).length,0);
+ assert.match(html,/apple-touch-icon\.png/);
+ assert.match(html,/icon-192\.png/);
+ assert.match(classicHtml,/apple-touch-icon\.png/);
+ assert.match(sw,/apple-touch-icon\.png/);
+ const pngSize=p=>{const b=readFileSync(new URL(p,import.meta.url));return[b.readUInt32BE(16),b.readUInt32BE(20)];};
+ assert.deepEqual(pngSize('../dist/icon-192.png'),[192,192]);
+ assert.deepEqual(pngSize('../dist/icon-512.png'),[512,512]);
+ assert.deepEqual(pngSize('../dist/apple-touch-icon.png'),[180,180]);
+ assert.deepEqual(pngSize('../dist/classic/icon-192.png'),[192,192]);
+ assert.deepEqual(pngSize('../dist/classic/icon-512.png'),[512,512]);
+});
 test('Security cutters and prospector boom use dedicated hull geometry',async()=>{
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const ships=readFileSync(new URL('../dist/ship-render.mjs',import.meta.url),'utf8');
