@@ -22,7 +22,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ### Candidate 2.16.3
 
-- **Ship/station edges:** Independent Fold clip review (Solace / Anchorage 01): leftover artifact is pixel crawl / shimmer on hard un-antialiased edges — Anchorage 01 spokes, NPC hulls, player chevron — as the camera pans. Ships, stations, and the player craft use a 1.6 device-pixel hairline plus a 2.4-device silhouette fringe; station arms are rounded and stroked. `#space` stays transparent (2.16.2 white-flash) and synchronized. The chase camera snaps to backing pixels.
+- **Ship/station edges:** Independent Fold clip review (Solace / Anchorage 01): leftover artifact is pixel crawl / shimmer on hard un-antialiased edges — Anchorage 01 spokes, NPC hulls, player chevron — as the camera pans. Ships and the player craft use a 2 device-pixel hairline plus a 3.2-device silhouette fringe; station arms are stroked capsules (not hard fillRect boxes). `#space` stays transparent (2.16.2 white-flash) and synchronized. The chase camera snaps to backing pixels.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.3`.
 
 ### Candidate 2.16.2

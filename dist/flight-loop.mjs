@@ -72,9 +72,9 @@ export function snapWorldCam(camX,camY,width,height,dpr,zoom){
  * spokes, NPC hulls, player chevron) crawls because filled 1 CSS-px edges
  * stair-step at backing×zoom < 1 device pixel.
  */
-export const HAIRLINE_DEVICE=1.6;
+export const HAIRLINE_DEVICE=2;
 /** Wider fringe so filled silhouettes keep an AA band while the camera pans. */
-export const SILHOUETTE_DEVICE=2.4;
+export const SILHOUETTE_DEVICE=3.2;
 export function hairline(pixelScale,minDevice=HAIRLINE_DEVICE){
  const s=pixelScale||1;
  return (s>0)?minDevice/s:minDevice;
@@ -94,6 +94,27 @@ export function strokeSilhouette(ctx,pixelScale){
  ctx.lineWidth=Math.max(prevW||0,hairline(pixelScale,HAIRLINE_DEVICE));
  ctx.stroke();
  ctx.lineWidth=prevW;
+}
+/**
+ * Thick rounded band (station spokes): soft fringe, rim, then core.
+ * A filled rect's long edges stair-step every frame when the camera or
+ * the station rotates; a stroked capsule keeps canvas AA on the silhouette.
+ */
+export function strokeBand(ctx,pixelScale,corePx,coreStyle,rimStyle){
+ if(!ctx)return;
+ const core=worldStroke(corePx,pixelScale);
+ const rim=core+hairline(pixelScale);
+ const fringe=core+hairline(pixelScale,SILHOUETTE_DEVICE);
+ const prevA=ctx.globalAlpha,prevW=ctx.lineWidth,prevS=ctx.strokeStyle;
+ ctx.lineJoin='round';ctx.lineCap='round';
+ ctx.strokeStyle=rimStyle;
+ ctx.globalAlpha=prevA*.4;
+ ctx.lineWidth=fringe;ctx.stroke();
+ ctx.globalAlpha=prevA;
+ ctx.lineWidth=rim;ctx.stroke();
+ ctx.strokeStyle=coreStyle;
+ ctx.lineWidth=core;ctx.stroke();
+ ctx.strokeStyle=prevS;ctx.lineWidth=prevW;
 }
 
 export function lerp(a,b,t){
