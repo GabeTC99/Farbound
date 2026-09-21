@@ -23,6 +23,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 ### Candidate 2.16.4
 
 - **High-mode Fold hitch (cover + inner):** The same flight stutter shows on the Fold’s tiny outer cover and the large inner display, so this is not “too many pixels.” High still did 340 live star fills, a live galaxy-band gradient, a giant stroked orbit for every planet, and a new lighting gradient per craft every frame. High keeps silhouette AA, capsule spokes, extrusion, and corona; dim stars and the Milky Way now blit from caches, far rings are culled, and hull gradients are reused. Performance LOD is an extra option. Bake-before-fill and transparent synchronized `#space` stay.
+- **How to verify 2.16.4:** Flight menu → Graphics → **Full / High**. On the Fold, cruise Solace on the **outer cover** and again on the **inner display** — both must stay continuous (the cover hitch means the hot path was too expensive even at modest resolution). Check: no white flash on hitch/resize; Anchorage spokes still capsules; ship silhouette AA still there. Optional: Chrome → Performance, 5 s cruise on each display; frame times near 8 ms (120 Hz) without 40–80 ms spikes while not jumping. Desktop Full/High keyboard cruise should feel the same, just steadier. Performance LOD is optional and is not the High fix.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.4`.
 
 ### Candidate 2.16.3
