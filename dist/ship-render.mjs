@@ -303,13 +303,25 @@ function drawPanels(ctx,def,size,art,lite){
 }
 
 function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
+ const hull=hostile?mix(art.metal,[78,28,30],.28):art.metal;
+ if(lite){
+  // Performance LOD: fill + one device-locked hairline. Skip extrusion,
+  // per-frame gradients, clip, and the 2.16.3 double silhouette stroke.
+  ctx.fillStyle=rgba([0,0,0],.28);
+  ctx.beginPath();ctx.ellipse(2,3,size*1.05,size*.32,0,0,6.28);ctx.fill();
+  ctx.fillStyle=rgbOf(hull);
+  pathBody(ctx,def.body,size);ctx.fill();
+  ctx.strokeStyle=rgbOf(mix(art.shadow,hull,.18));
+  ctx.lineWidth=lw(1.3);
+  pathBody(ctx,def.body,size);ctx.stroke();
+  return;
+ }
  const {x:tx,y:ty}=thickOf(size);
  ctx.fillStyle=rgba([0,0,0],.34);
  ctx.beginPath();ctx.ellipse(2.4,ty+3,size*1.12,size*.38,0,0,6.28);ctx.fill();
  drawExtrusion(ctx,def.body,size,tx,ty,rgbOf(mix(art.shadow,[8,10,12],.22)));
  ctx.fillStyle=rgbOf(art.shadow);
  pathBody(ctx,def.body,size,tx,ty);ctx.fill();
- const hull=hostile?mix(art.metal,[78,28,30],.28):art.metal;
  ctx.fillStyle=rgbOf(hull);
  pathBody(ctx,def.body,size);ctx.fill();
  ctx.save();
@@ -325,13 +337,13 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
  const len=Math.hypot(lx,ly)||1,ux=lx/len,uy=ly/len;
  const sun=ctx.createLinearGradient?.(-ux*size,-uy*size,ux*size,uy*size);
  if(sun?.addColorStop){
-  sun.addColorStop(0,`rgba(255,255,255,${lite?.14:.24+sheen*.1})`);
-  sun.addColorStop(.18,`rgba(255,255,255,${lite?.04:.08})`);
+  sun.addColorStop(0,`rgba(255,255,255,${.24+sheen*.1})`);
+  sun.addColorStop(.18,`rgba(255,255,255,.08)`);
   sun.addColorStop(.45,'rgba(0,0,0,0)');
-  sun.addColorStop(1,`rgba(0,4,10,${lite?.26:.38})`);
+  sun.addColorStop(1,`rgba(0,4,10,.38)`);
   ctx.fillStyle=sun;ctx.fill();
  }
- ctx.strokeStyle=rgba([230,240,248],lite?.12:.2);
+ ctx.strokeStyle=rgba([230,240,248],.2);
  ctx.lineWidth=lw(1.1);
  ctx.beginPath();ctx.moveTo(-size*.2,-size*.12);ctx.lineTo(size*.55,-size*.22);ctx.stroke();
  ctx.fillStyle=rgbOf(mix(hull,art.plate,.38));
@@ -345,6 +357,12 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
 function drawCanopy(ctx,def,size,art,lite){
  if(!def.cockpit)return;
  const c=def.cockpit,x=c.x*size,rx=Math.max(c.rx,size*.16),ry=Math.max(c.ry*.9,size*.09);
+ if(lite){
+  ctx.fillStyle=art.glass;
+  ctx.beginPath();ctx.ellipse(x,0,rx,ry,0,0,6.28);ctx.fill();
+  ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=lw(1.1);ctx.stroke();
+  return;
+ }
  const w=rx*2.35,h=ry*2.2;
  ctx.fillStyle=rgba(art.shadow,.55);
  ctx.beginPath();ctx.ellipse(x+1.4,1.8,rx+2.4,ry+2,0,0,6.28);ctx.fill();
@@ -485,9 +503,11 @@ export function drawCraft(ctx,opts={}){
  drawFlames(ctx,def,size,thrust,boost,lite);
  drawVolume(ctx,def,size,art,lx,ly,art.sheen,lite,!!opts.hostile);
  drawPanels(ctx,def,size,art,lite);
- drawParts(ctx,def,size,art);
- drawKit(ctx,def,size,art,opts.classId||classId,lite);
- drawBells(ctx,def,size,art,thrust);
+ if(!lite){
+  drawParts(ctx,def,size,art);
+  drawKit(ctx,def,size,art,opts.classId||classId,lite);
+  drawBells(ctx,def,size,art,thrust);
+ }
  if(opts.drawCockpit!==false)drawCanopy(ctx,def,size,art,lite);
  if(opts.drawLights!==false)drawNavLights(ctx,def,size,clock,opts);
  for(const a of def.accents||[]){

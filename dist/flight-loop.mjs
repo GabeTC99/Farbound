@@ -10,6 +10,8 @@ export const MAX_STEPS=5;
 /** Matches the old per-frame 0.09 lerp at 60 Hz: 1-exp(-k/60) ≈ 0.09. */
 export const CAM_FOLLOW=5.66;
 export const PIXEL_BUDGET={high:6.2e6,balanced:3.2e6,performance:1.8e6};
+/** Mode floors. The old 0.75 floor ignored the performance budget on Fold CSS sizes. */
+export const SCALE_FLOOR={high:.75,balanced:.6,performance:.5};
 
 export function createFrameClock(now=0){
  return {last:now,acc:0,ready:false};
@@ -200,11 +202,11 @@ export function canvasScale({cssW,cssH,dpr,graphics='high'}={}){
  const cap=Math.min(raw,2);
  const mode=graphics==='performance'||graphics==='balanced'?graphics:'high';
  const budget=PIXEL_BUDGET[mode];
+ const floor=SCALE_FLOOR[mode];
  const full=w*h*cap*cap;
  if(full<=budget)return cap;
  const scale=Math.sqrt(budget/(w*h));
- // Stay at least 0.75 so huge fold/tablet CSS sizes still paint, just softer.
- return Math.max(.75,Math.min(cap,scale));
+ return Math.max(floor,Math.min(cap,scale));
 }
 
 export function viewportSize(win=globalThis){

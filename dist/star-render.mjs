@@ -232,14 +232,16 @@ export function drawStarBody(ctx,p,opts={}){
  const lite=!!opts.lite;
  const spectral=p.spectral||'G';
  const art=artOfStar(spectral);
- if(!lite)drawFlares(ctx,p,art,lite);
- drawCorona(ctx,p,art,lite);
+ if(!lite){
+  drawFlares(ctx,p,art,lite);
+  drawCorona(ctx,p,art,lite);
+ }
  const tex=textureFor(p,lite,opts.pixelScale);
  ctx.save();
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.clip();
  if(tex){
   const dest=p.r*2;
-  const smooth=dest>tex.width*1.06;
+  const smooth=!lite&&dest>tex.width*1.06;
   ctx.imageSmoothingEnabled=smooth;
   if(smooth&&'imageSmoothingQuality'in ctx)ctx.imageSmoothingQuality='high';
   ctx.drawImage(tex,p.x-p.r,p.y-p.r,dest,dest);

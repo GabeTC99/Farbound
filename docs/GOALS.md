@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 21, 2026: Candidate 2.16.4 local-space flight stutter: performance mode now honors the Fold pixel budget (scale floor 0.5), ships skip extrusion/gradients/double-stroke AA, flight no longer double-fills the canvas, and off-screen planets/stars/stations are culled. White-flash bake-before-fill and high-mode edge AA stay. Service worker cache bumped to `farbound-v2.16.4`. Rollback tag `v2.16.3`.
+
 - September 21, 2026: Candidate 2.16.3 ship/station edges: Fold clip leftover is pixel crawl on hard un-antialiased edges (Anchorage spokes, NPC hulls, player chevron). Device-aware hairline + silhouette AA on ships/player; station arms are stroked capsules; keep transparent `#space` (white-flash) and synchronized presents; snap the world camera. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.
 
 - September 21, 2026: Candidate 2.16.2 Fold white-flash: transparent `#space` context so an uninitialized desync swap is dark CSS, not #fff; sky bake then fill; resize slack; launch/jump art warmup. Service worker cache bumped to `farbound-v2.16.2`. Rollback tag `v2.16.1`.

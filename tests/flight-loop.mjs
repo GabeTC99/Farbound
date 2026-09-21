@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
- FIXED_DT,MAX_FRAME_DT,MAX_STEPS,CAM_FOLLOW,PIXEL_BUDGET,
+ FIXED_DT,MAX_FRAME_DT,MAX_STEPS,CAM_FOLLOW,PIXEL_BUDGET,SCALE_FLOOR,
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
@@ -56,6 +56,14 @@ assert.ok(foldInner<2,'huge fold CSS sizes drop below 2x');
 assert.ok(foldInner*1800*foldInner*2200<=PIXEL_BUDGET.high*1.05,'huge CSS viewports stay on budget');
 const lite=canvasScale({cssW:1280,cssH:800,dpr:2,graphics:'performance'});
 assert.ok(lite<2,'performance mode scales a 2x laptop canvas');
+assert.equal(SCALE_FLOOR.performance,.5);
+assert.equal(SCALE_FLOOR.high,.75);
+const foldPerf=canvasScale({cssW:1800,cssH:2200,dpr:3,graphics:'performance'});
+assert.ok(foldPerf<foldInner,'performance Fold scale is below high');
+assert.ok(foldPerf*1800*foldPerf*2200<=PIXEL_BUDGET.performance*1.05,'performance mode must honor its pixel budget on Fold CSS sizes');
+const foldBal=canvasScale({cssW:1800,cssH:2200,dpr:3,graphics:'balanced'});
+assert.ok(foldBal*1800*foldBal*2200<=PIXEL_BUDGET.balanced*1.05,'balanced Fold stays on budget');
+assert.ok(foldPerf>=SCALE_FLOOR.performance);
 
 assert.deepEqual(viewportSize({innerWidth:800,innerHeight:600}),{width:800,height:600});
 assert.deepEqual(viewportSize({innerWidth:800,innerHeight:600,visualViewport:{width:390,height:700}}),{width:390,height:700});
@@ -131,7 +139,12 @@ assert.match(style,/#space\{[^}]*background:#060c16/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.3/);
+assert.match(sw,/farbound-v2\.16\.4/);
+const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
+assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
+assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);
+assert.match(app,/worldInView\(star\.x,star\.y,\(star\.r\|\|80\)\*\s*1\.85/);
+assert.ok(!/else circle\(p\.x,p\.y,p\.r\+150,'#ff777722',true\)/.test(app),'performance mode must not stroke the huge scoop-zone ring');
 
 // Camera-linked star offsets: leftover display alpha interpolates stars with the ship pose.
 const star={x:.4,y:.35,depth:.05};
@@ -213,6 +226,9 @@ assert.match(shipSrc,/strokeSilhouette/);
 assert.match(shipSrc,/pixelScale/);
 assert.match(shipSrc,/lineJoin='round'/);
 assert.ok(!/ctx\.lineWidth=\.6/.test(shipSrc),'panel hairlines go through worldStroke');
+const liteVol=shipSrc.slice(shipSrc.indexOf('if(lite){'),shipSrc.indexOf('const {x:tx,y:ty}=thickOf'));
+assert.ok(liteVol.includes('ctx.stroke()')&&!liteVol.includes('strokeSilhouette'),'performance hulls keep one hairline, not the double silhouette');
+assert.ok(liteVol.includes('return;'),'performance volume returns before extrusion and gradients');
 
 const cruise=[];
 let cx=0;

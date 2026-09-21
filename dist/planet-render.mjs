@@ -277,8 +277,6 @@ export function drawPlanetBody(ctx,p,opts={}){
  const kindId=p.kindId||'mineral';
  const art=artOf(kindId);
  const lx=opts.lightX??-1,ly=opts.lightY??-.8;
- const len=Math.hypot(lx,ly)||1;
- const ux=lx/len,uy=ly/len;
  if(p.ring)drawRings(ctx,p,false);
  if(!lite)drawAtmosphere(ctx,p,art,lite);
  else if(art.limb&&art.haze>0){ctx.strokeStyle=art.limb+'66';ctx.lineWidth=Math.max(1.2,p.r*.04);ctx.beginPath();ctx.arc(p.x,p.y,p.r+1.5,0,6.28);ctx.stroke();}
@@ -287,14 +285,15 @@ export function drawPlanetBody(ctx,p,opts={}){
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.clip();
  if(tex)ctx.drawImage(tex,p.x-p.r,p.y-p.r,p.r*2,p.r*2);
  else{ctx.fillStyle=p.color||'#6a8890';ctx.fill();}
- const gx0=p.x-ux*p.r,gy0=p.y-uy*p.r,gx1=p.x+ux*p.r,gy1=p.y+uy*p.r;
- const shade=ctx.createLinearGradient(gx0,gy0,gx1,gy1);
- shade.addColorStop(0,'#ffffff14');
- shade.addColorStop(.42,'#00000000');
- shade.addColorStop(.7,'#00040c77');
- shade.addColorStop(1,'#00040cf2');
- ctx.fillStyle=shade;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
  if(!lite){
+  const len=Math.hypot(lx,ly)||1,ux=lx/len,uy=ly/len;
+  const gx0=p.x-ux*p.r,gy0=p.y-uy*p.r,gx1=p.x+ux*p.r,gy1=p.y+uy*p.r;
+  const shade=ctx.createLinearGradient(gx0,gy0,gx1,gy1);
+  shade.addColorStop(0,'#ffffff14');
+  shade.addColorStop(.42,'#00000000');
+  shade.addColorStop(.7,'#00040c77');
+  shade.addColorStop(1,'#00040cf2');
+  ctx.fillStyle=shade;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
   const hx=p.x-ux*p.r*.45,hy=p.y-uy*p.r*.45;
   const spec=ctx.createRadialGradient(hx,hy,0,hx,hy,p.r*.5);
   spec.addColorStop(0,kindId==='metal'||kindId==='ice'?'#ffffff66':'#ffffff33');
