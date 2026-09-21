@@ -1,4 +1,4 @@
-# Farbound — Goals Log
+# Nullharbor — Goals Log
 
 Created: September 8, 2026
 
@@ -37,6 +37,8 @@ Status: Active goals log. On September 8, Gabe authorized the engine-animation f
 Use the stable FB identifiers when adding detail, choosing priorities, or updating progress. Suggested progression: Planned → Ready → In progress → Verification → Complete. Ready for review means implemented and tested, awaiting review and publication.
 
 ## Change history
+
+- September 21, 2026: Candidate 2.16.0 Nullharbor rename: player-facing title, welcome chip, HUD brand, PWA name, and Pages URL copy are Nullharbor. PWA install icons use Social Media Manager’s Voidwake X avatar (teal star) at `dist/branding/x-profile.png`. Save keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.0a`. Rollback tag `v2.15.7`.
 
 - September 20, 2026: Candidate 2.15.7 smooth starfield + white-flash fix: distant stars and the Milky Way track the interpolated camera; sky wash cache is static so a desynchronized canvas no longer presents a white frame mid-cruise or on resize. Rollback tag `v2.14.0`.
 

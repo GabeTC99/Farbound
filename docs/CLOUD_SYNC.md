@@ -7,10 +7,10 @@ When `dist/cloud-config.mjs` has empty `url` / `anonKey`, the Flight menu shows 
 ## 1. Create a Supabase project
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **Authentication → Providers → Email**: enable Email with **password** sign-in (Farbound uses email + password so auth stays inside the installed PWA — no magic link that opens Chrome/Gmail outside the app).
+2. **Authentication → Providers → Email**: enable Email with **password** sign-in (Nullharbor uses email + password so auth stays inside the installed PWA — no magic link that opens Chrome/Gmail outside the app).
 3. Optional but recommended for beta: turn on **Confirm email** off / autoconfirm so Create account signs in immediately without sending mail (avoids free-tier email rate limits).
 4. **Authentication → URL configuration**:
-   - Site URL: your Pages origin, e.g. `https://gabetc99.github.io/Farbound/`
+   - Site URL: your Pages origin, e.g. `https://gabetc99.github.io/Nullharbor/`
    - Redirect URLs: same origin (and `http://localhost:…` if you test locally). Magicked-link redirects are unused by the password flow but keep them correct for any leftover sessions.
 5. Copy **Project URL** and the public **anon** key (Settings → API).
 
