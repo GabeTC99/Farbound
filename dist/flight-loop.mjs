@@ -68,17 +68,32 @@ export function snapWorldCam(camX,camY,width,height,dpr,zoom){
 }
 
 /**
- * Minimum device-pixel width for world-space strokes. Fold cruise (low
- * backing scale × 0.54–0.75 zoom) turned 1 CSS-px hull/station lines into
- * sub-pixel stair-steps that crawled every frame — the Fold clip, not tear.
+ * Minimum device-pixel width for world-space strokes. Fold clip (Anchorage 01
+ * spokes, NPC hulls, player chevron) crawls because filled 1 CSS-px edges
+ * stair-step at backing×zoom < 1 device pixel.
  */
-export const HAIRLINE_DEVICE=1.4;
+export const HAIRLINE_DEVICE=1.6;
+/** Wider fringe so filled silhouettes keep an AA band while the camera pans. */
+export const SILHOUETTE_DEVICE=2.4;
 export function hairline(pixelScale,minDevice=HAIRLINE_DEVICE){
  const s=pixelScale||1;
  return (s>0)?minDevice/s:minDevice;
 }
 export function worldStroke(px,pixelScale,minDevice=HAIRLINE_DEVICE){
  return Math.max(Number(px)||0,hairline(pixelScale,minDevice));
+}
+/** Soft under-stroke then a device-locked outline. Path must already be current. */
+export function strokeSilhouette(ctx,pixelScale){
+ if(!ctx)return;
+ const prevW=ctx.lineWidth,prevA=ctx.globalAlpha;
+ ctx.lineJoin='round';ctx.lineCap='round';
+ ctx.lineWidth=hairline(pixelScale,SILHOUETTE_DEVICE);
+ ctx.globalAlpha=prevA*.4;
+ ctx.stroke();
+ ctx.globalAlpha=prevA;
+ ctx.lineWidth=Math.max(prevW||0,hairline(pixelScale,HAIRLINE_DEVICE));
+ ctx.stroke();
+ ctx.lineWidth=prevW;
 }
 
 export function lerp(a,b,t){
@@ -112,12 +127,12 @@ export const SPACE_CLEAR='#060c16';
  * on Android Chrome / Fold GPUs; 2.15.7's immediate fill could not win that
  * race when a hitch (sky bake, first NPC cluster) stalled the next GPU submit.
  *
- * Synchronized (desynchronized:false): Gabe's Fold clip (Solace / Anchorage 01,
- * ~107 fps / 120 Hz panel) shows a horizontal shear across the whole game
- * canvas during cruise — station, NPCs, labels, and starfield offset together
- * — while the HUD overlay stays locked. That is a desync/front-buffer present,
- * not a white flash. Transparency stays so a rare uninitialized present is
- * still dark CSS.
+ * Independent Fold clip review (Solace / Anchorage 01): leftover artifact is
+ * pixel crawl / shimmer on hard un-antialiased edges — Anchorage spokes,
+ * NPC hulls, player chevron — as the camera pans. World strokes keep a
+ * device hairline plus a silhouette fringe. Synchronized presents stay off
+ * as extra lock against front-buffer shear on a 120 Hz Fold panel.
+ * Transparency stays so a rare uninitialized present is still dark CSS.
  */
 export const SPACE_CONTEXT={alpha:true,desynchronized:false};
 /** Ignore 1–2 device-pixel visualViewport jitter so Fold chrome does not reset the buffer every frame. */

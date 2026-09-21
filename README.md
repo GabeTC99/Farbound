@@ -22,7 +22,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ### Candidate 2.16.3
 
-- **Ship/station edges:** Gabe’s Fold clip (Solace / Anchorage 01, ~107 fps) shows a horizontal shear of the whole `#space` canvas during cruise — station, NPCs, labels, and starfield move together — while the HUD stays locked. `#space` stays transparent (2.16.2 white-flash) but is no longer desynchronized. World strokes also keep a 1.4 device-pixel hairline; the chase camera snaps to backing pixels.
+- **Ship/station edges:** Independent Fold clip review (Solace / Anchorage 01): leftover artifact is pixel crawl / shimmer on hard un-antialiased edges — Anchorage 01 spokes, NPC hulls, player chevron — as the camera pans. Ships, stations, and the player craft use a 1.6 device-pixel hairline plus a 2.4-device silhouette fringe; station arms are rounded and stroked. `#space` stays transparent (2.16.2 white-flash) and synchronized. The chase camera snaps to backing pixels.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.3`.
 
 ### Candidate 2.16.2

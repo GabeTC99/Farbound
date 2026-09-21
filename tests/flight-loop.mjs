@@ -5,7 +5,7 @@ import {
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
- hairline,worldStroke,HAIRLINE_DEVICE,
+ hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
 } from '../dist/flight-loop.mjs';
 import {texSizeFor,STAR_TEX} from '../dist/star-render.mjs';
@@ -101,6 +101,8 @@ assert.match(app,/SPACE_CONTEXT/);
 assert.match(app,/getContext\('2d',SPACE_CONTEXT\)/);
 assert.match(app,/snapWorldCam\(/);
 assert.match(app,/worldStroke\(/);
+assert.match(app,/strokeSilhouette\(/);
+assert.match(app,/roundRect\(35,-9,45,18,3\)/);
 assert.match(app,/pixelScale:worldPx\(\)/);
 assert.match(app,/backingNeedsReset\(/);
 assert.match(app,/warmLocalArt\(/);
@@ -175,15 +177,28 @@ assert.deepEqual(snapWorldCam(0,0,800,600,2,1),{x:0,y:0});
 const mid=snapWorldCam(10.01,0,801,600,1.5,.54);
 const midTx=1.5*(801*.5-mid.x*.54);
 assert.ok(Math.abs(midTx-Math.round(midTx))<1e-9,'odd CSS widths still lock to backing pixels');
-assert.equal(HAIRLINE_DEVICE,1.4);
-assert.ok(Math.abs(hairline(1)-1.4)<1e-12);
-assert.ok(Math.abs(hairline(2)-.7)<1e-12);
+assert.equal(HAIRLINE_DEVICE,1.6);
+assert.equal(SILHOUETTE_DEVICE,2.4);
+assert.ok(Math.abs(hairline(1)-1.6)<1e-12);
+assert.ok(Math.abs(hairline(2)-.8)<1e-12);
+assert.ok(Math.abs(hairline(1,SILHOUETTE_DEVICE)-2.4)<1e-12);
 const foldPx=.75*1.1;
 assert.ok(worldStroke(1,foldPx)>1,'Fold-scale 1px hull strokes must thicken past a device hairline');
 assert.ok(worldStroke(1,foldPx)*foldPx>=HAIRLINE_DEVICE-1e-9);
 assert.equal(worldStroke(2,2),2,'desktop 2x already-thick strokes stay put');
+const strokes=[];
+strokeSilhouette({
+ lineWidth:1,globalAlpha:1,lineJoin:'',lineCap:'',
+ stroke(){strokes.push({w:this.lineWidth,a:this.globalAlpha});}
+},foldPx);
+assert.equal(strokes.length,2,'silhouette is a soft under-stroke then a locked outline');
+assert.ok(strokes[0].w*foldPx>=SILHOUETTE_DEVICE-1e-9);
+assert.ok(Math.abs(strokes[0].a-.4)<1e-12);
+assert.ok(strokes[1].w*foldPx>=HAIRLINE_DEVICE-1e-9);
+assert.equal(strokes[1].a,1);
 const shipSrc=readFileSync(new URL('../dist/ship-render.mjs',import.meta.url),'utf8');
 assert.match(shipSrc,/worldStroke/);
+assert.match(shipSrc,/strokeSilhouette/);
 assert.match(shipSrc,/pixelScale/);
 assert.match(shipSrc,/lineJoin='round'/);
 assert.ok(!/ctx\.lineWidth=\.6/.test(shipSrc),'panel hairlines go through worldStroke');
@@ -207,4 +222,4 @@ console.log('PASS Pixel budget caps huge fold CSS sizes without dropping typical
 console.log('PASS Star photosphere size no longer tracks zoom/DPR on the hot path');
 console.log('PASS Starfield and sky parallax track interpolated camera without 4 Hz wash rebake');
 console.log('PASS Space canvas stays transparent and synchronized; world cam locks to backing pixels');
-console.log('PASS Fold-scale hull/station strokes stay at least a 1.4 device-pixel hairline');
+console.log('PASS Fold-scale hull/station strokes stay at least a 1.6 device-pixel hairline with silhouette AA');

@@ -3,7 +3,7 @@
  * Geometry stays in hull-defs; this module adds class kits, materials, and physical engines.
  */
 import {HULL_DEFS,getHullDef} from './hull-defs.mjs';
-import {worldStroke} from './flight-loop.mjs';
+import {worldStroke,strokeSilhouette} from './flight-loop.mjs';
 let paintScale=1;
 const lw=px=>worldStroke(px,paintScale);
 
@@ -339,7 +339,7 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
  ctx.restore();
  ctx.strokeStyle=rgbOf(mix(art.shadow,hull,.18));
  ctx.lineWidth=lw(1.3);
- pathBody(ctx,def.body,size);ctx.stroke();
+ pathBody(ctx,def.body,size);strokeSilhouette(ctx,paintScale);
 }
 
 function drawCanopy(ctx,def,size,art,lite){

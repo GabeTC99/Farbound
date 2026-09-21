@@ -38,7 +38,7 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
-- September 21, 2026: Candidate 2.16.3 ship/station edges: Fold clip (Solace / Anchorage 01) is a canvas-wide horizontal shear during cruise with HUD locked — drop desynchronized presents, keep transparent `#space` (white-flash), hairline world strokes, snap the world camera. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.
+- September 21, 2026: Candidate 2.16.3 ship/station edges: Fold clip leftover is pixel crawl on hard un-antialiased edges (Anchorage spokes, NPC hulls, player chevron). Device-aware hairline + silhouette AA on ships/stations/player; keep transparent `#space` (white-flash) and synchronized presents; snap the world camera. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.
 
 - September 21, 2026: Candidate 2.16.2 Fold white-flash: transparent `#space` context so an uninitialized desync swap is dark CSS, not #fff; sky bake then fill; resize slack; launch/jump art warmup. Service worker cache bumped to `farbound-v2.16.2`. Rollback tag `v2.16.1`.
 
