@@ -243,7 +243,6 @@ export function drawStarBody(ctx,p,opts={}){
   const dest=p.r*2;
   const smooth=!lite&&dest>tex.width*1.06;
   ctx.imageSmoothingEnabled=smooth;
-  if(smooth&&'imageSmoothingQuality'in ctx)ctx.imageSmoothingQuality='high';
   ctx.drawImage(tex,p.x-p.r,p.y-p.r,dest,dest);
  }
  else{

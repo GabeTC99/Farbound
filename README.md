@@ -22,7 +22,7 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 
 ### Candidate 2.16.4
 
-- **Flight stutter:** Local-space hitching was not the graphics-quality toggle. Performance mode still painted a Fold-sized canvas (0.75 DPR floor ignored the 1.8e6 budget), every craft still extruded/gradient-lit/double-stroked, and `render()` filled the whole buffer *before* the sky bake-then-fill. Performance ships are now a fill + hairline LOD; off-screen planets/stars/stations are culled; scoop-zone rings and corona gradients stay off in performance; the pixel budget can drop to 0.5× on huge CSS viewports. High-mode silhouette AA, transparent synchronized `#space`, and bake-before-fill are unchanged.
+- **High-mode Fold hitch (cover + inner):** The same flight stutter shows on the Fold’s tiny outer cover and the large inner display, so this is not “too many pixels.” High still did 340 live star fills, a live galaxy-band gradient, a giant stroked orbit for every planet, and a new lighting gradient per craft every frame. High keeps silhouette AA, capsule spokes, extrusion, and corona; dim stars and the Milky Way now blit from caches, far rings are culled, and hull gradients are reused. Performance LOD is an extra option. Bake-before-fill and transparent synchronized `#space` stay.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.4`.
 
 ### Candidate 2.16.3

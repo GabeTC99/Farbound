@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
  FIXED_DT,MAX_FRAME_DT,MAX_STEPS,CAM_FOLLOW,PIXEL_BUDGET,SCALE_FLOOR,
+ HUGE_CSS,pixelBudget,ringInView,starLayerIndex,starLayerOffset,blitWrapped,
+ STAR_LAYER_DEPTHS,
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
@@ -53,7 +55,12 @@ const desktop=canvasScale({cssW:1440,cssH:900,dpr:2,graphics:'high'});
 assert.equal(desktop,2,'typical laptop retina stays at 2x');
 const foldInner=canvasScale({cssW:1800,cssH:2200,dpr:3,graphics:'high'});
 assert.ok(foldInner<2,'huge fold CSS sizes drop below 2x');
-assert.ok(foldInner*1800*foldInner*2200<=PIXEL_BUDGET.high*1.05,'huge CSS viewports stay on budget');
+assert.ok(foldInner*1800*foldInner*2200<=PIXEL_BUDGET.highHuge*1.05,'inner Fold High uses the 120 Hz budget, not 6.2e6');
+assert.ok(foldInner>=SCALE_FLOOR.high,'Fold High stays sharper than the Performance floor');
+const cover=canvasScale({cssW:384,cssH:832,dpr:3,graphics:'high'});
+assert.ok(cover>=1.8,'Fold cover High stays sharp — cover hitching is not a pixel-budget problem');
+assert.ok(384*832<HUGE_CSS);
+assert.equal(pixelBudget('high',384,832),PIXEL_BUDGET.high);
 const lite=canvasScale({cssW:1280,cssH:800,dpr:2,graphics:'performance'});
 assert.ok(lite<2,'performance mode scales a 2x laptop canvas');
 assert.equal(SCALE_FLOOR.performance,.5);
@@ -64,6 +71,16 @@ assert.ok(foldPerf*1800*foldPerf*2200<=PIXEL_BUDGET.performance*1.05,'performanc
 const foldBal=canvasScale({cssW:1800,cssH:2200,dpr:3,graphics:'balanced'});
 assert.ok(foldBal*1800*foldBal*2200<=PIXEL_BUDGET.balanced*1.05,'balanced Fold stays on budget');
 assert.ok(foldPerf>=SCALE_FLOOR.performance);
+assert.ok(ringInView(0,0,400,400,0,80),'a ring under the camera stays drawable');
+assert.ok(!ringInView(0,0,4000,0,0,80),'far orbits must not stroke a giant circle every frame');
+assert.equal(starLayerIndex(.03),0);
+assert.equal(starLayerIndex(.09),2);
+assert.equal(STAR_LAYER_DEPTHS.length,3);
+const off=starLayerOffset(100,0,.05,800,600);
+assert.ok(off.x>=0&&off.x<800);
+const blits=[];
+blitWrapped({drawImage(_l,x,y){blits.push([x,y]);}},{width:8,height:8},2,3,8,8);
+assert.equal(blits.length,4);
 
 assert.deepEqual(viewportSize({innerWidth:800,innerHeight:600}),{width:800,height:600});
 assert.deepEqual(viewportSize({innerWidth:800,innerHeight:600,visualViewport:{width:390,height:700}}),{width:390,height:700});
@@ -105,6 +122,11 @@ assert.match(app,/skyParallax\(/);
 assert.match(app,/skyCacheKey\(/);
 assert.match(app,/fillSpaceClear\(/);
 assert.match(app,/paintGalaxyBand\(/);
+assert.match(app,/ensureGalaxyLayer\(/);
+assert.match(app,/ensureStarLayers\(/);
+assert.match(app,/warmSkyCaches\(/);
+assert.match(app,/ringInView\(/);
+assert.match(app,/blitWrapped\(/);
 assert.match(app,/SPACE_CONTEXT/);
 assert.match(app,/getContext\('2d',SPACE_CONTEXT\)/);
 assert.match(app,/snapWorldCam\(/);
@@ -129,6 +151,9 @@ assert.ok(!worldXf.includes('translate(-cam.x,-cam.y)'),'unsapped cam must not d
 const skyFn=app.slice(app.indexOf('function drawSkyBackdrop'),app.indexOf('function drawEdgeArrow'));
 assert.ok(skyFn.includes('ensureSkyLayer(')&&skyFn.includes('fillSpaceClear('));
 assert.ok(skyFn.indexOf('ensureSkyLayer(')<skyFn.indexOf('fillSpaceClear('),'sky bake must finish before the main-buffer fill');
+assert.ok(skyFn.includes('ensureGalaxyLayer(')&&skyFn.indexOf('ensureGalaxyLayer(')<skyFn.indexOf('fillSpaceClear('));
+assert.ok(skyFn.includes('ensureStarLayers(')&&skyFn.indexOf('ensureStarLayers(')<skyFn.indexOf('fillSpaceClear('));
+assert.ok(!/paintGalaxyBand\(ctx,/.test(skyFn),'galaxy band is a cached blit, not a live gradient fill');
 assert.ok(!/cam\.x\+=\(desiredX-cam\.x\)\*\.09/.test(app),'old frame-rate camera lerp is gone');
 assert.ok(!/Math\.round\(\(\(s\.x\*width/.test(app),'starfield no longer snaps to whole pixels');
 assert.ok(!/Math\.floor\(clock\*4\),cx=Math\.round\(cam\.x/.test(app),'sky cache no longer rebakes on cam/4Hz');
@@ -229,6 +254,10 @@ assert.ok(!/ctx\.lineWidth=\.6/.test(shipSrc),'panel hairlines go through worldS
 const liteVol=shipSrc.slice(shipSrc.indexOf('if(lite){'),shipSrc.indexOf('const {x:tx,y:ty}=thickOf'));
 assert.ok(liteVol.includes('ctx.stroke()')&&!liteVol.includes('strokeSilhouette'),'performance hulls keep one hairline, not the double silhouette');
 assert.ok(liteVol.includes('return;'),'performance volume returns before extrusion and gradients');
+assert.match(shipSrc,/function hullBeam/);
+assert.match(shipSrc,/function hullSun/);
+assert.match(shipSrc,/strokeSilhouette\(ctx,paintScale\)/);
+assert.match(shipSrc,/drawExtrusion/);
 
 const cruise=[];
 let cx=0;

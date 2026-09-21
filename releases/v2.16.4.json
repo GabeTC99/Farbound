@@ -3,8 +3,8 @@
   "name": "Nullharbor",
   "date": "2026-09-21",
   "notes": [
-    "Local-space flight hitching persisted across graphics settings because the renderer still did high-cost work in performance mode: the 0.75 canvas scale floor ignored the 1.8e6 pixel budget on Fold CSS sizes, every craft extruded/gradient-lit and double-stroked the 2.16.3 silhouette, and render() filled the full buffer before the sky bake-then-fill.",
-    "Performance ships are a fill + device-locked hairline (no extrusion, per-frame gradients, or silhouette fringe). Off-screen planets, stars, and stations are culled. Scoop-zone rings and star corona stay off in performance. Balanced/high keep 2.16.3 capsule spokes and silhouette AA. Transparent synchronized #space and bake-before-fill are unchanged.",
+    "High-mode flight hitching on the Fold is a hot-path bug, not a huge-canvas bug: Gabe sees the same stutter on the outer cover (tiny) and the inner display. High still painted 340 live stars, a live galaxy band (gradients + dust), every planet orbit as a giant stroked circle, and allocated lighting gradients per craft per frame — work that does not shrink on a small screen.",
+    "High (and Balanced) keep silhouette AA, capsule station spokes, extrusion, and corona. The frame is cheaper because dim stars and the Milky Way blit from caches, far orbit/scoop rings are culled, and hull lighting gradients are reused. Performance LOD stays an extra option. Single sky fill, bake-before-fill, and transparent synchronized #space are unchanged.",
     "Service worker cache bumped to farbound-v2.16.4. Save keys stay farbound-save-v2."
   ],
   "save_key": "farbound-save-v2",
