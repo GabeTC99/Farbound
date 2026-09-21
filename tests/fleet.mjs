@@ -98,6 +98,7 @@ assert.match(app,/drawSecurityCraft/);
 assert.match(app,/drawTrafficCraft/);
 assert.match(app,/drawEnemyCraft/);
 assert.match(app,/from '\.\/ship-render\.mjs'/);
+assert.match(app,/pixelScale:worldPx\(\)/);
 
 const g=new Game();
 g.s.credits=250000;g.s.docked=true;

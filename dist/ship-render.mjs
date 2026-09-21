@@ -3,6 +3,9 @@
  * Geometry stays in hull-defs; this module adds class kits, materials, and physical engines.
  */
 import {HULL_DEFS,getHullDef} from './hull-defs.mjs';
+import {worldStroke,strokeSilhouette} from './flight-loop.mjs';
+let paintScale=1;
+const lw=px=>worldStroke(px,paintScale);
 
 export const CLASS_ART={
  explorer:{metal:[92,108,118],plate:[148,166,176],shadow:[30,36,42],glass:'#14343c',sheen:.42,rim:'#7ad9c8',heat:[108,68,50]},
@@ -204,7 +207,7 @@ function drawBells(ctx,def,size,art,thrust){
   ctx.lineTo(face+1.4,y+hh*.5);
   ctx.lineTo(face+inset,y+hh*.32);
   ctx.closePath();ctx.fill();
-  ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=lw(1);ctx.stroke();
   ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));
   ctx.fillRect(face-.55,y-hh*.46,Math.max(4.2,size*.16),hh*.92);
   ctx.strokeStyle=rgbOf(art.shadow);ctx.strokeRect(face-.55,y-hh*.46,Math.max(4.2,size*.16),hh*.92);
@@ -223,7 +226,7 @@ function drawBells(ctx,def,size,art,thrust){
 function drawParts(ctx,def,size,art){
  for(const p of def.parts||[]){
   ctx.globalAlpha=1;ctx.strokeStyle=rgbOf(mix(art.plate,art.shadow,.35));ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.15));
-  if(p.type==='stroke'){ctx.globalAlpha=p.alpha??.4;ctx.lineWidth=1;ctx.beginPath();p.pts.forEach(([x,y],i)=>{const px=x*size,py=y*size;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});ctx.stroke();}
+  if(p.type==='stroke'){ctx.globalAlpha=p.alpha??.4;ctx.lineWidth=lw(1);ctx.beginPath();p.pts.forEach(([x,y],i)=>{const px=x*size,py=y*size;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);});ctx.stroke();}
   else if(p.type==='rect'){
    const x=p.x*size,y=p.y*size,w=p.w*size,h=p.h*size;
    ctx.fillStyle=rgbOf(art.shadow);ctx.fillRect(x+1.3,y+1.6,w,h);
@@ -232,7 +235,7 @@ function drawParts(ctx,def,size,art){
    else ctx.fillStyle=rgbOf(art.metal);
    ctx.fillRect(x,y,w,h);
    ctx.strokeStyle=rgbOf(art.shadow);ctx.strokeRect(x,y,w,h);
-   ctx.strokeStyle=rgba(art.shadow,.45);ctx.lineWidth=.8;
+   ctx.strokeStyle=rgba(art.shadow,.45);ctx.lineWidth=lw(.8);
    ctx.beginPath();ctx.moveTo(x+w*.5,y);ctx.lineTo(x+w*.5,y+h);ctx.moveTo(x,y+h*.5);ctx.lineTo(x+w,y+h*.5);ctx.stroke();
   }
   else if(p.type==='poly'){
@@ -242,7 +245,7 @@ function drawParts(ctx,def,size,art){
   else if(p.type==='arc'){
    const ax=p.x*size,ay=p.y*size,r=p.r*size;
    const rootY=Math.sign(ay||1)*hullHalfY(def.body,p.x)*size*.72;
-   ctx.strokeStyle=rgbOf(mix(art.metal,art.shadow,.25));ctx.lineWidth=Math.max(1.6,size*.06);
+   ctx.strokeStyle=rgbOf(mix(art.metal,art.shadow,.25));ctx.lineWidth=lw(Math.max(1.6,size*.06));
    ctx.beginPath();ctx.moveTo(ax,rootY);ctx.lineTo(ax,ay);ctx.stroke();
    ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.15));
    ctx.beginPath();ctx.arc(ax,rootY,Math.max(1.4,r*.22),0,6.28);ctx.fill();
@@ -256,7 +259,7 @@ function drawParts(ctx,def,size,art){
    const sx=-size*.72,sy=size*.22;
    ctx.fillStyle=rgbOf(mix(art.metal,art.shadow,.2));
    ctx.beginPath();ctx.moveTo(-size*.2,sy);ctx.lineTo(sx,sy*.55);ctx.lineTo(sx,-sy*.55);ctx.lineTo(-size*.2,-sy);ctx.closePath();ctx.fill();
-   ctx.strokeStyle=rgbOf(mix(art.heat,art.metal,.35));ctx.lineWidth=1.4;
+   ctx.strokeStyle=rgbOf(mix(art.heat,art.metal,.35));ctx.lineWidth=lw(1.4);
    ctx.beginPath();ctx.moveTo(-size*.18,sy);ctx.quadraticCurveTo(sx-size*.08,0,-size*.18,-sy);ctx.stroke();
   }
   ctx.globalAlpha=1;
@@ -266,17 +269,17 @@ function drawParts(ctx,def,size,art){
 function drawPanels(ctx,def,size,art,lite){
  ctx.save();
  pathBody(ctx,def.body,size);ctx.clip();
- ctx.strokeStyle=rgba(art.shadow,.55);ctx.lineWidth=1.15;
+ ctx.strokeStyle=rgba(art.shadow,.55);ctx.lineWidth=lw(1.15);
  ctx.beginPath();ctx.moveTo(size*.7,0);ctx.lineTo(-size*.48,0);ctx.stroke();
  if(!lite){
-  ctx.strokeStyle=rgba(art.shadow,.38);ctx.lineWidth=.8;
+  ctx.strokeStyle=rgba(art.shadow,.38);ctx.lineWidth=lw(.8);
   ctx.beginPath();
   ctx.moveTo(size*.3,-size*.18);ctx.lineTo(-size*.3,-size*.14);
   ctx.moveTo(size*.3,size*.18);ctx.lineTo(-size*.3,size*.14);
   ctx.moveTo(size*.2,-size*.55);ctx.lineTo(size*.2,size*.55);
   ctx.moveTo(-size*.12,-size*.5);ctx.lineTo(-size*.12,size*.5);
   ctx.stroke();
-  ctx.strokeStyle=rgba(art.plate,.16);ctx.lineWidth=.6;
+  ctx.strokeStyle=rgba(art.plate,.16);ctx.lineWidth=lw(.6);
   for(let i=0;i<6;i++){
    const y=-size*.22+i*(size*.08);
    ctx.beginPath();ctx.moveTo(-size*.35,y);ctx.lineTo(size*.45,y);ctx.stroke();
@@ -329,14 +332,14 @@ function drawVolume(ctx,def,size,art,lx,ly,sheen,lite,hostile){
   ctx.fillStyle=sun;ctx.fill();
  }
  ctx.strokeStyle=rgba([230,240,248],lite?.12:.2);
- ctx.lineWidth=1.1;
+ ctx.lineWidth=lw(1.1);
  ctx.beginPath();ctx.moveTo(-size*.2,-size*.12);ctx.lineTo(size*.55,-size*.22);ctx.stroke();
  ctx.fillStyle=rgbOf(mix(hull,art.plate,.38));
  pathBody(ctx,scaleBody(def.body,.7),size,-.7,-1);ctx.globalAlpha=.42;ctx.fill();ctx.globalAlpha=1;
  ctx.restore();
  ctx.strokeStyle=rgbOf(mix(art.shadow,hull,.18));
- ctx.lineWidth=1.3;
- pathBody(ctx,def.body,size);ctx.stroke();
+ ctx.lineWidth=lw(1.3);
+ pathBody(ctx,def.body,size);strokeSilhouette(ctx,paintScale);
 }
 
 function drawCanopy(ctx,def,size,art,lite){
@@ -347,12 +350,12 @@ function drawCanopy(ctx,def,size,art,lite){
  ctx.beginPath();ctx.ellipse(x+1.4,1.8,rx+2.4,ry+2,0,0,6.28);ctx.fill();
  ctx.fillStyle=rgbOf(mix(art.plate,art.metal,.35));
  roundBox(ctx,x-w/2,-h/2,w,h,2);ctx.fill();
- ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=1.25;ctx.stroke();
+ ctx.strokeStyle=rgbOf(art.shadow);ctx.lineWidth=lw(1.25);ctx.stroke();
  ctx.fillStyle=art.glass;
  roundBox(ctx,x-w/2+2,-h/2+1.6,w-4,h-3.2,1.2);ctx.fill();
  ctx.fillStyle=rgba([8,16,20],.5);
  roundBox(ctx,x-w/2+3.2,-h/2+2.6,w-6.6,h-5,1);ctx.fill();
- ctx.strokeStyle=rgba(art.plate,.45);ctx.lineWidth=.8;
+ ctx.strokeStyle=rgba(art.plate,.45);ctx.lineWidth=lw(.8);
  ctx.beginPath();ctx.moveTo(x-w*.1,-h/2+1.6);ctx.lineTo(x,h/2-1.6);
  ctx.moveTo(x+w*.2,-h/2+1.6);ctx.lineTo(x+w*.28,h/2-1.6);ctx.stroke();
  ctx.fillStyle=rgba([210,232,242],.28);
@@ -379,7 +382,7 @@ function drawKit(ctx,def,size,art,classId,lite){
   const tipY=-Math.min(hy*.82,size*.32);
   ctx.fillStyle=shade;ctx.beginPath();ctx.arc(bx*size+0.6,1.1,2.1,0,6.28);ctx.fill();
   ctx.fillStyle=plate;ctx.beginPath();ctx.arc(bx*size,0,2.2,0,6.28);ctx.fill();ctx.strokeStyle=shade;ctx.stroke();
-  ctx.strokeStyle=rgbOf(mix(art.plate,art.shadow,.3));ctx.lineWidth=1.4;
+  ctx.strokeStyle=rgbOf(mix(art.plate,art.shadow,.3));ctx.lineWidth=lw(1.4);
   ctx.beginPath();ctx.moveTo(bx*size,0);ctx.lineTo(bx*size,tipY);ctx.stroke();
   ctx.fillStyle=plate;ctx.beginPath();ctx.arc(bx*size,tipY,1.5,0,6.28);ctx.fill();
  }
@@ -403,7 +406,7 @@ function drawKit(ctx,def,size,art,classId,lite){
   const cx=.1,hy=hullHalfY(def.body,cx)*size;
   for(const s of[-1,1]){
    const x=cx*size,y=s*hy*.88;
-   ctx.strokeStyle=plate;ctx.lineWidth=1.4;
+   ctx.strokeStyle=plate;ctx.lineWidth=lw(1.4);
    ctx.beginPath();ctx.moveTo(x,y-s*2);ctx.lineTo(x-2,y-s*5);ctx.lineTo(x-5,y-s*2);ctx.stroke();
   }
  }
@@ -477,6 +480,8 @@ export function drawCraft(ctx,opts={}){
  const size=opts.size||19,accent=opts.accent||art.rim;
  const thrust=opts.thrust||0,boost=!!opts.boost,clock=opts.clock||0,lite=!!opts.lite;
  const lx=opts.lightX??-1,ly=opts.lightY??-.75;
+ paintScale=opts.pixelScale||1;
+ ctx.lineJoin='round';ctx.lineCap='round';
  drawFlames(ctx,def,size,thrust,boost,lite);
  drawVolume(ctx,def,size,art,lx,ly,art.sheen,lite,!!opts.hostile);
  drawPanels(ctx,def,size,art,lite);

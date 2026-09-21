@@ -17,7 +17,7 @@ import {drawPlanetBody,warmPlanetTexture} from './planet-render.mjs';
 import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft} from './ship-render.mjs';
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
-import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset} from './flight-loop.mjs';
+import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset,snapWorldCam,worldStroke,strokeBand} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',system:'<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
 const icon=(name)=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.ship}</svg>`;
@@ -35,6 +35,7 @@ function graphicsMode(){const g=game?.s?.graphics;return g==='performance'||g===
 function liteFX(){return graphicsMode()==='performance';}
 function softFX(){return graphicsMode()!=='high';}
 function canvasDpr(){return canvasScale({cssW:width,cssH:height,dpr:devicePixelRatio||1,graphics:graphicsMode()});}
+function worldPx(){return cam.zoom*dpr;}
 let dpr=canvasDpr(),radarTick=0,skyLayer=null,skyLayerKey='',resizeTimer=0,knobTf='',heldFire=false,heldBoost=false;
 const frameClock=createFrameClock(),framePacer=createPacer(180),poseSnap={x:0,y:0,angle:0,ready:false};
 const starRand=rng(2471),stars=Array.from({length:340},()=>({x:starRand(),y:starRand(),r:.3+starRand()*1.35,a:.12+starRand()*.7,depth:.02+starRand()*.09,bright:starRand()>.92}));
@@ -622,7 +623,7 @@ try{visualViewport?.addEventListener('resize',scheduleResize);visualViewport?.ad
 canvas.addEventListener('pointerdown',e=>{if(panel||!started||game.s.docked||game.surface)return;const p={x:(e.clientX-width/2)/cam.zoom+cam.x,y:(e.clientY-height/2)/cam.zoom+cam.y};const docks=(game.stations||[]).filter(s=>s.type==='station'||game.sys.hasStation);const all=[...docks,...(game.stars||[game.star]),...(game.belts||[]),...game.wakes,...game.signals,...game.derelicts,...game.patrols,...game.traffic,...game.visiblePlanets,...game.enemies,...game.asteroids];const target=all.filter(t=>dist(p,t)<Math.max(t.r,35/cam.zoom)).sort((a,b)=>dist(p,a)-dist(p,b))[0];if(target){game.target=target;if(target.type==='station')game.station=target;game.auto=null;updateHUD();}});
 function drawMap(){const c=$('galaxy-map');if(!c)return;if(mapChart?.canvas===c){mapChart.selected=selectedSystem;mapChart.draw();return;}mapChart=new GalaxyChart(c,game,mapCamera,id=>{selectedSystem=id;renderPanel();},selectedSystem);}
 function drawSystemMap(){const c=$('system-map');if(!c)return;if(systemChart?.canvas===c){systemChart.draw();return;}systemChart=new SystemChart(c,game,systemCamera,body=>{if(!body||game.s.docked||game.surface)return;game.target=body;if(body.type==='station')game.station=body;game.auto=null;updateHUD();drawSystemMap();});}
-function circle(x,y,r,color,stroke=false){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);if(stroke){const prev=ctx.lineWidth;ctx.strokeStyle=color;ctx.lineWidth=1;ctx.stroke();ctx.lineWidth=prev;}else{ctx.fillStyle=color;ctx.fill();}}
+function circle(x,y,r,color,stroke=false){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);if(stroke){const prev=ctx.lineWidth;ctx.strokeStyle=color;ctx.lineWidth=worldStroke(prev||1,worldPx());ctx.stroke();ctx.lineWidth=prev;}else{ctx.fillStyle=color;ctx.fill();}}
 function localLight(x,y,a){
  const host=(game.stars||[game.star])[0]||game.star,lx=(host?.x??0)-x,ly=(host?.y??0)-y;
  const c=Math.cos(-a),s=Math.sin(-a);
@@ -631,15 +632,15 @@ function localLight(x,y,a){
 function drawShip(x,y,a,color,size=19,enemy=false,thrust=0,boost=false){
  ctx.save();ctx.translate(x,y);ctx.rotate(a);
  const L=localLight(x,y,a);
- if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y});
- else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y});
+ if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
+ else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
 }
 function drawSecurityShip(p,hostile=false){
  const f=FACTIONS.find(f=>f.id===p.faction),color=hostile?'#ee918b':(f?.color||'#9eb7bd');
  const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);
- drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y});
+ drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
 }
 function drawPlayerShip(dt=1/60){
@@ -653,7 +654,7 @@ function drawPlayerShip(dt=1/60){
  else if(game.s.shield>0&&game.s.shield<st.shield&&game.time-game.lastDamage>4){ctx.globalAlpha=.14+.05*Math.sin(clock*2);circle(p.x,p.y,size+12,color,true);ctx.globalAlpha=1;}
  const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);ctx.transform(1,0,Math.tan(shipBank)*.35,1,0,0);
- drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y});
+ drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
  if(boost){ctx.globalAlpha=.2;circle(p.x,p.y,size+28,hull.accent,true);ctx.globalAlpha=1;}
 }
@@ -662,7 +663,7 @@ function drawTrafficShip(tr){
  if(!lite){for(const t of tr.trail||[]){ctx.globalAlpha=Math.max(0,t.life*1.6);circle(t.x,t.y,1.6,color);}ctx.globalAlpha=1;}
  const L=localLight(tr.x,tr.y,tr.angle);
  ctx.save();ctx.translate(tr.x,tr.y);ctx.rotate(tr.angle);
- drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y});
+ drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
  if(tr.status==='FUEL SCOOPING'){ctx.strokeStyle='#ffc68577';ctx.lineWidth=1.5;ctx.setLineDash([6,10]);ctx.beginPath();ctx.moveTo(game.star.x,game.star.y);ctx.lineTo(tr.x,tr.y);ctx.stroke();ctx.setLineDash([]);}
  if(tr.status==='MINING RUN'){const rock=game.asteroids[0];if(rock){ctx.strokeStyle='#9ad7c988';ctx.lineWidth=1.4;ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(tr.x,tr.y);ctx.lineTo(rock.x+Math.sin(tr.work)*12,rock.y+Math.cos(tr.work)*12);ctx.stroke();ctx.setLineDash([]);}}
@@ -687,7 +688,7 @@ function drawPlanet(p){
  }
 }
 function label(text,x,y,color='#a1bdc8',size=14){ctx.font=`${size}px system-ui`;ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(text,x,y);}
-function drawStation(s=game.station){if(!s||s.type==='beacon')return;const scale=s.r/65,lite=liteFX();ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);ctx.lineWidth=2;circle(0,0,64,'#527d8c',true);circle(0,0,51,'#29434f',true);for(let i=0;i<(lite?3:6);i++){ctx.save();ctx.rotate(i*Math.PI/(lite?1.5:3));ctx.fillStyle='#18303e';ctx.strokeStyle='#6a94a3';ctx.fillRect(35,-9,45,18);ctx.strokeRect(35,-9,45,18);if(!lite){ctx.fillStyle='#82d7c2';ctx.fillRect(68,-3,7,6);}ctx.restore();}circle(0,0,22,'#132833');circle(0,0,22,'#7db9bd',true);ctx.restore();if(!lite){ctx.setLineDash([9,13]);circle(s.x,s.y,125*scale,'#4c8c8740',true);ctx.setLineDash([]);}label(s.name,s.x,s.y-100*scale,'#94c7cd');if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-78*scale,'#608592',12);}
+function drawStation(s=game.station){if(!s||s.type==='beacon')return;const scale=s.r/65,lite=liteFX(),px=worldPx()*scale,hair=worldStroke(2,px);ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=hair;circle(0,0,64,'#527d8c',true);circle(0,0,51,'#29434f',true);for(let i=0;i<(lite?3:6);i++){ctx.save();ctx.rotate(i*Math.PI/(lite?1.5:3));ctx.beginPath();ctx.moveTo(44,0);ctx.lineTo(72,0);strokeBand(ctx,px,16,'#18303e','#6a94a3');if(!lite){ctx.fillStyle='#82d7c2';ctx.beginPath();ctx.arc(76,0,3.2,0,Math.PI*2);ctx.fill();}ctx.restore();}circle(0,0,22,'#132833');circle(0,0,22,'#7db9bd',true);ctx.restore();if(!lite){ctx.setLineDash([9,13]);circle(s.x,s.y,125*scale,'#4c8c8740',true);ctx.setLineDash([]);}label(s.name,s.x,s.y-100*scale,'#94c7cd');if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-78*scale,'#608592',12);}
 function drawStar(p=game.star){
  const col=p.color||'#e9be82';
  drawStarBody(ctx,p,{lite:liteFX(),clock,pixelScale:cam.zoom*dpr});
@@ -839,7 +840,9 @@ function render(dt=1/60,snapCam=false){
  cam.zoom=started?(width<650?.54:height<520?.55:.75):.26;const desiredX=started?game.player.x:400,desiredY=started?game.player.y:50;
  if(snapCam){cam.x=desiredX;cam.y=desiredY;}else followCam(cam,desiredX,desiredY,dt);
  drawSkyBackdrop();
- ctx.save();ctx.translate(width/2,height/2);ctx.scale(cam.zoom,cam.zoom);ctx.translate(-cam.x,-cam.y);
+ const view=snapWorldCam(cam.x,cam.y,width,height,dpr,cam.zoom);
+ ctx.save();ctx.translate(width/2,height/2);ctx.scale(cam.zoom,cam.zoom);ctx.translate(-view.x,-view.y);
+ ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=worldStroke(1,worldPx());
  if(!softFX()){const orbitColor='#2c52652b';ctx.lineWidth=1;for(const star of (game.stars||[game.star]))for(const p of game.visiblePlanets)circle(star.x,star.y,dist(p,star),orbitColor,true);}
  for(const p of game.visiblePlanets)drawPlanet(p);if(game.sys.hasStation)for(const s of (game.stations||[game.station]).filter(s=>s.type==='station'))drawStation(s);for(const star of (game.stars||[game.star]))drawStar(star);for(const p of game.patrols){if(!worldInView(p.x,p.y,60))continue;drawSecurityShip(p);label(p.status==='ENGAGING'?'SECURITY ENGAGING':p.status==='SEARCHING'?'SECURITY SEARCHING':p.status==='RESPONDING'?'SECURITY RESPONDING':p.name,p.x,p.y-38,'#9eb7bd',12);}
  if(game.heatWanted>0&&game.lastKnown){const lk=game.lastKnown;circle(lk.x,lk.y,28,'#df8e8344',true);circle(lk.x,lk.y,6,'#df8e8388');label('LAST CONTACT',lk.x,lk.y-36,'#df8e83',11);}

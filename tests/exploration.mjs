@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.16\.2'/);
+ assert.match(release,/export const RELEASE='2\.16\.3'/);
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
@@ -151,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.2/);
- assert.match(sw,/release:'2\.16\.2'/);
+ assert.match(sw,/farbound-v2\.16\.3/);
+ assert.match(sw,/release:'2\.16\.3'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -326,7 +326,7 @@ test('Ambient NPC combat stays silent and security shots do not mine for the pla
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/game\.s\.shield<st\.shield&&game\.time-game\.lastDamage>4/);
  assert(!app.includes("circle(p.x,p.y,size+18,'#a9e9df18',true)"));
- assert.match(app,/ctx\.lineWidth=1;ctx\.stroke\(\);ctx\.lineWidth=prev/);
+ assert.match(app,/ctx\.lineWidth=worldStroke\(prev\|\|1,worldPx\(\)\);ctx\.stroke\(\);ctx\.lineWidth=prev/);
 });
 test('Civilian destruction can yield loot, persists its bounty, and allows payment at a station',()=>{
  const g=new Game();g.launch();const civilian=g.traffic[0];civilian.x=g.player.x+250;civilian.y=g.player.y;civilian.hp=1;g.player.angle=0;g.target=civilian;const original=Math.random;Math.random=()=>0;try{g.shoot();ticks(g,.5);}finally{Math.random=original;}assert(!g.traffic.includes(civilian));assert.equal(g.s.bounty,1000);assert.equal(g.s.cargo.food,1);let h=roundtrip(g);assert.equal(h.s.bounty,1000);h.s.docked=true;h.s.credits=2000;assert(h.payBounty());assert.equal(h.s.bounty,0);assert.equal(h.s.credits,1000);assert(!h.payBounty());assert.equal(validateSave({...h.serialize(),bounty:-1}),null);

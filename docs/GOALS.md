@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 21, 2026: Candidate 2.16.3 ship/station edges: Fold clip leftover is pixel crawl on hard un-antialiased edges (Anchorage spokes, NPC hulls, player chevron). Device-aware hairline + silhouette AA on ships/player; station arms are stroked capsules; keep transparent `#space` (white-flash) and synchronized presents; snap the world camera. Service worker cache bumped to `farbound-v2.16.3`. Rollback tag `v2.16.2`.
+
 - September 21, 2026: Candidate 2.16.2 Fold white-flash: transparent `#space` context so an uninitialized desync swap is dark CSS, not #fff; sky bake then fill; resize slack; launch/jump art warmup. Service worker cache bumped to `farbound-v2.16.2`. Rollback tag `v2.16.1`.
 
 - September 21, 2026: Candidate 2.16.1 live-beta QA: station desk/hangar actions require walk-up range (NH-001); derelict events acquire the wreck as the nav target and SCAN no longer snaps to a world (NH-002); 800×600 HUD keeps INTERACT on-screen (NH-003); out-of-range surface SCAN SIGNAL relabels as PING BEACON (NH-004). Service worker cache bumped to `farbound-v2.16.1`. Rollback tag `v2.16.0`.

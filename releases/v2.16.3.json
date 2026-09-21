@@ -1,0 +1,14 @@
+{
+  "release": "2.16.3",
+  "name": "Nullharbor",
+  "date": "2026-09-21",
+  "notes": [
+    "Independent Fold clip review (Solace / Anchorage 01): leftover artifact is pixel crawl / shimmer on hard un-antialiased edges — Anchorage 01 spokes, NPC hulls, player chevron — as the camera pans. Not classic screen tearing.",
+    "Ships and the player craft use a 2 device-pixel hairline plus a 3.2-device silhouette fringe; station arms are stroked capsules so rotating spokes keep canvas AA. #space stays transparent (2.16.2 white-flash) and synchronized. Chase camera snaps to backing pixels; distant stars stay unsapped.",
+    "Sky bake-before-fill, backing slack, and launch/jump art warmup from 2.16.2 are unchanged. Service worker cache bumped to farbound-v2.16.3. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

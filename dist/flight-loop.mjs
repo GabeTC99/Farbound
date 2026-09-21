@@ -54,6 +54,69 @@ export function followCam(cam,targetX,targetY,dt,k=CAM_FOLLOW){
  return cam;
 }
 
+/**
+ * Device-pixel-lock a chase camera so world-space ships/stations land on whole
+ * backing pixels. Starfield stays on the unsapped cam (continuous parallax);
+ * snapping stars was 2.15.7's stair-step.
+ */
+export function snapWorldCam(camX,camY,width,height,dpr,zoom){
+ const z=zoom||1,s=dpr||1;
+ if(!(z>0)||!(s>0)||!Number.isFinite(camX)||!Number.isFinite(camY))return {x:camX||0,y:camY||0};
+ const tx=Math.round(s*((width||0)*.5-camX*z));
+ const ty=Math.round(s*((height||0)*.5-camY*z));
+ return {x:((width||0)*.5-tx/s)/z,y:((height||0)*.5-ty/s)/z};
+}
+
+/**
+ * Minimum device-pixel width for world-space strokes. Fold clip (Anchorage 01
+ * spokes, NPC hulls, player chevron) crawls because filled 1 CSS-px edges
+ * stair-step at backing×zoom < 1 device pixel.
+ */
+export const HAIRLINE_DEVICE=2;
+/** Wider fringe so filled silhouettes keep an AA band while the camera pans. */
+export const SILHOUETTE_DEVICE=3.2;
+export function hairline(pixelScale,minDevice=HAIRLINE_DEVICE){
+ const s=pixelScale||1;
+ return (s>0)?minDevice/s:minDevice;
+}
+export function worldStroke(px,pixelScale,minDevice=HAIRLINE_DEVICE){
+ return Math.max(Number(px)||0,hairline(pixelScale,minDevice));
+}
+/** Soft under-stroke then a device-locked outline. Path must already be current. */
+export function strokeSilhouette(ctx,pixelScale){
+ if(!ctx)return;
+ const prevW=ctx.lineWidth,prevA=ctx.globalAlpha;
+ ctx.lineJoin='round';ctx.lineCap='round';
+ ctx.lineWidth=hairline(pixelScale,SILHOUETTE_DEVICE);
+ ctx.globalAlpha=prevA*.4;
+ ctx.stroke();
+ ctx.globalAlpha=prevA;
+ ctx.lineWidth=Math.max(prevW||0,hairline(pixelScale,HAIRLINE_DEVICE));
+ ctx.stroke();
+ ctx.lineWidth=prevW;
+}
+/**
+ * Thick rounded band (station spokes): soft fringe, rim, then core.
+ * A filled rect's long edges stair-step every frame when the camera or
+ * the station rotates; a stroked capsule keeps canvas AA on the silhouette.
+ */
+export function strokeBand(ctx,pixelScale,corePx,coreStyle,rimStyle){
+ if(!ctx)return;
+ const core=worldStroke(corePx,pixelScale);
+ const rim=core+hairline(pixelScale);
+ const fringe=core+hairline(pixelScale,SILHOUETTE_DEVICE);
+ const prevA=ctx.globalAlpha,prevW=ctx.lineWidth,prevS=ctx.strokeStyle;
+ ctx.lineJoin='round';ctx.lineCap='round';
+ ctx.strokeStyle=rimStyle;
+ ctx.globalAlpha=prevA*.4;
+ ctx.lineWidth=fringe;ctx.stroke();
+ ctx.globalAlpha=prevA;
+ ctx.lineWidth=rim;ctx.stroke();
+ ctx.strokeStyle=coreStyle;
+ ctx.lineWidth=core;ctx.stroke();
+ ctx.strokeStyle=prevS;ctx.lineWidth=prevW;
+}
+
 export function lerp(a,b,t){
  t=t<0?0:t>1?1:t;
  return a+(b-a)*t;
@@ -80,13 +143,19 @@ export const STAR_DEPTH_MAX=.11;
 export const SKY_PARALLAX=.012;
 export const SPACE_CLEAR='#060c16';
 /**
- * Transparent so an uninitialized desynchronized swap composites over `#space`
- * CSS (`#060c16`) instead of paper-white. Opaque (`alpha:false`) 2D buffers
- * initialize to #fff on Android Chrome / Fold GPUs; 2.15.7's immediate fill
- * could not win that race when a hitch (sky bake, first NPC cluster) stalled
- * the next GPU submit.
+ * Transparent so an uninitialized swap composites over `#space` CSS (`#060c16`)
+ * instead of paper-white. Opaque (`alpha:false`) 2D buffers initialize to #fff
+ * on Android Chrome / Fold GPUs; 2.15.7's immediate fill could not win that
+ * race when a hitch (sky bake, first NPC cluster) stalled the next GPU submit.
+ *
+ * Independent Fold clip review (Solace / Anchorage 01): leftover artifact is
+ * pixel crawl / shimmer on hard un-antialiased edges — Anchorage spokes,
+ * NPC hulls, player chevron — as the camera pans. World strokes keep a
+ * device hairline plus a silhouette fringe. Synchronized presents stay off
+ * as extra lock against front-buffer shear on a 120 Hz Fold panel.
+ * Transparency stays so a rare uninitialized present is still dark CSS.
  */
-export const SPACE_CONTEXT={alpha:true,desynchronized:true};
+export const SPACE_CONTEXT={alpha:true,desynchronized:false};
 /** Ignore 1–2 device-pixel visualViewport jitter so Fold chrome does not reset the buffer every frame. */
 export const BACKING_SLACK=2;
 

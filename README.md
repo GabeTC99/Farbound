@@ -14,15 +14,20 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.2**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.3**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
 ## Nullharbor 2.16
 
+### Candidate 2.16.3
+
+- **Ship/station edges:** Independent Fold clip review (Solace / Anchorage 01): leftover artifact is pixel crawl / shimmer on hard un-antialiased edges — Anchorage 01 spokes, NPC hulls, player chevron — as the camera pans. Ships and the player craft use a 2 device-pixel hairline plus a 3.2-device silhouette fringe; station arms are stroked capsules (not hard fillRect boxes). `#space` stays transparent (2.16.2 white-flash) and synchronized. The chase camera snaps to backing pixels.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.3`.
+
 ### Candidate 2.16.2
 
-- **Fold white flash:** `#space` is a transparent desynchronized canvas so a mid-cruise hitch (resize, sky-layer bake, first NPC cluster) cannot present an uninitialized paper-white frame. Sky washes bake *before* the main-buffer fill; resize ignores 1–2 px visualViewport jitter; launch / jump warms planet albedos and the sky layer.
+- **Fold white flash:** `#space` is a transparent canvas so a mid-cruise hitch (resize, sky-layer bake, first NPC cluster) cannot present an uninitialized paper-white frame. Sky washes bake *before* the main-buffer fill; resize ignores 1–2 px visualViewport jitter; launch / jump warms planet albedos and the sky layer.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.2`.
 
 ### Candidate 2.16.1
@@ -221,7 +226,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.2). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.3). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

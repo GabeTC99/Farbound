@@ -4,7 +4,8 @@ import {
  FIXED_DT,MAX_FRAME_DT,MAX_STEPS,CAM_FOLLOW,PIXEL_BUDGET,
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
- wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,
+ wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
+ hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,strokeBand,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
 } from '../dist/flight-loop.mjs';
 import {texSizeFor,STAR_TEX} from '../dist/star-render.mjs';
@@ -98,14 +99,25 @@ assert.match(app,/fillSpaceClear\(/);
 assert.match(app,/paintGalaxyBand\(/);
 assert.match(app,/SPACE_CONTEXT/);
 assert.match(app,/getContext\('2d',SPACE_CONTEXT\)/);
+assert.match(app,/snapWorldCam\(/);
+assert.match(app,/worldStroke\(/);
+assert.match(app,/strokeBand\(/);
+assert.match(app,/moveTo\(44,0\);ctx\.lineTo\(72,0\)/);
+assert.ok(!/fillRect\(35,-9,45,18\)/.test(app),'station spokes are stroked capsules, not hard fillRect boxes');
+assert.match(app,/pixelScale:worldPx\(\)/);
 assert.match(app,/backingNeedsReset\(/);
 assert.match(app,/warmLocalArt\(/);
 assert.match(app,/warmPlanetTexture/);
 assert.match(app,/warmStarTexture/);
 const loopSrc=readFileSync(new URL('../dist/flight-loop.mjs',import.meta.url),'utf8');
-assert.match(loopSrc,/desynchronized:\s*true/);
+assert.match(loopSrc,/desynchronized:\s*false/);
 assert.match(loopSrc,/alpha:\s*true/);
+assert.ok(!/desynchronized:\s*true/.test(loopSrc),'desync presents tear ship/station edges under the HUD');
 assert.ok(!/getContext\('2d',\{alpha:\s*false/.test(app),'opaque space context is the Fold white-flash path');
+assert.ok(!/function circle\([^)]*\)\{[^}]*ctx\.lineWidth=1;/.test(app),'station/ship circles no longer force a 1 CSS-px stroke');
+const worldXf=app.slice(app.indexOf('drawSkyBackdrop();'),app.indexOf('if(!softFX()){const orbitColor'));
+assert.ok(worldXf.includes('snapWorldCam(')&&worldXf.includes('translate(-view.x,-view.y)'),'world layer uses the pixel-locked camera');
+assert.ok(!worldXf.includes('translate(-cam.x,-cam.y)'),'unsapped cam must not drive ship/station edges');
 const skyFn=app.slice(app.indexOf('function drawSkyBackdrop'),app.indexOf('function drawEdgeArrow'));
 assert.ok(skyFn.includes('ensureSkyLayer(')&&skyFn.includes('fillSpaceClear('));
 assert.ok(skyFn.indexOf('ensureSkyLayer(')<skyFn.indexOf('fillSpaceClear('),'sky bake must finish before the main-buffer fill');
@@ -119,7 +131,7 @@ assert.match(style,/#space\{[^}]*background:#060c16/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.2/);
+assert.match(sw,/farbound-v2\.16\.3/);
 
 // Camera-linked star offsets: leftover display alpha interpolates stars with the ship pose.
 const star={x:.4,y:.35,depth:.05};
@@ -148,7 +160,7 @@ assert.equal(fills[0].color,SPACE_CLEAR);
 assert.deepEqual(fills[0],{x:0,y:0,w:400,h:300,color:SPACE_CLEAR});
 
 assert.equal(SPACE_CONTEXT.alpha,true);
-assert.equal(SPACE_CONTEXT.desynchronized,true);
+assert.equal(SPACE_CONTEXT.desynchronized,false);
 assert.equal(BACKING_SLACK,2);
 assert.deepEqual(backingSize(400,300,2),{w:800,h:600});
 assert.equal(backingNeedsReset(800,600,800,600),false);
@@ -156,10 +168,69 @@ assert.equal(backingNeedsReset(800,600,801,601),false,'1px Fold chrome jitter mu
 assert.equal(backingNeedsReset(800,600,804,600),true);
 assert.equal(backingNeedsReset(0,0,800,600),true);
 
+const snap=snapWorldCam(100.37,50.19,800,600,2,.75);
+const snapTx=2*(400-snap.x*.75),snapTy=2*(300-snap.y*.75);
+assert.ok(Math.abs(snapTx-Math.round(snapTx))<1e-9,'snapped view translation is a whole device pixel');
+assert.ok(Math.abs(snapTy-Math.round(snapTy))<1e-9);
+const rawTx=2*(400-100.37*.75);
+assert.ok(Math.abs(snapTx-rawTx)<=.5+1e-9,'snap stays within half a device pixel of the chase cam');
+assert.deepEqual(snapWorldCam(0,0,800,600,2,1),{x:0,y:0});
+const mid=snapWorldCam(10.01,0,801,600,1.5,.54);
+const midTx=1.5*(801*.5-mid.x*.54);
+assert.ok(Math.abs(midTx-Math.round(midTx))<1e-9,'odd CSS widths still lock to backing pixels');
+assert.equal(HAIRLINE_DEVICE,2);
+assert.equal(SILHOUETTE_DEVICE,3.2);
+assert.ok(Math.abs(hairline(1)-2)<1e-12);
+assert.ok(Math.abs(hairline(2)-1)<1e-12);
+assert.ok(Math.abs(hairline(1,SILHOUETTE_DEVICE)-3.2)<1e-12);
+const foldPx=.75*1.1;
+assert.ok(worldStroke(1,foldPx)>1,'Fold-scale 1px hull strokes must thicken past a device hairline');
+assert.ok(worldStroke(1,foldPx)*foldPx>=HAIRLINE_DEVICE-1e-9);
+assert.equal(worldStroke(2,2),2,'desktop 2x already-thick strokes stay put');
+const strokes=[];
+strokeSilhouette({
+ lineWidth:1,globalAlpha:1,lineJoin:'',lineCap:'',
+ stroke(){strokes.push({w:this.lineWidth,a:this.globalAlpha});}
+},foldPx);
+assert.equal(strokes.length,2,'silhouette is a soft under-stroke then a locked outline');
+assert.ok(strokes[0].w*foldPx>=SILHOUETTE_DEVICE-1e-9);
+assert.ok(Math.abs(strokes[0].a-.4)<1e-12);
+assert.ok(strokes[1].w*foldPx>=HAIRLINE_DEVICE-1e-9);
+assert.equal(strokes[1].a,1);
+const bands=[];
+strokeBand({
+ lineWidth:1,globalAlpha:1,lineJoin:'',lineCap:'',strokeStyle:'',
+ stroke(){bands.push({w:this.lineWidth,a:this.globalAlpha,s:this.strokeStyle});}
+},foldPx,16,'#18303e','#6a94a3');
+assert.equal(bands.length,3,'spoke band is fringe, rim, then core');
+assert.equal(bands[0].s,'#6a94a3');
+assert.ok(Math.abs(bands[0].a-.4)<1e-12);
+assert.equal(bands[2].s,'#18303e');
+assert.ok(bands[2].w>=16);
+const shipSrc=readFileSync(new URL('../dist/ship-render.mjs',import.meta.url),'utf8');
+assert.match(shipSrc,/worldStroke/);
+assert.match(shipSrc,/strokeSilhouette/);
+assert.match(shipSrc,/pixelScale/);
+assert.match(shipSrc,/lineJoin='round'/);
+assert.ok(!/ctx\.lineWidth=\.6/.test(shipSrc),'panel hairlines go through worldStroke');
+
+const cruise=[];
+let cx=0;
+for(let i=0;i<8;i++){
+ cx+=220/60;
+ const v=snapWorldCam(cx,0,800,600,2,.75);
+ cruise.push(2*(400-v.x*.75));
+}
+for(let i=1;i<cruise.length;i++){
+ assert.ok(Number.isInteger(cruise[i])||Math.abs(cruise[i]-Math.round(cruise[i]))<1e-9);
+ assert.ok(cruise[i]<=cruise[i-1],'locked cam steps monotonically as the chase cam advances');
+}
+
 console.log('PASS Fixed 60 Hz steps, hitch clamp, and leftover alpha');
 console.log('PASS Time-based camera lag is stable at 30/60/120 Hz (old lerp is not)');
 console.log(`PASS Camera offset spread time=${timeSpread.toFixed(2)} vs frame-lerp=${frameSpread.toFixed(2)}`);
 console.log('PASS Pixel budget caps huge fold CSS sizes without dropping typical phones');
 console.log('PASS Star photosphere size no longer tracks zoom/DPR on the hot path');
 console.log('PASS Starfield and sky parallax track interpolated camera without 4 Hz wash rebake');
-console.log('PASS Space canvas stays transparent; sky bake precedes fill; backing slack ignores 1px jitter');
+console.log('PASS Space canvas stays transparent and synchronized; world cam locks to backing pixels');
+console.log('PASS Fold-scale hull/station strokes stay at least a 2 device-pixel hairline with silhouette AA');
