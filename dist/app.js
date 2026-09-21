@@ -13,11 +13,11 @@ import {GalaxyChart,galaxyDisplay} from './galaxy-chart.mjs';
 import {SystemChart} from './system-chart.mjs';
 import {renderSurface} from './surface-render.mjs';
 import {renderOnFoot} from './onfoot-render.mjs';
-import {drawPlanetBody} from './planet-render.mjs';
+import {drawPlanetBody,warmPlanetTexture} from './planet-render.mjs';
 import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft} from './ship-render.mjs';
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
-import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR} from './flight-loop.mjs';
+import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',system:'<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
 const icon=(name)=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.ship}</svg>`;
@@ -29,7 +29,7 @@ let saved=boot.existing?boot.pilot:null,storageOK=!boot.error;
 let game=new Game(boot.pilot),started=false,panel=null,stationTab='market',deskVisit=false,qty=1,selectedSystem=game.s.system,installPrompt=null,offlineReady=false,updateAvailable=false,updateBusy=false;
 const engine=new EngineAudio();let mapQuery='',mapFilter='all',shipFilter='all',mapChart=null,systemChart=null,mapCamera={...galaxyDisplay(SYSTEMS[game.s.system]),scale:10},systemCamera={x:0,y:0,scale:.02};
 let keys={},touch={aim:null,thrust:0,fire:false,boost:false},stickPointer=null,padActive=false,padHintShown=false,showTutorial=game.s.tutorial<5,lastStore=0,lastHUD=0,clock=0,saveErrorShown=false,confirmAction=null,lastFocus=null,shipBank=0,playerTrail=[];
-const canvas=$('space'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});let width=innerWidth,height=innerHeight,cam={x:0,y:0,zoom:.6};
+const canvas=$('space'),ctx=canvas.getContext('2d',SPACE_CONTEXT);let width=innerWidth,height=innerHeight,cam={x:0,y:0,zoom:.6};
 function compactUI(){return matchMedia('(max-width:700px), (pointer:coarse)').matches;}
 function graphicsMode(){const g=game?.s?.graphics;return g==='performance'||g==='balanced'?g:'high';}
 function liteFX(){return graphicsMode()==='performance';}
@@ -601,11 +601,14 @@ function setupStick(){const stick=$('stick');const move=e=>{if(e.pointerId!==sti
 window.addEventListener('blur',()=>{resetControls();engine.muteAll();save();});document.addEventListener('visibilitychange',()=>{resetControls();if(document.hidden)engine.muteAll();save();});window.addEventListener('pagehide',()=>{resetControls();engine.muteAll();save();});window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;});
 function resize(){
  const view=viewportSize();
- width=view.width;height=view.height;dpr=canvasDpr();
- const nextW=Math.max(1,Math.round(width*dpr)),nextH=Math.max(1,Math.round(height*dpr));
- if(canvas.width!==nextW||canvas.height!==nextH){
-  canvas.width=nextW;canvas.height=nextH;skyLayer=null;skyLayerKey='';
-  // Paint before the compositor presents: desynchronized+alpha:false can flash white on a fresh buffer (Fold / leave station).
+ const nextDpr=canvasScale({cssW:view.width,cssH:view.height,dpr:devicePixelRatio||1,graphics:graphicsMode()});
+ const next=backingSize(view.width,view.height,nextDpr);
+ if(backingNeedsReset(canvas.width,canvas.height,next.w,next.h)){
+  width=view.width;height=view.height;dpr=nextDpr;
+  canvas.width=next.w;canvas.height=next.h;skyLayer=null;skyLayerKey='';
+  // Fresh backing store: fill, bake the sky layer (alloc can evict this buffer), fill again.
+  fillSpaceClear(ctx,dpr,width,height);
+  try{ensureSkyLayer(width|0,height|0,systemSky(game.sys),liteFX(),softFX());}catch{}
   fillSpaceClear(ctx,dpr,width,height);
  }
  if(panel==='map')drawMap();if(panel==='system-map')drawSystemMap();
@@ -776,9 +779,12 @@ function ensureSkyLayer(w,h,sky,lite,soft){
 function drawSkyBackdrop(){
  const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
  const w=Math.max(1,width|0),h=Math.max(1,height|0);
- ctx.fillStyle=sky.bg||SPACE_CLEAR;ctx.fillRect(0,0,width,height);
+ // Allocate / bake the wash layer first. A full-viewport OffscreenCanvas can
+ // evict the main GPU buffer (Fold: uninitialized #fff). Fill only after that.
+ const layer=ensureSkyLayer(w,h,sky,lite,soft);
+ fillSpaceClear(ctx,dpr,width,height,sky.bg||SPACE_CLEAR);
  paintGalaxyBand(ctx,sky,lite,soft);
- ctx.drawImage(ensureSkyLayer(w,h,sky,lite,soft),0,0,width,height);
+ ctx.drawImage(layer,0,0,width,height);
  // Soft ion curtains — faint drifting veils, not hard scanlines.
  if(sky.kind==='ion'&&!lite){
   const n=soft?2:3;
@@ -933,6 +939,15 @@ function warmLocalStars(){
  const lite=liteFX();
  for(const star of (game.stars||[game.star]))warmStarTexture(star,lite);
 }
+function warmLocalArt(){
+ warmLocalStars();
+ const lite=liteFX();
+ for(const p of (game.visiblePlanets||game.planets||[]))warmPlanetTexture(p,lite);
+ try{
+  ensureSkyLayer(Math.max(1,width|0),Math.max(1,height|0),systemSky(game.sys),lite,softFX());
+  fillSpaceClear(ctx,dpr,width,height);
+ }catch{}
+}
 function poseBody(){return game.onfoot||game.surface||game.player;}
 function capturePose(){const p=poseBody();poseSnap.x=p.x;poseSnap.y=p.y;poseSnap.angle=p.angle||0;poseSnap.ready=true;}
 function withDisplayPose(alpha,fn){
@@ -988,11 +1003,11 @@ function loop(now){
   if(input.fire&&!game.surface&&!game.onfoot&&!game.s.docked&&now-lastFireSound>240){sound('fire');lastFireSound=now;}
   if(!wasFolding&&game.jump){try{engine.unlock();}catch{}}
   if(wasFolding&&!game.jump){
-   warmLocalStars();capturePose();snapCam=true;
+   warmLocalArt();capturePose();snapCam=true;
    if(game.s.sound){const vol=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35;try{engine.playFoldJump(vol);engine.playFoldArrive(vol);}catch{}}
   }
   if(!wasDocked&&game.s.docked){try{engine.unlock();}catch{}capturePose();snapCam=true;}
-  else if(wasDocked&&!game.s.docked){warmLocalStars();capturePose();snapCam=true;closePanel();}
+  else if(wasDocked&&!game.s.docked){warmLocalArt();capturePose();snapCam=true;closePanel();}
  }
  const alpha=frame.hitch?1:frame.alpha;
  withDisplayPose(alpha,()=>render(dt,snapCam));

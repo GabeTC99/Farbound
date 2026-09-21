@@ -5,7 +5,7 @@ import {
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,
- SKY_PARALLAX,SPACE_CLEAR
+ SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
 } from '../dist/flight-loop.mjs';
 import {texSizeFor,STAR_TEX} from '../dist/star-render.mjs';
 
@@ -96,8 +96,19 @@ assert.match(app,/skyParallax\(/);
 assert.match(app,/skyCacheKey\(/);
 assert.match(app,/fillSpaceClear\(/);
 assert.match(app,/paintGalaxyBand\(/);
-assert.match(app,/desynchronized:\s*true/);
+assert.match(app,/SPACE_CONTEXT/);
+assert.match(app,/getContext\('2d',SPACE_CONTEXT\)/);
+assert.match(app,/backingNeedsReset\(/);
+assert.match(app,/warmLocalArt\(/);
+assert.match(app,/warmPlanetTexture/);
 assert.match(app,/warmStarTexture/);
+const loopSrc=readFileSync(new URL('../dist/flight-loop.mjs',import.meta.url),'utf8');
+assert.match(loopSrc,/desynchronized:\s*true/);
+assert.match(loopSrc,/alpha:\s*true/);
+assert.ok(!/getContext\('2d',\{alpha:\s*false/.test(app),'opaque space context is the Fold white-flash path');
+const skyFn=app.slice(app.indexOf('function drawSkyBackdrop'),app.indexOf('function drawEdgeArrow'));
+assert.ok(skyFn.includes('ensureSkyLayer(')&&skyFn.includes('fillSpaceClear('));
+assert.ok(skyFn.indexOf('ensureSkyLayer(')<skyFn.indexOf('fillSpaceClear('),'sky bake must finish before the main-buffer fill');
 assert.ok(!/cam\.x\+=\(desiredX-cam\.x\)\*\.09/.test(app),'old frame-rate camera lerp is gone');
 assert.ok(!/Math\.round\(\(\(s\.x\*width/.test(app),'starfield no longer snaps to whole pixels');
 assert.ok(!/Math\.floor\(clock\*4\),cx=Math\.round\(cam\.x/.test(app),'sky cache no longer rebakes on cam/4Hz');
@@ -108,7 +119,7 @@ assert.match(style,/#space\{[^}]*background:#060c16/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.1/);
+assert.match(sw,/farbound-v2\.16\.2/);
 
 // Camera-linked star offsets: leftover display alpha interpolates stars with the ship pose.
 const star={x:.4,y:.35,depth:.05};
@@ -136,9 +147,19 @@ fillSpaceClear({setTransform(){},fillRect(x,y,w,h){fills.push({x,y,w,h,color:thi
 assert.equal(fills[0].color,SPACE_CLEAR);
 assert.deepEqual(fills[0],{x:0,y:0,w:400,h:300,color:SPACE_CLEAR});
 
+assert.equal(SPACE_CONTEXT.alpha,true);
+assert.equal(SPACE_CONTEXT.desynchronized,true);
+assert.equal(BACKING_SLACK,2);
+assert.deepEqual(backingSize(400,300,2),{w:800,h:600});
+assert.equal(backingNeedsReset(800,600,800,600),false);
+assert.equal(backingNeedsReset(800,600,801,601),false,'1px Fold chrome jitter must not reset the buffer');
+assert.equal(backingNeedsReset(800,600,804,600),true);
+assert.equal(backingNeedsReset(0,0,800,600),true);
+
 console.log('PASS Fixed 60 Hz steps, hitch clamp, and leftover alpha');
 console.log('PASS Time-based camera lag is stable at 30/60/120 Hz (old lerp is not)');
 console.log(`PASS Camera offset spread time=${timeSpread.toFixed(2)} vs frame-lerp=${frameSpread.toFixed(2)}`);
 console.log('PASS Pixel budget caps huge fold CSS sizes without dropping typical phones');
 console.log('PASS Star photosphere size no longer tracks zoom/DPR on the hot path');
 console.log('PASS Starfield and sky parallax track interpolated camera without 4 Hz wash rebake');
+console.log('PASS Space canvas stays transparent; sky bake precedes fill; backing slack ignores 1px jitter');

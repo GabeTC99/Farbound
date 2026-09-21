@@ -231,6 +231,12 @@ function textureFor(p,lite){
 
 export function clearPlanetTextures(){cache.clear();}
 
+/** Paint a body's albedo off the hot path (after a jump or on launch). */
+export function warmPlanetTexture(p,lite=false){
+ if(!p)return null;
+ return textureFor(p,!!lite);
+}
+
 function drawRings(ctx,p,front){
  const col=p.color||'#c8b898';
  ctx.save();
