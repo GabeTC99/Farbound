@@ -1,6 +1,8 @@
 # Nullharbor
 
-An original solo space sandbox for Android touchscreens and desktop browsers. Inspired by the open-ended exploration, economy, mining and ship progression found in Galaxy Genome and Elite Dangerous. All names, code, interface, spacecraft, world models and game artwork here are original; no assets from those games are included.
+Nullharbor — a solo space sandbox from Voidwake Studios. Explore systems, fly your fleet, make a living between the stars.
+
+An original game for Android touchscreens and desktop browsers. Inspired by the open-ended exploration, economy, mining and ship progression found in Galaxy Genome and Elite Dangerous. All names, code, interface, spacecraft, world models and game artwork here are original; no assets from those games are included.
 
 ## Play on Android
 
@@ -12,7 +14,7 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. After 2.16.0 lands, the welcome chip should read **Nullharbor 2.16.0**. Hard-refresh only if an old worker still sticks. GitHub redirects the previous `/Farbound/` Pages path after the repository is renamed. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.0**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
