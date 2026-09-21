@@ -1,10 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Voidwake Studios">
-  <!-- Official Voidwake Studios mark from GabeTC99/voidwake-site public/favicon.svg.
-       Placeholder PWA icon until Social Media Manager’s Nullharbor/Voidwake X profile
-       square is dropped at dist/branding/x-profile.png (or .svg) and
-       scripts/render-pwa-icons.py is re-run. Do not replace with a new invented logo. -->
-  <rect width="32" height="32" rx="8" fill="#0b0d12"/>
-  <circle cx="16" cy="16" r="10" fill="none" stroke="#c9a36a" stroke-width="1.4"/>
-  <path d="M8 16h11" stroke="#c9a36a" stroke-width="1.4"/>
-  <circle cx="22" cy="11" r="2.2" fill="none" stroke="#7eb8c9" stroke-width="1.2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Voidwake Studios">
+  <image href="icon-512.png" width="512" height="512"/>
 </svg>

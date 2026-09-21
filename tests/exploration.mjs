@@ -151,7 +151,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.0/);
+ assert.match(sw,/farbound-v2\.16\.0a/);
  assert.match(sw,/release:'2\.16\.0'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
@@ -197,19 +197,25 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  assert.equal(SAVE_KEY,'farbound-save-v2');
  assert.match(app,/data-action="update-app"/);
 });
-test('PWA icons are the Voidwake mark, not the old Farbound F',()=>{
+test('PWA icons are the Voidwake X star, not the old Farbound F',()=>{
  const icon=readFileSync(new URL('../dist/icon.svg',import.meta.url),'utf8');
  const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
  const classicHtml=readFileSync(new URL('../dist/classic/index.html',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
+ const manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
  assert.match(icon,/aria-label="Voidwake Studios"/);
- assert.match(icon,/stroke="#c9a36a"/);
+ assert.match(icon,/icon-512\.png/);
  assert.equal((icon.match(/M150 352V156H365/g)||[]).length,0);
- assert.match(html,/apple-touch-icon\.png/);
+ assert.equal((icon.match(/stroke="#c9a36a"/g)||[]).length,0);
  assert.match(html,/icon-192\.png/);
+ assert.match(html,/icon-512\.png/);
+ assert.match(html,/apple-touch-icon\.png/);
  assert.match(classicHtml,/apple-touch-icon\.png/);
  assert.match(sw,/apple-touch-icon\.png/);
+ assert.match(manifest,/"src":"icon-192\.png"/);
+ assert.match(manifest,/"src":"icon-512\.png"/);
  const pngSize=p=>{const b=readFileSync(new URL(p,import.meta.url));return[b.readUInt32BE(16),b.readUInt32BE(20)];};
+ assert.deepEqual(pngSize('../dist/branding/x-profile.png'),[720,720]);
  assert.deepEqual(pngSize('../dist/icon-192.png'),[192,192]);
  assert.deepEqual(pngSize('../dist/icon-512.png'),[512,512]);
  assert.deepEqual(pngSize('../dist/apple-touch-icon.png'),[180,180]);

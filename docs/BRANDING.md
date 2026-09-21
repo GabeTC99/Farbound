@@ -1,22 +1,16 @@
 # PWA / install icons
 
-Home-screen and favicon art should be the **Voidwake Studios / Nullharbor X profile icon** from Social Media Manager — not the old Farbound “F” mark, and not a newly invented logo.
+Home-screen and favicon art is the **Voidwake Studios / Nullharbor X profile** mark from Social Media Manager (teal four-point star), not the old Farbound “F”.
 
-## Current placeholder
+## Current source
 
-Until that square PNG/SVG is in this repo, the PWA uses the official Voidwake Studios mark already shipping on the marketing site:
+- `dist/branding/x-profile.png` — X avatar as supplied (center-cropped to square if the drop is landscape)
+- Rasterized to `dist/icon-192.png`, `dist/icon-512.png`, `dist/apple-touch-icon.png` (180), with matching `dist/classic/` copies
+- `dist/icon.svg` wraps `icon-512.png` so leftover SVG favicon links still show the same mark
+- Manifest `icons` list 192 + 512 PNG; HTML uses PNG favicon + apple-touch-icon
 
-- Source: `GabeTC99/voidwake-site` → `public/favicon.svg` (gold ring, wake line, ice-blue body)
-- Copied into `dist/icon.svg` and rasterized to `dist/icon-192.png`, `dist/icon-512.png`, and `dist/apple-touch-icon.png` (classic/ copies match)
+## Replace the avatar
 
-## TODO — drop in the X profile icon
-
-When Social Media Manager has a square Nullharbor/Voidwake **X profile** PNG or SVG:
-
-1. Save it as **`dist/branding/x-profile.png`** (preferred) or **`dist/branding/x-profile.svg`**. Square, no extra UI chrome.
-2. From the repo root: `python3 scripts/render-pwa-icons.py`
-3. Confirm `dist/icon.svg`, `dist/icon-192.png`, `dist/icon-512.png`, `dist/apple-touch-icon.png`, and the `dist/classic/` copies updated.
-4. Bump `dist/release.mjs` and the `farbound-v…` cache in `dist/sw.js` so Pages / **Flight menu → Update** pick up the new art.
-5. Commit on the rename branch (or a follow-up into `beta`). Do not invent a replacement mark.
-
-`scripts/render-pwa-icons.py` prefers `dist/branding/x-profile.*` when present; otherwise it re-renders the Voidwake site mark.
+1. Overwrite **`dist/branding/x-profile.png`** (or `.svg`) with a new square.
+2. `python3 scripts/render-pwa-icons.py`
+3. Bump `dist/release.mjs` and the `farbound-v…` cache in `dist/sw.js` so **Flight menu → Update** picks up the art.

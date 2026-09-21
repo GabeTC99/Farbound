@@ -1,7 +1,0 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="32" android:viewportHeight="32">
-    <!-- Voidwake Studios mark (GabeTC99/voidwake-site public/favicon.svg). Replace when dist/branding/x-profile.png lands. -->
-    <path android:fillColor="#0B0D12" android:pathData="M8,0H24A8,8 0 0 1 32,8V24A8,8 0 0 1 24,32H8A8,8 0 0 1 0,24V8A8,8 0 0 1 8,0Z"/>
-    <path android:fillColor="#00000000" android:strokeColor="#C9A36A" android:strokeWidth="1.4" android:pathData="M16,16m-10,0a10,10 0 1,1 20,0a10,10 0 1,1 -20,0"/>
-    <path android:fillColor="#00000000" android:strokeColor="#C9A36A" android:strokeWidth="1.4" android:pathData="M8,16h11"/>
-    <path android:fillColor="#00000000" android:strokeColor="#7EB8C9" android:strokeWidth="1.2" android:pathData="M22,11m-2.2,0a2.2,2.2 0 1,1 4.4,0a2.2,2.2 0 1,1 -4.4,0"/>
-</vector>

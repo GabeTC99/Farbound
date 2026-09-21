@@ -1,3 +1,9 @@
-Drop the Social Media Manager Nullharbor/Voidwake **X profile** square here as `x-profile.png` or `x-profile.svg`, then run `python3 scripts/render-pwa-icons.py` from the repo root.
+Social Media Manager’s Nullharbor/Voidwake **X profile** mark lives here as `x-profile.png`.
 
-Until that file exists, PWA icons use the official Voidwake Studios mark from `GabeTC99/voidwake-site` (`public/favicon.svg`). See `docs/BRANDING.md`.
+Regenerate PWA icons from the repo root:
+
+```
+python3 scripts/render-pwa-icons.py
+```
+
+That writes `icon-192.png`, `icon-512.png`, and `apple-touch-icon.png` (plus classic copies). Bump the service worker cache in `dist/sw.js` after replacing this file.

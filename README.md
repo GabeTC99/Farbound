@@ -21,8 +21,8 @@ This delivery contains a playable browser/PWA prototype and an Android applicati
 ### Candidate 2.16.0
 
 - **Title:** the game is **Nullharbor** (Voidwake Studios unchanged). Welcome chip, HUD brand, flight menu header, PWA name, and Pages URL copy all read Nullharbor.
-- **PWA icon:** install-to-home-screen uses the official Voidwake Studios mark from `GabeTC99/voidwake-site` (`public/favicon.svg`) as a placeholder — 192/512 PNG plus apple-touch-icon. Drop Social Media Manager’s X profile square at `dist/branding/x-profile.png` and run `python3 scripts/render-pwa-icons.py` (see `docs/BRANDING.md`).
-- **Saves:** local keys stay `farbound-save-v2` so existing pilots continue. Service worker cache bumped to `farbound-v2.16.0`. **Flight menu → Update** still clears `farbound-*` caches.
+- **PWA icon:** install-to-home-screen uses Social Media Manager’s Voidwake X avatar (teal four-point star) at 192/512 PNG plus apple-touch-icon. Source: `dist/branding/x-profile.png`.
+- **Saves:** local keys stay `farbound-save-v2` so existing pilots continue. Service worker cache bumped to `farbound-v2.16.0a`. **Flight menu → Update** still clears `farbound-*` caches.
 
 ## Frontiers 2.15 — Fleet Atlas
 
