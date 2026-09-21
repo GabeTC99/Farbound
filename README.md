@@ -1,6 +1,8 @@
-# Farbound
+# Nullharbor
 
-An original solo space sandbox for Android touchscreens and desktop browsers. Inspired by the open-ended exploration, economy, mining and ship progression found in Galaxy Genome and Elite Dangerous. All names, code, interface, spacecraft, world models and game artwork here are original; no assets from those games are included.
+Nullharbor — a solo space sandbox from Voidwake Studios. Explore systems, fly your fleet, make a living between the stars.
+
+An original game for Android touchscreens and desktop browsers. Inspired by the open-ended exploration, economy, mining and ship progression found in Galaxy Genome and Elite Dangerous. All names, code, interface, spacecraft, world models and game artwork here are original; no assets from those games are included.
 
 ## Play on Android
 
@@ -102,4 +104,4 @@ The Android shell bundles `dist/` as offline assets, serves them through an inte
 - Android documentation, local WebView content: https://developer.android.com/develop/ui/views/layout/webapps/load-local-content
 - Android Gradle Plugin 8.7 documentation: https://developer.android.com/build/releases/past-releases/agp-8-7-0-release-notes
 
-Farbound is an independent prototype, unaffiliated with either reference game.
+Nullharbor is an independent prototype, unaffiliated with either reference game.
