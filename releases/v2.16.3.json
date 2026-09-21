@@ -1,0 +1,14 @@
+{
+  "release": "2.16.3",
+  "name": "Nullharbor",
+  "date": "2026-09-21",
+  "notes": [
+    "Ship/station edges: #space stays a transparent 2D canvas (Fold white-flash protection) but is no longer desynchronized. Chrome's desync hint can front-buffer and tear; under the HUD overlay that read as vsync-off shredding on hard hull and station rims after 2.16.2.",
+    "World-space chase camera snaps to whole backing pixels so ships and stations lock against the starfield during cruise. Distant stars still use the unsapped interpolated camera (2.15.7 stair-step stay gone).",
+    "Sky bake-before-fill, backing slack, and launch/jump art warmup from 2.16.2 are unchanged. Service worker cache bumped to farbound-v2.16.3. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

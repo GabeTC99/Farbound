@@ -17,7 +17,7 @@ import {drawPlanetBody,warmPlanetTexture} from './planet-render.mjs';
 import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft} from './ship-render.mjs';
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
-import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset} from './flight-loop.mjs';
+import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset,snapWorldCam} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',system:'<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
 const icon=(name)=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]||icons.ship}</svg>`;
@@ -839,7 +839,8 @@ function render(dt=1/60,snapCam=false){
  cam.zoom=started?(width<650?.54:height<520?.55:.75):.26;const desiredX=started?game.player.x:400,desiredY=started?game.player.y:50;
  if(snapCam){cam.x=desiredX;cam.y=desiredY;}else followCam(cam,desiredX,desiredY,dt);
  drawSkyBackdrop();
- ctx.save();ctx.translate(width/2,height/2);ctx.scale(cam.zoom,cam.zoom);ctx.translate(-cam.x,-cam.y);
+ const view=snapWorldCam(cam.x,cam.y,width,height,dpr,cam.zoom);
+ ctx.save();ctx.translate(width/2,height/2);ctx.scale(cam.zoom,cam.zoom);ctx.translate(-view.x,-view.y);
  if(!softFX()){const orbitColor='#2c52652b';ctx.lineWidth=1;for(const star of (game.stars||[game.star]))for(const p of game.visiblePlanets)circle(star.x,star.y,dist(p,star),orbitColor,true);}
  for(const p of game.visiblePlanets)drawPlanet(p);if(game.sys.hasStation)for(const s of (game.stations||[game.station]).filter(s=>s.type==='station'))drawStation(s);for(const star of (game.stars||[game.star]))drawStar(star);for(const p of game.patrols){if(!worldInView(p.x,p.y,60))continue;drawSecurityShip(p);label(p.status==='ENGAGING'?'SECURITY ENGAGING':p.status==='SEARCHING'?'SECURITY SEARCHING':p.status==='RESPONDING'?'SECURITY RESPONDING':p.name,p.x,p.y-38,'#9eb7bd',12);}
  if(game.heatWanted>0&&game.lastKnown){const lk=game.lastKnown;circle(lk.x,lk.y,28,'#df8e8344',true);circle(lk.x,lk.y,6,'#df8e8388');label('LAST CONTACT',lk.x,lk.y-36,'#df8e83',11);}

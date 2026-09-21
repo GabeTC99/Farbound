@@ -54,6 +54,19 @@ export function followCam(cam,targetX,targetY,dt,k=CAM_FOLLOW){
  return cam;
 }
 
+/**
+ * Device-pixel-lock a chase camera so world-space ships/stations land on whole
+ * backing pixels. Starfield stays on the unsapped cam (continuous parallax);
+ * snapping stars was 2.15.7's stair-step.
+ */
+export function snapWorldCam(camX,camY,width,height,dpr,zoom){
+ const z=zoom||1,s=dpr||1;
+ if(!(z>0)||!(s>0)||!Number.isFinite(camX)||!Number.isFinite(camY))return {x:camX||0,y:camY||0};
+ const tx=Math.round(s*((width||0)*.5-camX*z));
+ const ty=Math.round(s*((height||0)*.5-camY*z));
+ return {x:((width||0)*.5-tx/s)/z,y:((height||0)*.5-ty/s)/z};
+}
+
 export function lerp(a,b,t){
  t=t<0?0:t>1?1:t;
  return a+(b-a)*t;
@@ -80,13 +93,17 @@ export const STAR_DEPTH_MAX=.11;
 export const SKY_PARALLAX=.012;
 export const SPACE_CLEAR='#060c16';
 /**
- * Transparent so an uninitialized desynchronized swap composites over `#space`
- * CSS (`#060c16`) instead of paper-white. Opaque (`alpha:false`) 2D buffers
- * initialize to #fff on Android Chrome / Fold GPUs; 2.15.7's immediate fill
- * could not win that race when a hitch (sky bake, first NPC cluster) stalled
- * the next GPU submit.
+ * Transparent so an uninitialized swap composites over `#space` CSS (`#060c16`)
+ * instead of paper-white. Opaque (`alpha:false`) 2D buffers initialize to #fff
+ * on Android Chrome / Fold GPUs; 2.15.7's immediate fill could not win that
+ * race when a hitch (sky bake, first NPC cluster) stalled the next GPU submit.
+ *
+ * Synchronized (desynchronized:false): Chrome's desync hint may front-buffer
+ * and tear. Combined with alpha:true under the HUD overlay (`#game`), that
+ * presented as vsync-off shredding on ship/station edges after 2.16.2.
+ * Transparency stays so a rare uninitialized present is still dark CSS.
  */
-export const SPACE_CONTEXT={alpha:true,desynchronized:true};
+export const SPACE_CONTEXT={alpha:true,desynchronized:false};
 /** Ignore 1–2 device-pixel visualViewport jitter so Fold chrome does not reset the buffer every frame. */
 export const BACKING_SLACK=2;
 
