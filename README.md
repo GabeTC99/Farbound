@@ -6,7 +6,7 @@ An original game for Android touchscreens and desktop browsers. Inspired by the 
 
 ## Play on Android
 
-**Fold 120 Hz:** sideload the Nullharbor APK (below). Chrome PWA / GitHub Pages cannot lock the display mode; native games can, and that is what the shell does.
+**Fold 120 Hz:** sideload the Nullharbor APK from **https://github.com/GabeTC99/Nullharbor/releases/latest** (steps under *Android sideload*). Chrome PWA / GitHub Pages cannot lock the display mode; native games can, and that is what the shell does. Check Releases for a newer APK.
 
 **Web / PWA (Pages beta):** Open https://gabetc99.github.io/Nullharbor/ in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner. Expect ~60 FPS while hands-off on Fold until the ship moves.
 
@@ -18,7 +18,7 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.7**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
-This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred; check **GitHub Releases** (or this PR’s Actions artifact) for a newer APK.
+This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. APK testers download from **[Releases](https://github.com/GabeTC99/Nullharbor/releases/latest)**. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred.
 
 ## Nullharbor 2.16
 
@@ -27,8 +27,8 @@ This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullh
 - **Sideload APK is the Fold 120 Hz path.** 2.16.6 compositor keep-alive + wake lock failed on Chrome PWA (still **60 until the ship moves**). Native games on the same Fold hold 120. Pages beta stays the fast web channel; PWA compositor hacks stay optional and are not expected to unlock 120.
 - **Package rename:** Android applicationId / namespace is `com.nullharbor.game` (was `com.farbound.game`). JS bridge is `NullharborAndroid`, with a `FarboundAndroid` alias so existing save-export JS still works.
 - **Native preferred refresh:** the WebView Activity locks `preferredDisplayModeId` + `preferredRefreshRate` to the highest mode at the current cover/inner resolution, calls `Surface.setFrameRate(..., FIXED_SOURCE, CHANGE_FRAME_RATE_ALWAYS)` on a 1 px hint surface (API 30+), sets `setPreferMinimalPostProcessing(true)`, re-applies on resume / fold / focus, and on API 35 votes `setRequestedFrameRate` + `setFrameContentVelocity` on the WebView and root. Immersive fullscreen and keep-screen-on stay. JS `refreshLock()` reports the requested Hz; the FPS meter may add `shell 120` — it does not rewrite the FPS number.
-- **Build:** `android/assemble-debug.sh` (or Android Studio / `./gradlew assembleDebug`) syncs `dist/` → `android/app/src/main/assets/` then builds. CI workflow **Android debug APK** uploads `nullharbor-2.16.7-debug`. Release signing / Play Store / in-app updater are later. PC `.exe` launcher is later.
-- **How to verify on Fold:** sideload the debug APK (steps under *Sideload the Android APK*), open Flight menu → Temporary DEV tools → **Show FPS**, cruise, lift your finger for 10 s. Success: the big number stays nearer **120** (not a hard 16.6 ms hold) and the detail can show `shell 120`. Pages PWA testers should still see 2.16.2–2.16.6 flash/AA/hitch/meter behavior; expect 60 until motion on Chrome.
+- **Build / testers:** `android/assemble-debug.sh` (or Android Studio / `./gradlew assembleDebug`) syncs `dist/` → `android/app/src/main/assets/` then builds. APK testers download from https://github.com/GabeTC99/Nullharbor/releases/latest (tag `android-v*` / `v*-android` runs **Android Release** and uploads the asset). This ship is **versionCode 9** / versionName 2.16.7, signed with the repo sideload key. Play Store / in-app updater and PC `.exe` are later. Check Releases for a newer APK.
+- **How to verify on Fold:** download the APK from Releases (steps under *Android sideload*), open Flight menu → Temporary DEV tools → **Show FPS**, cruise, lift your finger for 10 s. Success: the big number stays nearer **120** (not a hard 16.6 ms hold) and the detail can show `shell 120`. Pages PWA testers should still see 2.16.2–2.16.6 flash/AA/hitch/meter behavior; expect 60 until motion on Chrome.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.7`.
 
 ### Candidate 2.16.6
@@ -303,21 +303,61 @@ node tests/offline.mjs
 
 Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA and physical Fold sideload still need Gabe on-device. Native `assembleDebug` is scripted (Gradle wrapper + CI); a debug APK is produced when the SDK is available.
 
-## Sideload the Android APK (Fold)
+## Android sideload
 
-The 2.16.7 debug APK is `com.nullharbor.game`. Download it from this PR’s **Actions → Android debug APK** artifact (`nullharbor-2.16.7-debug`), or build it locally (next section). Check **GitHub Releases** later for a newer APK. Play Store and in-app auto-update are deferred.
+APK testers download here (always the newest published Android build):
 
-On the Fold:
+**https://github.com/GabeTC99/Nullharbor/releases/latest**
 
-1. Copy `app-debug.apk` to the phone (USB, Drive, or Messages).
-2. Settings → Security / Install unknown apps → allow the Files / Chrome app you will use.
+Pages beta is for web testers. Releases is for APK testers. There is **no in-app auto-updater** — when you want a newer APK, open that link again. Play Store listing is later.
+
+### First install (one-time unknown-apps)
+
+1. Download the `.apk` from the latest Release (asset like `nullharbor-2.16.7-vc9.apk`).
+2. **One-time:** Settings → Security / Install unknown apps → allow the Files, Chrome, or Messages app you will use to open the file.
 3. Open the APK → **Install**. First sideload may need **Allow from this source**.
-4. Open **Nullharbor**. Grant nothing extra — the shell has no internet permission.
-5. Flight menu → Temporary DEV tools → **Show FPS**. Close the menu, cruise in Solace, lift your finger for 10 s.
-6. Look at the meter: big number = real RAF. Success is nearer **120** while hands-off, with detail like `8.3 ms · 1% 118 · shell 120`. A hard **60** / `16.6 ms` / `idle 60 / 120` means the display-mode lock did not stick (check Settings → Display → Motion smoothness → High / 120 Hz).
-7. Import an existing Pages save with Flight menu → Restore a pilot (document picker). Saves stay `farbound-save-v2`.
+4. Open **Nullharbor**. The shell has no internet permission.
+5. Optional: Flight menu → Restore a pilot to import a Pages save (`farbound-save-v2`).
 
-Uninstalling the old `com.farbound.game` build is fine if you ever installed one; this id is a new app.
+`com.nullharbor.game` is a new applicationId. Uninstall any old `com.farbound.game` build. If you installed the earlier cloud-agent debug APK (different debug key), uninstall once so this sideload-signed build can take over.
+
+### Updates
+
+Download the newer APK from the same Releases page and open it. Android **replaces** the installed app when:
+
+- `versionCode` is higher than the build on the phone, and
+- the APK is signed with the **same sideload key** (`android/sideload.keystore` in this repo — not the future Play Store key).
+
+You do not uninstall first. Saves stay on device. If Android says the package conflicts or is not signed by the same certificate, uninstall once and install again.
+
+This ship is **versionName 2.16.7 · versionCode 9**. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
+
+### Fold 120 Hz check
+
+Flight menu → Temporary DEV tools → **Show FPS**. Close the menu, cruise in Solace, lift your finger for 10 s. Big number = real RAF. Success is nearer **120** while hands-off, with detail like `8.3 ms · 1% 118 · shell 120`. A hard **60** / `16.6 ms` / `idle 60 / 120` means the display-mode lock did not stick (Settings → Display → Motion smoothness → **High / 120 Hz**).
+
+### Publish a new APK (maintainers)
+
+1. Bump `versionCode` (required) and `versionName` when needed in `android/app/build.gradle`.
+2. Preferred — tag and push (CI **Android Release** builds and uploads the asset):
+   ```sh
+   git tag android-v2.16.7
+   git push origin android-v2.16.7
+   # also accepted: v2.16.7-android
+   # helper (prints the same commands): android/scripts/cut-android-release.sh
+   ```
+3. Manual fallback if Actions cannot upload:
+   ```sh
+   cd android
+   ./assemble-release.sh
+   gh release create android-v2.16.7 \
+     app/build/outputs/apk/release/app-release.apk#nullharbor-2.16.7-vc9.apk \
+     --title "Nullharbor Android 2.16.7 (versionCode 9)" \
+     --notes "Sideload. Higher versionCode + same sideload key replaces the app."
+   ```
+   Or create a Release in the GitHub UI and attach that APK.
+
+PR **Actions → Android debug APK** is a CI smoke artifact, not the tester channel.
 
 ## Build the native Android app
 
@@ -334,7 +374,7 @@ Or open `android/` in Android Studio (AGP 8.7.3) and Run / Build → Assemble De
 
 `android/app/build/outputs/apk/debug/app-debug.apk`
 
-The first build downloads Android build dependencies. For a Play/distribution APK later, create your own release signing key in Android Studio; no signing secrets are in the repo.
+The first build downloads Android build dependencies. Debug and release APKs for testers are signed with the committed **sideload** key (`android/sideload.keystore`) so a higher `versionCode` replaces the app. Play Store later uses a different unpublished key; do not reuse the sideload keystore there.
 
 The shell serves bundled assets through an intercepted HTTPS origin (`https://appassets.androidplatform.net/assets/`), keeps the screen on, goes immersive fullscreen, and exposes `NullharborAndroid` / `FarboundAndroid` (`exportSave`, `refreshLock`). Android 8.0+ and a current Android System WebView are required.
 

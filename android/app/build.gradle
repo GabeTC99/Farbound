@@ -1,5 +1,11 @@
 plugins { id 'com.android.application' }
 
+def sideloadProps = new Properties()
+def sideloadFile = rootProject.file('sideload.properties')
+if (sideloadFile.exists()) {
+    sideloadFile.withInputStream { sideloadProps.load(it) }
+}
+
 android {
     namespace 'com.nullharbor.game'
     compileSdk 35
@@ -7,8 +13,27 @@ android {
         applicationId 'com.nullharbor.game'
         minSdk 26
         targetSdk 35
-        versionCode 8
+        versionCode 9
         versionName '2.16.7'
+    }
+    signingConfigs {
+        sideload {
+            def store = sideloadProps.getProperty('storeFile', 'sideload.keystore')
+            storeFile rootProject.file(store)
+            storePassword sideloadProps.getProperty('storePassword')
+            keyAlias sideloadProps.getProperty('keyAlias')
+            keyPassword sideloadProps.getProperty('keyPassword')
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.sideload
+        }
+        release {
+            signingConfig signingConfigs.sideload
+            minifyEnabled false
+            debuggable false
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

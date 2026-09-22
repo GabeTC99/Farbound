@@ -1,0 +1,59 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'android-v*'
+      - 'v*-android'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Assemble sideload-signed APKs
+        working-directory: android
+        run: ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
+      - name: Name APKs from Gradle version
+        id: ver
+        working-directory: android
+        run: |
+          NAME=$(grep -oP "versionName '\\K[^']+" app/build.gradle | head -1)
+          CODE=$(grep -oP "versionCode \\K[0-9]+" app/build.gradle | head -1)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          mkdir -p "$GITHUB_WORKSPACE/dist-apk"
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/dist-apk/nullharbor-${NAME}-vc${CODE}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist-apk/nullharbor-${NAME}-vc${CODE}-debug.apk"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('android-v{0}', steps.ver.outputs.name) }}
+          name: Nullharbor Android ${{ steps.ver.outputs.name }} (versionCode ${{ steps.ver.outputs.code }})
+          generate_release_notes: true
+          body: |
+            Sideload APK for Fold testers (`com.nullharbor.game`).
+
+            **Download / update:** https://github.com/GabeTC99/Nullharbor/releases/latest
+
+            versionName ${{ steps.ver.outputs.name }} · versionCode ${{ steps.ver.outputs.code }}.
+            A newer APK with a higher versionCode, signed with the same sideload key, replaces the installed app. No in-app updater — check Releases when you want an update.
+
+            Pages web testers stay on https://gabetc99.github.io/Nullharbor/
+          files: |
+            dist-apk/nullharbor-${{ steps.ver.outputs.name }}-vc${{ steps.ver.outputs.code }}.apk
+            dist-apk/nullharbor-${{ steps.ver.outputs.name }}-vc${{ steps.ver.outputs.code }}-debug.apk
+          fail_on_unmatched_files: true
