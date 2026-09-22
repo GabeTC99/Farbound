@@ -348,15 +348,15 @@ export function createFpsMeter(windowSize=120){
 }
 
 /**
- * Fold clip (Gabe, 2.16.5): RAF holds ~120 while a finger is down, then ~2–3 s
- * after the last touch during cruise it locks at 60 (16.4–16.7 ms). Touch
- * returns 113–120 immediately. 1% low tracks the cadence — not a render hitch.
- *
- * Our loop already follows display vsync (fixed 60 Hz sim + interpolation).
- * Nothing in visibility/touch handlers caps RAF at 60. The drop is Chrome
- * Android hybrid 60/120 plus Samsung Adaptive / Game Optimizer: no web API
- * can set the panel rate. A compositor-thread transform animation is the
- * strongest hint we can send; Screen Wake Lock only prevents sleep.
+ * Fold (Gabe 2.16.5–2.16.6): RAF ~120 on touch, hard 60 after idle cruise.
+ * 2.16.6 compositor 1 px keep-alive + wake lock did not hold 120. Native
+ * games on the same panel do. Pages PWA / Chrome Android has no API to set
+ * the display mode; Canvas2D dirty every frame is not a 120 Hz vsync vote
+ * (Gabe: stuck at 60 until the ship moves). SPACE_CONTEXT stays
+ * {alpha:true, desynchronized:false} — desync tears, opaque flashes white.
+ * Web still runs the CSS keep-alive plus a 1×1 WebGL present. The unlock
+ * that matches native games is android/ MainActivity preferHighRefresh
+ * (preferredDisplayModeId + View.setRequestedFrameRate).
  */
 export const HZ_KEEP_ID='hz-keep';
 export const HZ_KEEP_CLASS='hz-keep-on';
@@ -425,4 +425,51 @@ export function createFlightWakeLock(nav=globalThis.navigator){
   acquire,release,
   held(){return !!(lock&&lock.released===false);}
  };
+}
+
+export const GPU_KEEP_ID='gpu-keep';
+const GPU_KEEP_OPTS={alpha:true,antialias:false,depth:false,stencil:false,preserveDrawingBuffer:false,desynchronized:false,powerPreference:'high-performance'};
+export function mountGpuKeepAlive(doc=globalThis.document){
+ if(!doc?.createElement)return null;
+ const existing=typeof doc.getElementById==='function'?doc.getElementById(GPU_KEEP_ID):null;
+ if(existing)return existing;
+ const el=doc.createElement('canvas');
+ el.id=GPU_KEEP_ID;
+ el.width=1;el.height=1;
+ if(el.setAttribute)el.setAttribute('aria-hidden','true');
+ (doc.body||doc.documentElement)?.appendChild?.(el);
+ return el;
+}
+export function createGpuKeepAlive(doc=globalThis.document){
+ const el=mountGpuKeepAlive(doc);
+ let gl=null;
+ if(el&&typeof el.getContext==='function'){
+  try{gl=el.getContext('webgl',GPU_KEEP_OPTS)||el.getContext('webgl2',GPU_KEEP_OPTS);}catch{gl=null;}
+ }
+ let on=false;
+ return {
+  setActive(v){on=!!v;},
+  present(){
+   if(!on||!gl)return false;
+   try{gl.viewport(0,0,1,1);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);return true;}catch{return false;}
+  },
+  ok(){return !!gl;}
+ };
+}
+
+/** Preferred NullharborAndroid, then the FarboundAndroid alias. */
+export function nativeAndroidBridge(win=globalThis){
+ return win?.NullharborAndroid||win?.FarboundAndroid||null;
+}
+
+/** Read the Android shell refresh lock. Never used as a fake FPS number. */
+export function readNativeRefreshLock(bridge){
+ if(!bridge||typeof bridge.refreshLock!=='function')return null;
+ try{
+  const raw=bridge.refreshLock();
+  const data=typeof raw==='string'?JSON.parse(raw):raw;
+  const hz=Number(data?.hz);
+  if(!(hz>0))return null;
+  return {hz,mode:String(data.mode||'native'),modeId:Number(data.modeId)||0};
+ }catch{return null;}
 }
