@@ -16,11 +16,21 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.8**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.9**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. APK testers download from **[Releases](https://github.com/GabeTC99/Nullharbor/releases/latest)**. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred.
 
 ## Nullharbor 2.16
+
+### Candidate 2.16.9
+
+- **APK cloud sync:** 2.16.8 sideload could not create an account (“Failed to fetch”). The shell had no `INTERNET` permission, and `shouldInterceptRequest` blocked every URL that was not `https://appassets.androidplatform.net/assets/…` — so Supabase never left the device. Pages / PWA was already fine.
+- **Network:** the APK now declares `android.permission.INTERNET` only (HTTPS outbound). `usesCleartextTraffic` stays **false**. Cloud sync remains optional; RLS and the public anon key are unchanged.
+- **Intercept:** only the appassets host is served from bundled assets. Other HTTPS (Supabase auth/API) returns `null` so WebView uses the real network. zip, `..`, and non-https stay blocked. Top-level navigation still cannot leave the game origin.
+- **Offline:** game files stay on-device. Play, Flight menu, and 2.16.8 audio / 120 Hz shell work without a connection. Network is used only if the pilot opens Cloud sync.
+- **Ship:** versionName **2.16.9** · Android **versionCode 11**. Do **not** tag a Release until this PR merges to `beta`. After merge, tag the beta tip so https://github.com/GabeTC99/Nullharbor/releases/latest updates.
+- **How to verify:** APK — Flight menu → Cloud sync → create account / sign in / upload-download against the existing Supabase project. Then airplane mode: the game still loads from bundled assets. Pages — same cloud flow as before; no intercept change.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.9`.
 
 ### Candidate 2.16.8
 
@@ -267,7 +277,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.8). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.9). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -307,6 +317,7 @@ node tests/stars.mjs
 node tests/flight-loop.mjs
 node tests/engine-audio.mjs
 node tests/cloud-sync.mjs
+node tests/android-webview.mjs
 node tests/sw-update.mjs
 node tests/offline.mjs
 ```
@@ -326,7 +337,7 @@ Pages beta is for web testers. Releases is for APK testers. There is **no in-app
 1. Download the `.apk` from the latest Release (asset like `nullharbor-2.16.7-vc9.apk`).
 2. **One-time:** Settings → Security / Install unknown apps → allow the Files, Chrome, or Messages app you will use to open the file.
 3. Open the APK → **Install**. First sideload may need **Allow from this source**.
-4. Open **Nullharbor**. The shell has no internet permission.
+4. Open **Nullharbor**. Game assets are offline-bundled; play works without a network. The APK may use HTTPS for optional **Cloud sync** (create account / sign in / upload-download) only.
 5. Optional: Flight menu → Restore a pilot to import a Pages save (`farbound-save-v2`).
 
 `com.nullharbor.game` is a new applicationId. Uninstall any old `com.farbound.game` build. If you installed the earlier cloud-agent debug APK (different debug key), uninstall once so this sideload-signed build can take over.
@@ -340,7 +351,7 @@ Download the newer APK from the same Releases page and open it. Android **replac
 
 You do not uninstall first. Saves stay on device. If Android says the package conflicts or is not signed by the same certificate, uninstall once and install again.
 
-This tree is **versionName 2.16.8 · versionCode 10**. Published `/releases/latest` stays on the last tagged APK until PM tags the merged beta tip. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
+This tree is **versionName 2.16.9 · versionCode 11**. Published `/releases/latest` stays on the last tagged APK until PM tags the merged beta tip. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
 
 ### Fold 120 Hz check
 
@@ -386,7 +397,7 @@ Or open `android/` in Android Studio (AGP 8.7.3) and Run / Build → Assemble De
 
 The first build downloads Android build dependencies. Debug and release APKs for testers are signed with the committed **sideload** key (`android/sideload.keystore`) so a higher `versionCode` replaces the app. Play Store later uses a different unpublished key; do not reuse the sideload keystore there.
 
-The shell serves bundled assets through an intercepted HTTPS origin (`https://appassets.androidplatform.net/assets/`), keeps the screen on, goes immersive fullscreen, and exposes `NullharborAndroid` / `FarboundAndroid` (`exportSave`, `refreshLock`). Android 8.0+ and a current Android System WebView are required.
+The shell serves bundled game assets through an intercepted HTTPS origin (`https://appassets.androidplatform.net/assets/`). Other HTTPS requests (optional Supabase cloud sync) pass through to the real network. The APK may use the network for that opt-in account flow; play itself stays offline. The shell keeps the screen on, goes immersive fullscreen, and exposes `NullharborAndroid` / `FarboundAndroid` (`exportSave`, `refreshLock`). Android 8.0+ and a current Android System WebView are required.
 
 **Planned, not in this PR:** a PC `.exe` launcher (Electron/Tauri). Pages PWA remains the desktop/web channel.
 

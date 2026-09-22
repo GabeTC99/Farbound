@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 22, 2026: Candidate 2.16.9 APK optional cloud sync: INTERNET permission + WebView intercept pass-through for non-appassets HTTPS (Supabase). zip/`..`/non-https stay blocked. usesCleartextTraffic false. RLS and anon key unchanged. Game assets remain offline-bundled. versionName 2.16.9 / versionCode 11. Do not tag Releases until merge. Service worker cache bumped to `farbound-v2.16.9`. Rollback tag `v2.16.8`.
+
 - September 22, 2026: Candidate 2.16.8 APK Flight-menu polish: short generic Graphics copy; hide Install app behind NullharborAndroid; click-free ambience (loop-edge fade, pause/resume ramp, no blur mute). versionName 2.16.8 / versionCode 10. Do not tag Releases until merge. Service worker cache bumped to `farbound-v2.16.8`. Rollback tag `v2.16.7`.
 
 - September 22, 2026: Candidate 2.16.7 Fold-ready Nullharbor sideload APK (`com.nullharbor.game`). 2.16.6 CSS keep-alive failed on Chrome PWA (still 60 until the ship moves). Pages beta stays the web channel; APK testers use https://github.com/GabeTC99/Nullharbor/releases/latest. Native shell locks preferredDisplayModeId / Surface.setFrameRate / API 35 WebView votes. JS bridges NullharborAndroid + FarboundAndroid alias. Gradle wrapper + dist→assets sync + sideload keystore + assembleDebug CI. Tag `android-v*` / `v*-android` publishes the APK as a Release asset. This ship is versionCode 9. Play Store / in-app updater and PC .exe launcher deferred. SPACE_CONTEXT unchanged. FPS meter stays real RAF (`shell 120` is the lock request). Service worker cache bumped to `farbound-v2.16.7`. Rollback tag `v2.16.6`.

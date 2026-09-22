@@ -33,7 +33,8 @@ import java.util.Collections;
 import java.util.Locale;
 
 /**
- * Offline Nullharbor shell: bundled dist/ assets at a fixed HTTPS origin. No network permission.
+ * Offline Nullharbor shell: bundled dist/ assets at a fixed HTTPS origin.
+ * INTERNET is for optional cloud sync (Supabase) only. Game files stay on-device.
  *
  * Fold 2.16.7: Chrome PWA compositor keep-alive did not hold 120 Hz. Native games on the
  * same panel do — they lock the window display mode. Pages PWA cannot call these APIs.
@@ -76,15 +77,7 @@ public final class MainActivity extends Activity {
                 return !HOST.equals(request.getUrl().getHost());
             }
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String path = uri.getPath();
-                if (!"https".equals(uri.getScheme()) || !HOST.equals(uri.getHost()) || path == null || !path.startsWith("/assets/") || path.contains("..")) return blocked();
-                String asset = path.substring(8);
-                if (asset.isEmpty()) asset = "index.html";
-                if (asset.endsWith(".zip")) return blocked();
-                String type = asset.endsWith(".html") ? "text/html" : asset.endsWith(".js") || asset.endsWith(".mjs") ? "text/javascript" : asset.endsWith(".css") ? "text/css" : asset.endsWith(".webp") ? "image/webp" : asset.endsWith(".png") ? "image/png" : asset.endsWith(".svg") ? "image/svg+xml" : "application/json";
-                try { return new WebResourceResponse(type, "UTF-8", 200, "OK", Collections.singletonMap("Cache-Control", "no-cache"), getAssets().open(asset)); }
-                catch (Exception e) { return blocked(); }
+                return interceptRequest(request.getUrl());
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
@@ -190,6 +183,26 @@ public final class MainActivity extends Activity {
                 surface.setFrameRate(hz, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
             }
         } catch (Throwable ignored) {}
+    }
+    /**
+     * Asset host intercepted from bundled assets. Other HTTPS returns null so
+     * WebView uses the real network (optional Supabase cloud sync). Non-https,
+     * zip, and path traversal stay blocked.
+     */
+    WebResourceResponse interceptRequest(Uri uri) {
+        String host = uri.getHost();
+        String path = uri.getPath();
+        if (!HOST.equals(host)) {
+            if (!"https".equals(uri.getScheme())) return blocked();
+            return null;
+        }
+        if (!"https".equals(uri.getScheme()) || path == null || !path.startsWith("/assets/") || path.contains("..")) return blocked();
+        String asset = path.substring(8);
+        if (asset.isEmpty()) asset = "index.html";
+        if (asset.endsWith(".zip")) return blocked();
+        String type = asset.endsWith(".html") ? "text/html" : asset.endsWith(".js") || asset.endsWith(".mjs") ? "text/javascript" : asset.endsWith(".css") ? "text/css" : asset.endsWith(".webp") ? "image/webp" : asset.endsWith(".png") ? "image/png" : asset.endsWith(".svg") ? "image/svg+xml" : "application/json";
+        try { return new WebResourceResponse(type, "UTF-8", 200, "OK", Collections.singletonMap("Cache-Control", "no-cache"), getAssets().open(asset)); }
+        catch (Exception e) { return blocked(); }
     }
     private static WebResourceResponse blocked() {
         return new WebResourceResponse("text/plain", "UTF-8", 404, "Not found", Collections.emptyMap(), new ByteArrayInputStream(new byte[0]));
