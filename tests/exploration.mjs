@@ -195,6 +195,7 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  assert.match(manifest,/"name":"Nullharbor"/);
  assert.match(manifest,/"short_name":"Nullharbor"/);
  assert.match(app,/nativeAndroidBridge/);
+ assert.match(app,/GabeTC99\/Nullharbor\/releases\/latest/);
  assert.match(loop,/NullharborAndroid/);
  assert.match(loop,/FarboundAndroid/);
  assert.match(classic,/NullharborAndroid/);

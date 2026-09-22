@@ -322,6 +322,9 @@ assert.match(gradle,/applicationId 'com\.nullharbor\.game'/);
 assert.match(gradle,/namespace 'com\.nullharbor\.game'/);
 assert.match(gradle,/syncWebAssets/);
 assert.match(gradle,/versionName '2\.16\.7'/);
+assert.match(gradle,/versionCode 9/);
+assert.match(gradle,/signingConfigs/);
+assert.match(gradle,/sideload/);
 
 const android=readFileSync(new URL('../android/app/src/main/java/com/nullharbor/game/MainActivity.java',import.meta.url),'utf8');
 assert.match(android,/package com\.nullharbor\.game/);
@@ -344,6 +347,14 @@ assert.ok(!pages.includes('assembleDebug'),'Pages deploy must stay web-only');
 const apkCi=readFileSync(new URL('../.github/workflows/android-debug.yml',import.meta.url),'utf8');
 assert.match(apkCi,/assembleDebug/);
 assert.match(apkCi,/nullharbor-2\.16\.7-debug/);
+const apkRel=readFileSync(new URL('../.github/workflows/android-release.yml',import.meta.url),'utf8');
+assert.match(apkRel,/android-v\*/);
+assert.match(apkRel,/v\*-android/);
+assert.match(apkRel,/action-gh-release/);
+const readme=readFileSync(new URL('../README.md',import.meta.url),'utf8');
+assert.match(readme,/## Android sideload/);
+assert.match(readme,/github.com\/GabeTC99\/Nullharbor\/releases\/latest/);
+assert.match(readme,/versionCode/);
 
 const manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
 assert.match(manifest,/display_override/);
