@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.16\.6'/);
+ assert.match(release,/export const RELEASE='2\.16\.7'/);
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
@@ -151,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.6/);
- assert.match(sw,/release:'2\.16\.6'/);
+ assert.match(sw,/farbound-v2\.16\.7/);
+ assert.match(sw,/release:'2\.16\.7'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -179,6 +179,7 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  const classicHtml=readFileSync(new URL('../dist/classic/index.html',import.meta.url),'utf8');
  const manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
+ const loop=readFileSync(new URL('../dist/flight-loop.mjs',import.meta.url),'utf8');
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/SOLO SPACE SANDBOX · \$\{RELEASE_NAME\.toUpperCase\(\)\} \$\{RELEASE\}/);
  assert.match(app,/<h1>NULLHARBOR/);
@@ -193,7 +194,12 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  assert.match(classicHtml,/Nullharbor · The quiet frontier/);
  assert.match(manifest,/"name":"Nullharbor"/);
  assert.match(manifest,/"short_name":"Nullharbor"/);
- assert.match(app,/FarboundAndroid/);
+ assert.match(app,/nativeAndroidBridge/);
+ assert.match(app,/GabeTC99\/Nullharbor\/releases\/latest/);
+ assert.match(loop,/NullharborAndroid/);
+ assert.match(loop,/FarboundAndroid/);
+ assert.match(classic,/NullharborAndroid/);
+ assert.match(classic,/FarboundAndroid/);
  assert.equal(SAVE_KEY,'farbound-save-v2');
  assert.match(app,/data-action="update-app"/);
 });
@@ -487,6 +493,7 @@ test('Dynamic events start, resolve, and reuse living NPCs',()=>{
  assert.match(app,/case 'dev-fps'/);assert.match(app,/data-action="dev-fps"/);
  assert.match(app,/id="fps-meter"/);assert.match(app,/createFpsMeter/);
  assert.match(app,/setRefreshKeepAlive/);assert.match(app,/createFlightWakeLock/);
+ assert.match(app,/createGpuKeepAlive/);assert.match(app,/readNativeRefreshLock/);assert.match(app,/nativeAndroidBridge/);
  assert.match(app,/function drawEdgeArrow/);assert.match(app,/eventArrowTargets\(game\)/);
  assert.match(app,/gravityLens|radioStorm|silentRelic/);
 });

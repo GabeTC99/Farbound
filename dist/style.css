@@ -102,6 +102,7 @@
 #hz-keep{position:fixed;left:0;bottom:0;width:2px;height:2px;margin:0;padding:0;border:0;z-index:2;pointer-events:none;opacity:.03;background:#9eebd8;contain:strict;will-change:transform;transform:translate3d(0,0,0)}
 #hz-keep.hz-keep-on{animation:nh-hz-keep 1s linear infinite}
 @keyframes nh-hz-keep{0%{transform:translate3d(0,0,0)}50%{transform:translate3d(1px,0,0)}100%{transform:translate3d(0,0,0)}}
+#gpu-keep{position:fixed;left:2px;bottom:0;width:1px;height:1px;margin:0;padding:0;border:0;z-index:2;pointer-events:none;opacity:.02;contain:strict}
 
 /* 2.11 Frontier Presence — traffic board + market callout */
 .bulletin{margin:10px 0 16px;padding:12px 14px;border:1px solid #33565b;border-left:3px solid var(--mint);border-radius:6px;background:#81e3cd0c}

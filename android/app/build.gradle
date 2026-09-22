@@ -1,19 +1,53 @@
 plugins { id 'com.android.application' }
 
+def sideloadProps = new Properties()
+def sideloadFile = rootProject.file('sideload.properties')
+if (sideloadFile.exists()) {
+    sideloadFile.withInputStream { sideloadProps.load(it) }
+}
+
 android {
-    namespace 'com.farbound.game'
+    namespace 'com.nullharbor.game'
     compileSdk 35
     defaultConfig {
-        applicationId 'com.farbound.game'
+        applicationId 'com.nullharbor.game'
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName '2.1.4'
+        versionCode 9
+        versionName '2.16.7'
+    }
+    signingConfigs {
+        sideload {
+            def store = sideloadProps.getProperty('storeFile', 'sideload.keystore')
+            storeFile rootProject.file(store)
+            storePassword sideloadProps.getProperty('storePassword')
+            keyAlias sideloadProps.getProperty('keyAlias')
+            keyPassword sideloadProps.getProperty('keyPassword')
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.sideload
+        }
+        release {
+            signingConfig signingConfigs.sideload
+            minifyEnabled false
+            debuggable false
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    sourceSets { main { assets.srcDirs = ['../../dist'] } }
     androidResources { ignoreAssetsPattern '!.git:!.svn:!*.zip:!sw.js' }
 }
+
+tasks.register('syncWebAssets', Copy) {
+    group = 'nullharbor'
+    description = 'Copy web dist/ into the APK assets folder'
+    from "${rootProject.projectDir}/../dist"
+    into 'src/main/assets'
+    exclude '**/*.zip', '**/.git/**'
+}
+
+preBuild.dependsOn syncWebAssets
