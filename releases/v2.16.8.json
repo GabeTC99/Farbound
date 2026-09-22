@@ -1,0 +1,15 @@
+{
+  "release": "2.16.8",
+  "name": "Nullharbor",
+  "date": "2026-09-22",
+  "notes": [
+    "Flight menu Graphics copy is short and player-facing: Full / Balanced / Performance. One generic sentence that the Android app can use a high-refresh display when the phone offers one. No Fold, Gabe, Chrome internals, API names, Game Booster, GitHub URLs, or white-flash history in that row.",
+    "Install app row is hidden when NullharborAndroid / FarboundAndroid is present (native APK). Pages PWA still shows Install app where supported.",
+    "Audio pops: looped ambience buffers fade at the wrap and drop DC; UI/fold one-shots attack from zero; Sound off uses muteAll; window blur no longer hard-cuts audio (Fold/WebView focus storms). APK onPause sends nullharbor-pause, ramps, then pauses the WebView; onResume zeros then resumes the context. Loops stay single-instance.",
+    "versionName 2.16.8 · Android versionCode 10. Do not tag /releases/latest until this PR is merged. Service worker cache bumped to farbound-v2.16.8. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

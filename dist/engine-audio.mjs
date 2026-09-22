@@ -1,3 +1,57 @@
+/** Fade both ends of a looping buffer so the wrap is not a click. */
+export function fadeLoopBuffer(data, fadeSamples){
+ if(!data||!data.length)return data;
+ const n=data.length,f=Math.max(1,Math.min(fadeSamples|0,n>>3));
+ for(let i=0;i<f;i++){
+  const w=i/f;
+  data[i]*=w;
+  data[n-1-i]*=w;
+ }
+ return data;
+}
+/** Remove DC so gain changes do not thump. */
+export function removeDc(data){
+ if(!data||!data.length)return data;
+ let s=0;for(let i=0;i<data.length;i++)s+=data[i];
+ const mean=s/data.length;
+ if(Math.abs(mean)<1e-12)return data;
+ for(let i=0;i<data.length;i++)data[i]-=mean;
+ return data;
+}
+export function prepareLoopSamples(data, sampleRate=48000){
+ removeDc(data);
+ fadeLoopBuffer(data, Math.max(64, Math.round((sampleRate||48000)*0.016)));
+ return data;
+}
+function paramNow(param){
+ const v=Number(param?.value);
+ return Number.isFinite(v)?v:0;
+}
+/** Click-free gain change. Never setValueAtTime to a new level without a ramp. */
+export function rampGain(param, value, t, seconds=0.04){
+ if(!param)return;
+ const dur=Math.max(0.018,seconds);
+ const from=Math.max(0,paramNow(param));
+ const to=Math.max(0,value);
+ try{
+  param.cancelScheduledValues(t);
+  if(to<=0){
+   const start=Math.max(from,1e-4);
+   param.setValueAtTime(start,t);
+   param.exponentialRampToValueAtTime(1e-4,t+dur);
+   param.setValueAtTime(0,t+dur+0.001);
+  }else if(from<=1e-5){
+   param.setValueAtTime(1e-4,t);
+   param.exponentialRampToValueAtTime(to,t+dur);
+  }else{
+   param.setValueAtTime(from,t);
+   param.linearRampToValueAtTime(to,t+dur);
+  }
+ }catch{
+  try{param.value=to;}catch{}
+ }
+}
+
 export class EngineAudio{
  constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;}
  unlock(){
@@ -12,7 +66,19 @@ export class EngineAudio{
   this.ensureHum();
   this.ensureAmb();
   this.ensureFold();
-  if(this.context.state==='suspended')this.context.resume().catch(()=>{});
+  if(this.context.state==='suspended'){
+   this.silenceInstant();
+   this.context.resume().catch(()=>{});
+  }
+ }
+ gains(){return [this.gain,this.humGain,this.noiseGain,this.ambGain,this.foldGain,this.foldNoiseGain];}
+ silenceInstant(){
+  if(!this.context)return;
+  const t=this.context.currentTime;
+  for(const g of this.gains()){
+   if(!g)continue;
+   try{g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(0,t);}catch{try{g.gain.value=0;}catch{}}
+  }
  }
  ensureHum(){
   if(!this.context||this.humReady)return;
@@ -36,6 +102,7 @@ export class EngineAudio{
    b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.96900*b2+w*.1538520;
    data[i]=(b0+b1+b2)*.14;
   }
+  prepareLoopSamples(data,rate);
   this.noise=c.createBufferSource();this.noise.buffer=buffer;this.noise.loop=true;
   this.noiseFilter=c.createBiquadFilter();this.noiseFilter.type='lowpass';this.noiseFilter.frequency.value=150;this.noiseFilter.Q.value=.4;
   this.noiseGain=c.createGain();this.noiseGain.gain.value=0;
@@ -54,6 +121,7 @@ export class EngineAudio{
    b0=.997*b0+w*.05;b1=.985*b1+w*.07;b2=.96*b2+w*.12;
    data[i]=(b0+b1+b2)*.11;
   }
+  prepareLoopSamples(data,rate);
   this.amb=c.createBufferSource();this.amb.buffer=buffer;this.amb.loop=true;
   this.ambFilter=c.createBiquadFilter();this.ambFilter.type='lowpass';this.ambFilter.frequency.value=220;this.ambFilter.Q.value=.35;
   this.ambGain=c.createGain();this.ambGain.gain.value=0;
@@ -94,17 +162,14 @@ export class EngineAudio{
  }
  mute(){
   if(!this.context)return;
-  this.gain.gain.setTargetAtTime(0,this.context.currentTime,.05);
+  rampGain(this.gain.gain,0,this.context.currentTime,.05);
  }
  muteAll(){
   if(!this.context)return;
   const t=this.context.currentTime;
-  this.gain.gain.setTargetAtTime(0,t,.05);
-  if(this.humGain)this.humGain.gain.setTargetAtTime(0,t,.05);
-  if(this.noiseGain)this.noiseGain.gain.setTargetAtTime(0,t,.05);
-  if(this.ambGain)this.ambGain.gain.setTargetAtTime(0,t,.05);
-  if(this.foldGain)this.foldGain.gain.setTargetAtTime(0,t,.04);
-  if(this.foldNoiseGain)this.foldNoiseGain.gain.setTargetAtTime(0,t,.04);
+  for(const g of this.gains()){
+   if(g)rampGain(g.gain,0,t,.05);
+  }
  }
  ensureFold(){
   if(!this.context||this.foldReady)return;
@@ -121,6 +186,7 @@ export class EngineAudio{
   this.foldOsc.start();this.foldOsc2.start();
   const seconds=2,rate=c.sampleRate,buffer=c.createBuffer(1,rate*seconds,rate),data=buffer.getChannelData(0);
   for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.35;
+  prepareLoopSamples(data,rate);
   this.foldNoise=c.createBufferSource();this.foldNoise.buffer=buffer;this.foldNoise.loop=true;
   this.foldNoiseFilter=c.createBiquadFilter();this.foldNoiseFilter.type='bandpass';this.foldNoiseFilter.frequency.value=900;this.foldNoiseFilter.Q.value=.8;
   this.foldNoiseGain=c.createGain();this.foldNoiseGain.gain.value=0;
@@ -158,7 +224,7 @@ export class EngineAudio{
   const n=c.createBufferSource();n.buffer=buffer;
   const ng=c.createGain(),nf=c.createBiquadFilter();
   nf.type='highpass';nf.frequency.value=400;
-  ng.gain.setValueAtTime(vol*.7,t);ng.gain.exponentialRampToValueAtTime(.001,t+.32);
+  ng.gain.setValueAtTime(0,t);ng.gain.linearRampToValueAtTime(vol*.7,t+.02);ng.gain.exponentialRampToValueAtTime(.001,t+.32);
   n.connect(nf);nf.connect(ng);ng.connect(c.destination);n.start(t);n.stop(t+.35);
  }
  playFoldArrive(volume=.35){

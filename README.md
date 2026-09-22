@@ -16,11 +16,20 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.7**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.8**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. APK testers download from **[Releases](https://github.com/GabeTC99/Nullharbor/releases/latest)**. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred.
 
 ## Nullharbor 2.16
+
+### Candidate 2.16.8
+
+- **Graphics copy:** Flight menu Graphics is a short player-facing summary — Full keeps the intended visuals, Balanced reduces effects, Performance is best for older phones — plus one generic line that the Android app can use a high-refresh display when the phone offers one. No Fold / Gabe / Chrome / API / Game Booster / GitHub / white-flash text in that row.
+- **Install app:** hidden in the native APK (`NullharborAndroid` / `FarboundAndroid`). Pages PWA still shows the row.
+- **Audio pops:** looped station/space beds fade at the wrap and drop DC; UI and fold one-shots attack from zero; Sound off uses `muteAll`; `blur` no longer hard-cuts (WebView focus storms). The APK sends `nullharbor-pause`, ramps, then pauses the WebView; resume zeros then unlocks. Loops stay single-instance.
+- **Ship:** versionName **2.16.8** · Android **versionCode 10**. Do **not** tag a Release until this PR merges to `beta`. After merge, tag the beta tip so https://github.com/GabeTC99/Nullharbor/releases/latest updates.
+- **How to verify:** APK Flight menu — concise Graphics, no Install app row; toggle Sound and leave/return to the app without a click. Pages — Install app still present. 2.16.2–2.16.7 flash / AA / 120 Hz shell stay.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.8`.
 
 ### Candidate 2.16.7
 
@@ -258,7 +267,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.7). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.8). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -296,6 +305,7 @@ node tests/planets.mjs
 node tests/fleet.mjs
 node tests/stars.mjs
 node tests/flight-loop.mjs
+node tests/engine-audio.mjs
 node tests/cloud-sync.mjs
 node tests/sw-update.mjs
 node tests/offline.mjs
@@ -330,7 +340,7 @@ Download the newer APK from the same Releases page and open it. Android **replac
 
 You do not uninstall first. Saves stay on device. If Android says the package conflicts or is not signed by the same certificate, uninstall once and install again.
 
-This ship is **versionName 2.16.7 · versionCode 9**. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
+This tree is **versionName 2.16.8 · versionCode 10**. Published `/releases/latest` stays on the last tagged APK until PM tags the merged beta tip. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
 
 ### Fold 120 Hz check
 

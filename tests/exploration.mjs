@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.16\.7'/);
+ assert.match(release,/export const RELEASE='2\.16\.8'/);
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
@@ -151,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.7/);
- assert.match(sw,/release:'2\.16\.7'/);
+ assert.match(sw,/farbound-v2\.16\.8/);
+ assert.match(sw,/release:'2\.16\.8'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);
@@ -274,8 +274,23 @@ test('Traffic turns smoothly and flees when assaulted',()=>{
 test('Engine volume uses the full slider and stays silent at zero',()=>{
  const source=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),'utf8');assert(source.includes('*.32'));assert(source.includes('Math.pow'));assert(!source.includes('*.24'));assert(!source.includes('*.065'));
  assert(source.includes('setFoldCharge'));assert(source.includes('playFoldJump'));assert(source.includes('playFoldArrive'));
+ assert(source.includes('prepareLoopSamples'));assert(source.includes('fadeLoopBuffer'));assert(source.includes('silenceInstant'));
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert(app.includes('wasFolding'));assert(app.includes('setFoldCharge'));assert(app.includes('playFoldJump'));
+ assert(app.includes('nullharbor-pause'));assert(app.includes('nullharbor-resume'));
+ assert.match(app,/case 'sound':[\s\S]*muteAll/);
+ assert.ok(!/blur'\)=>\{resetControls\(\);engine\.muteAll/.test(app),'blur must not hard-cut audio');
+});
+test('Flight menu Graphics copy is short and Install app hides in the APK',()=>{
+ const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
+ const g=app.slice(app.indexOf('<h3>Graphics</h3>'),app.indexOf('<h3>Engine & station ambience</h3>'));
+ assert.match(g,/Full keeps the intended visuals/);
+ assert.match(g,/Balanced reduces effects/);
+ assert.match(g,/Performance is best for older phones/);
+ assert.match(g,/high-refresh display when the phone offers one/);
+ assert.equal((g.match(/Gabe|Fold|Game Booster|preferredDisplayModeId|white-flash|github\.com/g)||[]).length,0);
+ assert.match(app,/nativeAndroidBridge\(\)\?''/);
+ assert.match(app,/<h3>Install app<\/h3>/);
 });
 test('Security responds to wanted attacks and assaults on innocent civilians',()=>{
  const g=new Game();g.launch();const civilian=g.traffic[0],wanted=g.enemies[0],patrol=g.patrols[0],remote=g.patrols[1];civilian.x=1100;civilian.y=900;wanted.x=1450;wanted.y=900;wanted.raidFire=0;patrol.x=1000;patrol.y=900;remote.x=-2500;remote.y=-2500;const before=dist(patrol,wanted);g.update(.05);assert.equal(wanted.wanted,true);assert.equal(patrol.responseTarget,wanted.id);assert.equal(patrol.status,'RESPONDING');assert.equal(remote.responseTarget,null);assert.equal(remote.status,'PATROLLING');ticks(g,1);assert(dist(patrol,wanted)<before);assert(g.shots.some(b=>b.trafficShot&&b.enemy));
