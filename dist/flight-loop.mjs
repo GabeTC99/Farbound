@@ -302,11 +302,27 @@ export function createPacer(windowSize=120){
  * so a Fold cover measurement is not pinned by one pause.
  */
 export const FPS_STALL_MS=250;
+/** Common panel cadences. Used only to label RAF samples — never as a fake FPS. */
+export const CADENCE_HZ=[120,90,60,30];
+export function inferCadence(ms){
+ if(!(ms>0))return 0;
+ const hz=1000/ms;
+ let best=0,err=Infinity;
+ for(const c of CADENCE_HZ){
+  const e=Math.abs(hz-c)/c;
+  if(e<err){err=e;best=c;}
+ }
+ return err<=.08?best:0;
+}
+/** True when this session already saw high refresh and RAF is now sitting on 60. */
+export function idleRefreshThrottle(peakCadence,cadence){
+ return peakCadence>=90&&cadence>0&&cadence<=60&&peakCadence>cadence;
+}
 export function createFpsMeter(windowSize=120){
  const times=new Float64Array(windowSize);
- let i=0,n=0,last=0,ema=0,ready=false;
+ let i=0,n=0,last=0,ema=0,ready=false,peakCadence=0;
  return {
-  reset(){i=0;n=0;last=0;ema=0;ready=false;},
+  reset(){i=0;n=0;last=0;ema=0;ready=false;peakCadence=0;},
   record(now){
    if(!ready){last=now;ready=true;return null;}
    const dt=now-last;
@@ -319,12 +335,94 @@ export function createFpsMeter(windowSize=120){
    return fps;
   },
   snapshot(){
-   if(!n)return {fps:0,ms:0,low1:0,n:0};
+   if(!n)return {fps:0,ms:0,low1:0,n:0,cadence:0,peakCadence,idleThrottle:false};
    let sum=0;
    for(let k=0;k<n;k++)sum+=times[k];
+   const ms=sum/n,cadence=inferCadence(ms);
+   if(cadence>peakCadence)peakCadence=cadence;
    const copy=Array.from(times.subarray(0,n)).sort((a,b)=>a-b);
    const p99=copy[Math.min(n-1,Math.max(0,Math.ceil(n*.99)-1))];
-   return {fps:ema,ms:sum/n,low1:p99>0?1000/p99:0,n};
+   return {fps:ema,ms,low1:p99>0?1000/p99:0,n,cadence,peakCadence,idleThrottle:idleRefreshThrottle(peakCadence,cadence)};
   }
+ };
+}
+
+/**
+ * Fold clip (Gabe, 2.16.5): RAF holds ~120 while a finger is down, then ~2–3 s
+ * after the last touch during cruise it locks at 60 (16.4–16.7 ms). Touch
+ * returns 113–120 immediately. 1% low tracks the cadence — not a render hitch.
+ *
+ * Our loop already follows display vsync (fixed 60 Hz sim + interpolation).
+ * Nothing in visibility/touch handlers caps RAF at 60. The drop is Chrome
+ * Android hybrid 60/120 plus Samsung Adaptive / Game Optimizer: no web API
+ * can set the panel rate. A compositor-thread transform animation is the
+ * strongest hint we can send; Screen Wake Lock only prevents sleep.
+ */
+export const HZ_KEEP_ID='hz-keep';
+export const HZ_KEEP_CLASS='hz-keep-on';
+export const HZ_KEEP_ANIM='nh-hz-keep';
+export const HZ_KEEP_DURATION_MS=1000;
+
+export function mountRefreshKeepAlive(doc=globalThis.document){
+ if(!doc?.createElement)return null;
+ const existing=typeof doc.getElementById==='function'?doc.getElementById(HZ_KEEP_ID):null;
+ if(existing)return existing;
+ const el=doc.createElement('div');
+ el.id=HZ_KEEP_ID;
+ if(el.setAttribute)el.setAttribute('aria-hidden','true');
+ (doc.body||doc.documentElement)?.appendChild?.(el);
+ return el;
+}
+
+export function setRefreshKeepAlive(on,doc=globalThis.document){
+ const el=mountRefreshKeepAlive(doc);
+ if(!el)return false;
+ const want=!!on;
+ el.classList?.toggle?.(HZ_KEEP_CLASS,want);
+ const running=typeof el.getAnimations==='function'?el.getAnimations().filter(a=>a&&a.id===HZ_KEEP_ANIM&&a.playState!=='idle'):[];
+ if(want){
+  if(!running.length&&typeof el.animate==='function'){
+   try{
+    el.animate(
+     [{transform:'translate3d(0,0,0)'},{transform:'translate3d(1px,0,0)'},{transform:'translate3d(0,0,0)'}],
+     {duration:HZ_KEEP_DURATION_MS,iterations:Infinity,easing:'linear',id:HZ_KEEP_ANIM,composite:'replace'}
+    );
+   }catch{}
+  }
+ }else{
+  for(const a of running)try{a.cancel();}catch{}
+ }
+ return want;
+}
+
+export function createFlightWakeLock(nav=globalThis.navigator){
+ let lock=null,want=false,pending=null;
+ const request=nav?.wakeLock?.request;
+ async function acquire(){
+  want=true;
+  if(typeof request!=='function')return false;
+  if(lock&&lock.released===false)return true;
+  if(pending)return pending;
+  pending=(async()=>{
+   try{
+    const next=await request.call(nav.wakeLock,'screen');
+    if(!want){try{await next.release();}catch{}return false;}
+    lock=next;
+    next.addEventListener?.('release',()=>{if(lock===next)lock=null;if(want)acquire().catch(()=>{});});
+    return true;
+   }catch{return false;}
+   finally{pending=null;}
+  })();
+  return pending;
+ }
+ async function release(){
+  want=false;
+  const held=lock;
+  lock=null;
+  if(held)try{await held.release();}catch{}
+ }
+ return {
+  acquire,release,
+  held(){return !!(lock&&lock.released===false);}
  };
 }

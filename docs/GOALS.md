@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 22, 2026: Candidate 2.16.6 Fold refresh-rate throttle: Gabe clip + review show RAF ~120 while touching and a hard 60 Hz hold after ~2–3 s of hands-off cruise (Samsung Adaptive / Game Optimizer + Chrome Android hybrid 60/120). Loop was already display-rate; compositor keep-alive + screen wake lock during play; FPS meter labels real idle cadence (`idle 60 / 120`) without faking numbers. OS settings still required if the web hint loses: High/120 Hz motion smoothness, Game Booster max FPS, Unrestricted. Service worker cache bumped to `farbound-v2.16.6`. Rollback tag `v2.16.5`.
+
 - September 21, 2026: Candidate 2.16.5 FPS meter in Temporary DEV tools: live `requestAnimationFrame` overlay (smoothed FPS, frame ms, 1% low) so Fold PWA testing is not stuck at Game Booster 0. Off by default; persists as `showFps` on the pilot. Near-zero cost when disabled. 2.16.2–2.16.4 flash/AA/hitch path unchanged. Service worker cache bumped to `farbound-v2.16.5`. Rollback tag `v2.16.4`.
 
 - September 21, 2026: Candidate 2.16.4 High-mode Fold hitch (cover + inner): same stutter on the tiny outer cover and the large inner display, so the hot path was too expensive even at modest resolutions. High keeps AA/capsules/extrusion; dim stars and the galaxy band blit from caches, far orbit/scoop rings are culled, hull lighting gradients are reused. Performance LOD is optional. Bake-before-fill and transparent `#space` stay. Verify Full/High on the outer cover and again on the inner display — both must cruise without hitch; a cover hitch is not a pixel-budget problem. Service worker cache bumped to `farbound-v2.16.4`. Rollback tag `v2.16.3`.

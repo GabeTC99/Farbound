@@ -6,6 +6,8 @@ import {
  STAR_LAYER_DEPTHS,
  createFrameClock,resetFrameClock,beginFrame,expSmooth,followCam,
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,createFpsMeter,FPS_STALL_MS,
+ inferCadence,idleRefreshThrottle,CADENCE_HZ,mountRefreshKeepAlive,setRefreshKeepAlive,
+ createFlightWakeLock,HZ_KEEP_ID,HZ_KEEP_CLASS,HZ_KEEP_ANIM,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
  hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,strokeBand,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
@@ -115,12 +117,36 @@ assert.ok(fps.n>=15);
 assert.ok(fps.fps>115&&fps.fps<125,'120 Hz RAF intervals should report ~120 FPS');
 assert.ok(fps.ms>8&&fps.ms<9);
 assert.ok(fps.low1>115);
+assert.equal(fps.cadence,120);
+assert.equal(fps.peakCadence,120);
+assert.equal(fps.idleThrottle,false);
 meter.reset();
 meter.record(0);
 meter.record(8.3);
 meter.record(8.3+400);
 assert.ok(FPS_STALL_MS<400);
 assert.equal(meter.snapshot().n,1,'tab-hide stalls must not pin 1% low');
+assert.equal(inferCadence(8.333),120);
+assert.equal(inferCadence(16.667),60);
+assert.equal(inferCadence(11.11),90);
+assert.equal(inferCadence(0),0);
+assert.ok(CADENCE_HZ.includes(120)&&CADENCE_HZ.includes(60));
+assert.equal(idleRefreshThrottle(120,60),true);
+assert.equal(idleRefreshThrottle(60,60),false);
+assert.equal(idleRefreshThrottle(120,120),false);
+assert.equal(idleRefreshThrottle(120,90),false);
+const drop=createFpsMeter(16);
+let t=0;
+drop.record(0);
+for(let k=0;k<16;k++){t+=8.333;drop.record(t);}
+assert.equal(drop.snapshot().peakCadence,120);
+for(let k=0;k<16;k++){t+=16.667;drop.record(t);}
+const dropped=drop.snapshot();
+assert.ok(dropped.ms>16&&dropped.ms<17,'60 Hz hold reports ~16.7 ms, not a faked 8.3');
+assert.equal(dropped.cadence,60);
+assert.equal(dropped.peakCadence,120);
+assert.equal(dropped.idleThrottle,true);
+assert.ok(dropped.fps<100,'smoothed FPS follows RAF; do not fake 120 after a 60 Hz hold');
 
 // Photospheres stay sharp (384) but no longer rebuild 192→512 when zoom/DPR changes.
 assert.equal(texSizeFor({r:40},true,1),STAR_TEX.lite);
@@ -136,6 +162,12 @@ assert.match(app,/id="fps-meter"/);
 assert.match(app,/case 'dev-fps'/);
 assert.match(app,/fpsMeter\.record\(now\)/);
 assert.match(app,/game\.s\.showFps===true/);
+assert.match(app,/setRefreshKeepAlive\(/);
+assert.match(app,/createFlightWakeLock\(/);
+assert.match(app,/syncRefreshKeepAlive\(/);
+assert.match(app,/idleThrottle/);
+assert.match(app,/navigationUI:'hide'/);
+assert.match(app,/Adaptive refresh and Game Booster/);
 assert.match(app,/beginFrame\(/);
 assert.match(app,/followCam\(/);
 assert.match(app,/canvasScale\(/);
@@ -183,10 +215,67 @@ assert.ok(!/cam\.x\*\.012/.test(app),'galaxy band uses skyParallax, not a baked 
 
 const style=readFileSync(new URL('../dist/style.css',import.meta.url),'utf8');
 assert.match(style,/#space\{[^}]*background:#060c16/);
+assert.match(style,/#hz-keep\{/);
+assert.match(style,/@keyframes nh-hz-keep/);
+assert.match(style,/\.fps-meter\.fps-idle/);
+
+const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
+assert.match(html,/id="hz-keep"/);
+
+function mockDoc(){
+ const els=new Map();
+ const body={children:[],appendChild(el){this.children.push(el);els.set(el.id,el);return el;}};
+ return {
+  body,
+  getElementById:id=>els.get(id)||null,
+  createElement(){
+   const classes=new Set();
+   const anims=[];
+   return {
+    id:'',
+    setAttribute(){},
+    classList:{toggle(n,on){if(on)classes.add(n);else classes.delete(n);},contains:n=>classes.has(n)},
+    animate(_k,opts){
+     const a={id:opts.id,playState:'running',cancel(){this.playState='idle';}};
+     anims.push(a);
+     return a;
+    },
+    getAnimations(){return anims.filter(a=>a.playState!=='idle');}
+   };
+  }
+ };
+}
+const keepDoc=mockDoc();
+const keepEl=mountRefreshKeepAlive(keepDoc);
+assert.equal(keepEl.id,HZ_KEEP_ID);
+assert.equal(setRefreshKeepAlive(true,keepDoc),true);
+assert.ok(keepEl.classList.contains(HZ_KEEP_CLASS));
+assert.ok(keepEl.getAnimations().some(a=>a.id===HZ_KEEP_ANIM));
+assert.equal(setRefreshKeepAlive(false,keepDoc),false);
+assert.ok(!keepEl.classList.contains(HZ_KEEP_CLASS));
+assert.equal(keepEl.getAnimations().length,0);
+
+const locks=[];
+const wake=createFlightWakeLock({
+ wakeLock:{
+  async request(type){
+   const l={type,released:false,addEventListener(){},async release(){this.released=true;}};
+   locks.push(l);
+   return l;
+  }
+ }
+});
+assert.equal(wake.held(),false);
+assert.equal(await wake.acquire(),true);
+assert.equal(wake.held(),true);
+assert.equal(locks[0].type,'screen');
+await wake.release();
+assert.equal(wake.held(),false);
+assert.equal(locks[0].released,true);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.5/);
+assert.match(sw,/farbound-v2\.16\.6/);
 const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
 assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
 assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);
@@ -293,7 +382,8 @@ for(let i=1;i<cruise.length;i++){
  assert.ok(cruise[i]<=cruise[i-1],'locked cam steps monotonically as the chase cam advances');
 }
 
-console.log('PASS RAF FPS meter reports ~120 Hz and ignores tab-hide stalls');
+console.log('PASS RAF FPS meter reports ~120 Hz, labels idle 60/120 throttle, and ignores tab-hide stalls');
+console.log('PASS Compositor keep-alive and screen wake lock mount without faking FPS');
 console.log('PASS Fixed 60 Hz steps, hitch clamp, and leftover alpha');
 console.log('PASS Time-based camera lag is stable at 30/60/120 Hz (old lerp is not)');
 console.log(`PASS Camera offset spread time=${timeSpread.toFixed(2)} vs frame-lerp=${frameSpread.toFixed(2)}`);
