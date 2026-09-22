@@ -1,0 +1,16 @@
+{
+  "release": "2.16.6",
+  "name": "Nullharbor",
+  "date": "2026-09-22",
+  "notes": [
+    "Fold cover/inner 120 Hz: Gabe’s clip plus independent review show RAF at ~120 while touching (including dismissing notifications / tapping the stick) and a hard hold at 60 (16.4–16.7 ms) after ~2–3 s of hands-off cruise. 1% low tracks the display cadence. This is Samsung Adaptive / Game Optimizer plus Chrome Android hybrid 60/120 — not a hitch in the 2.16.2–2.16.5 flash/AA/hitch path, and not a 60 Hz cap in our loop (fixed 60 Hz sim + display interpolation already follows vsync).",
+    "Mitigation: during play a 1 px compositor-thread transform keep-alive runs (CSS + Web Animations) so Chrome is more likely to keep requesting 120 without a finger down. Screen Wake Lock holds the panel on during flight. Fullscreen still uses navigationUI hide. No web API can set the panel rate; Game Booster / Adaptive refresh can still win.",
+    "FPS meter stays. The big number is still real RAF. If this session already saw ~120 and then sits on 60, the detail line adds `idle 60 / 120` (not a fake FPS). Off by default; persists as showFps.",
+    "Player note (Flight menu → Graphics): on a Fold, prefer High/120 Hz motion smoothness if the phone has it (Adaptive idle-throttles); Game Booster Performance / max FPS, not 60 Hz battery saver; Chrome or this PWA Unrestricted.",
+    "Verify on Fold with FPS on: hands-off cruise 10 s should stay nearer 120 if the keep-alive sticks. Desktop smoke cannot prove Fold VRR. Service worker cache bumped to farbound-v2.16.6. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

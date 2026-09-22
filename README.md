@@ -14,11 +14,20 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.5**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.6**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
 
 ## Nullharbor 2.16
+
+### Candidate 2.16.6
+
+- **Fold 120 Hz cruise:** Gabe’s clip (and independent review) show the DEV FPS meter at ~120 while touching — including dismissing notifications or tapping the stick — then a hard hold at **60** (16.4–16.7 ms) after ~2–3 s of hands-off cruise. Touch returns 113–120 immediately. 1% low tracks the cadence; this is not a 2.16.2–2.16.5 hitch. The loop already follows display vsync (60 Hz sim + interpolation). Chrome Android hybrid 60/120 and Samsung Adaptive / Game Optimizer drop the panel when there is no finger down. There is no web API that can set refresh rate.
+- **What we can do:** during play a 1 px compositor-thread transform keep-alive runs (CSS + Web Animations) so Chrome is more likely to keep requesting 120 without touch. Screen Wake Lock keeps the panel awake. Fullscreen still hides browser chrome. 2.16.2–2.16.5 flash / AA / hitch / FPS-meter work is unchanged.
+- **What we cannot do:** Game Booster, Adaptive motion smoothness, and battery savers can still lock 60. On the Fold: Settings → Display → Motion smoothness → **High / 120 Hz** if the phone has it (Adaptive will idle-throttle); Game Booster / Game Optimizer → Performance / max FPS, not 60 Hz battery saver; Chrome or this PWA → battery **Unrestricted**.
+- **FPS meter:** still real RAF. If this session already saw ~120 and then sits on 60, the detail line adds `idle 60 / 120` so you can tell throttle from a 60 Hz panel. Off by default; persists as `showFps`.
+- **How to verify 2.16.6:** Flight menu → Temporary DEV tools → Show FPS, close the menu, cruise, lift your finger for 10 s. If the keep-alive sticks, the readout stays nearer 120 (not a hard 16.6 ms hold). Desktop smoke cannot prove Fold VRR.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.6`.
 
 ### Candidate 2.16.5
 
@@ -238,7 +247,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.5). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.6). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 

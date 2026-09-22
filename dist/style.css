@@ -91,7 +91,17 @@
 .fps-meter small{display:block;font-size:.65rem;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:#6db6ad}
 .fps-meter b{display:block;font-size:1.2rem;font-weight:600;color:#a7f0df;line-height:1.15;margin:2px 0}
 .fps-meter span{display:block;font-size:.7rem;color:#7aa89e;letter-spacing:.02em}
+.fps-meter.fps-idle{border-color:#6a5340;color:#e8c9a6}
+.fps-meter.fps-idle small{color:#c4a07a}
+.fps-meter.fps-idle b{color:#f0d2ad}
 @media(max-width:650px){.fps-meter{top:max(64px,calc(env(safe-area-inset-top) + 48px));right:max(10px,env(safe-area-inset-right));min-width:76px;padding:5px 8px}.fps-meter b{font-size:1.1rem}}
+
+/* Compositor keep-alive: Chrome Android / Samsung VRR drop RAF to 60 Hz ~2s after
+   the last touch. A 1px transform on its own layer is the strongest web hint.
+   2.16.2–2.16.5 #space path is unchanged. */
+#hz-keep{position:fixed;left:0;bottom:0;width:2px;height:2px;margin:0;padding:0;border:0;z-index:2;pointer-events:none;opacity:.03;background:#9eebd8;contain:strict;will-change:transform;transform:translate3d(0,0,0)}
+#hz-keep.hz-keep-on{animation:nh-hz-keep 1s linear infinite}
+@keyframes nh-hz-keep{0%{transform:translate3d(0,0,0)}50%{transform:translate3d(1px,0,0)}100%{transform:translate3d(0,0,0)}}
 
 /* 2.11 Frontier Presence — traffic board + market callout */
 .bulletin{margin:10px 0 16px;padding:12px 14px;border:1px solid #33565b;border-left:3px solid var(--mint);border-radius:6px;background:#81e3cd0c}
