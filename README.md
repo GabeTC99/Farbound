@@ -6,7 +6,7 @@ An original game for Android touchscreens and desktop browsers. Inspired by the 
 
 ## Play on Android
 
-**Fold 120 Hz:** sideload the Nullharbor APK from **https://github.com/GabeTC99/Nullharbor/releases/latest** (steps under *Android sideload*). Chrome PWA / GitHub Pages cannot lock the display mode; native games can, and that is what the shell does. Check Releases for a newer APK.
+**Fold 120 Hz:** sideload the Nullharbor APK from **https://github.com/GabeTC99/Nullharbor/releases/latest/download/Nullharbor.apk** (stable filename; steps under *Android sideload*). Chrome PWA / GitHub Pages cannot lock the display mode; native games can, and that is what the shell does. Check Releases for a newer APK.
 
 **Web / PWA (Pages beta):** Open https://gabetc99.github.io/Nullharbor/ in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner. Expect ~60 FPS while hands-off on Fold until the ship moves.
 
@@ -328,13 +328,13 @@ Validation includes 9 retained classic gameplay checks, Frontiers progression an
 
 APK testers download here (always the newest published Android build):
 
-**https://github.com/GabeTC99/Nullharbor/releases/latest**
+**https://github.com/GabeTC99/Nullharbor/releases/latest/download/Nullharbor.apk**
 
-Pages beta is for web testers. Releases is for APK testers. There is **no in-app auto-updater** — when you want a newer APK, open that link again. Play Store listing is later.
+That URL stays stable. Each Android Release also keeps a versioned asset (`nullharbor-X.Y.Z-vcN.apk`) with the same bytes. Pages beta is for web testers. Releases is for APK testers. There is **no in-app auto-updater** — when you want a newer APK, open that link again. Play Store listing is later.
 
 ### First install (one-time unknown-apps)
 
-1. Download the `.apk` from the latest Release (asset like `nullharbor-2.16.7-vc9.apk`).
+1. Download **Nullharbor.apk** from the latest Release (or the versioned twin `nullharbor-2.16.9-vc11.apk`).
 2. **One-time:** Settings → Security / Install unknown apps → allow the Files, Chrome, or Messages app you will use to open the file.
 3. Open the APK → **Install**. First sideload may need **Allow from this source**.
 4. Open **Nullharbor**. Game assets are offline-bundled; play works without a network. The APK may use HTTPS for optional **Cloud sync** (create account / sign in / upload-download) only.
@@ -360,7 +360,7 @@ Flight menu → Temporary DEV tools → **Show FPS**. Close the menu, cruise in 
 ### Publish a new APK (maintainers)
 
 1. Bump `versionCode` (required) and `versionName` when needed in `android/app/build.gradle`.
-2. Preferred — tag and push (CI **Android Release** builds and uploads the asset):
+2. Preferred — tag and push (CI **Android Release** builds and uploads `Nullharbor.apk` plus the versioned twin):
    ```sh
    git tag android-v2.16.7
    git push origin android-v2.16.7
@@ -372,11 +372,12 @@ Flight menu → Temporary DEV tools → **Show FPS**. Close the menu, cruise in 
    cd android
    ./assemble-release.sh
    gh release create android-v2.16.7 \
+     app/build/outputs/apk/release/app-release.apk#Nullharbor.apk \
      app/build/outputs/apk/release/app-release.apk#nullharbor-2.16.7-vc9.apk \
      --title "Nullharbor Android 2.16.7 (versionCode 9)" \
      --notes "Sideload. Higher versionCode + same sideload key replaces the app."
    ```
-   Or create a Release in the GitHub UI and attach that APK.
+   Or create a Release in the GitHub UI and attach both APK names.
 
 PR **Actions → Android debug APK** is a CI smoke artifact, not the tester channel.
 
