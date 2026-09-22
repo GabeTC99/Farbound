@@ -1,19 +1,28 @@
 plugins { id 'com.android.application' }
 
 android {
-    namespace 'com.farbound.game'
+    namespace 'com.nullharbor.game'
     compileSdk 35
     defaultConfig {
-        applicationId 'com.farbound.game'
+        applicationId 'com.nullharbor.game'
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName '2.1.4'
+        versionCode 8
+        versionName '2.16.7'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    sourceSets { main { assets.srcDirs = ['../../dist'] } }
     androidResources { ignoreAssetsPattern '!.git:!.svn:!*.zip:!sw.js' }
 }
+
+tasks.register('syncWebAssets', Copy) {
+    group = 'nullharbor'
+    description = 'Copy web dist/ into the APK assets folder'
+    from "${rootProject.projectDir}/../dist"
+    into 'src/main/assets'
+    exclude '**/*.zip', '**/.git/**'
+}
+
+preBuild.dependsOn syncWebAssets

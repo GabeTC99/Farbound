@@ -8,6 +8,7 @@ import {
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,createFpsMeter,FPS_STALL_MS,
  inferCadence,idleRefreshThrottle,CADENCE_HZ,mountRefreshKeepAlive,setRefreshKeepAlive,
  createFlightWakeLock,HZ_KEEP_ID,HZ_KEEP_CLASS,HZ_KEEP_ANIM,
+ createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,GPU_KEEP_ID,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
  hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,strokeBand,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
@@ -167,7 +168,12 @@ assert.match(app,/createFlightWakeLock\(/);
 assert.match(app,/syncRefreshKeepAlive\(/);
 assert.match(app,/idleThrottle/);
 assert.match(app,/navigationUI:'hide'/);
-assert.match(app,/Adaptive refresh and Game Booster/);
+assert.match(app,/createGpuKeepAlive\(/);
+assert.match(app,/readNativeRefreshLock\(/);
+assert.match(app,/gpuKeep\.present\(/);
+assert.match(app,/Pages PWA cannot lock/);
+assert.match(app,/preferredDisplayModeId/);
+assert.match(app,/shell /);
 assert.match(app,/beginFrame\(/);
 assert.match(app,/followCam\(/);
 assert.match(app,/canvasScale\(/);
@@ -218,9 +224,11 @@ assert.match(style,/#space\{[^}]*background:#060c16/);
 assert.match(style,/#hz-keep\{/);
 assert.match(style,/@keyframes nh-hz-keep/);
 assert.match(style,/\.fps-meter\.fps-idle/);
+assert.match(style,/#gpu-keep\{/);
 
 const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 assert.match(html,/id="hz-keep"/);
+assert.match(html,/id="gpu-keep"/);
 
 function mockDoc(){
  const els=new Map();
@@ -273,9 +281,77 @@ await wake.release();
 assert.equal(wake.held(),false);
 assert.equal(locks[0].released,true);
 
+function mockGpuDoc(){
+ const els=new Map();
+ const body={children:[],appendChild(el){this.children.push(el);els.set(el.id,el);return el;}};
+ let clears=0;
+ return {
+  body,getElementById:id=>els.get(id)||null,
+  createElement(tag){
+   return {
+    tag,id:'',width:0,height:0,
+    setAttribute(){},
+    getContext(kind){
+     if(kind!=='webgl'&&kind!=='webgl2')return null;
+     return {viewport(){},clearColor(){},clear(){clears++;},COLOR_BUFFER_BIT:1};
+    },
+    _clears(){return clears;}
+   };
+  }
+ };
+}
+const gpuDoc=mockGpuDoc();
+const gpu=createGpuKeepAlive(gpuDoc);
+assert.equal(gpu.ok(),true);
+assert.equal(gpu.present(),false);
+gpu.setActive(true);
+assert.equal(gpu.present(),true);
+assert.equal(gpuDoc.getElementById(GPU_KEEP_ID).id,GPU_KEEP_ID);
+assert.equal(readNativeRefreshLock(null),null);
+assert.equal(readNativeRefreshLock({}),null);
+assert.deepEqual(readNativeRefreshLock({refreshLock:()=>'{"hz":120,"mode":"preferredDisplayModeId","modeId":3}'}),{hz:120,mode:'preferredDisplayModeId',modeId:3});
+assert.equal(readNativeRefreshLock({refreshLock:()=>'{"hz":0}'}),null);
+assert.equal(readNativeRefreshLock({refreshLock:()=>{throw Error('no');}}),null);
+const preferred={refreshLock:()=>'ok'};
+assert.equal(nativeAndroidBridge({}),null);
+assert.equal(nativeAndroidBridge({FarboundAndroid:preferred}),preferred);
+assert.equal(nativeAndroidBridge({NullharborAndroid:preferred,FarboundAndroid:{}}),preferred);
+
+const gradle=readFileSync(new URL('../android/app/build.gradle',import.meta.url),'utf8');
+assert.match(gradle,/applicationId 'com\.nullharbor\.game'/);
+assert.match(gradle,/namespace 'com\.nullharbor\.game'/);
+assert.match(gradle,/syncWebAssets/);
+assert.match(gradle,/versionName '2\.16\.7'/);
+
+const android=readFileSync(new URL('../android/app/src/main/java/com/nullharbor/game/MainActivity.java',import.meta.url),'utf8');
+assert.match(android,/package com\.nullharbor\.game/);
+assert.match(android,/NullharborAndroid/);
+assert.match(android,/FarboundAndroid/);
+assert.match(android,/preferredDisplayModeId/);
+assert.match(android,/setRequestedFrameRate/);
+assert.match(android,/setFrameContentVelocity/);
+assert.match(android,/preferHighRefresh/);
+assert.match(android,/refreshLock/);
+assert.match(android,/setFrameRate\(/);
+assert.match(android,/FRAME_RATE_COMPATIBILITY_FIXED_SOURCE/);
+assert.match(android,/CHANGE_FRAME_RATE_ALWAYS/);
+assert.match(android,/setPreferMinimalPostProcessing/);
+assert.ok(!/desynchronized:\s*true/.test(loopSrc));
+
+const pages=readFileSync(new URL('../.github/workflows/deploy-beta.yml',import.meta.url),'utf8');
+assert.match(pages,/path: dist/);
+assert.ok(!pages.includes('assembleDebug'),'Pages deploy must stay web-only');
+const apkCi=readFileSync(new URL('../.github/workflows/android-debug.yml',import.meta.url),'utf8');
+assert.match(apkCi,/assembleDebug/);
+assert.match(apkCi,/nullharbor-2\.16\.7-debug/);
+
+const manifest=readFileSync(new URL('../dist/manifest.webmanifest',import.meta.url),'utf8');
+assert.match(manifest,/display_override/);
+assert.match(manifest,/"fullscreen"/);
+
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.6/);
+assert.match(sw,/farbound-v2\.16\.7/);
 const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
 assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
 assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);
@@ -384,6 +460,7 @@ for(let i=1;i<cruise.length;i++){
 
 console.log('PASS RAF FPS meter reports ~120 Hz, labels idle 60/120 throttle, and ignores tab-hide stalls');
 console.log('PASS Compositor keep-alive and screen wake lock mount without faking FPS');
+console.log('PASS WebGL keep-alive and native refreshLock parse; Android shell locks preferredDisplayModeId');
 console.log('PASS Fixed 60 Hz steps, hitch clamp, and leftover alpha');
 console.log('PASS Time-based camera lag is stable at 30/60/120 Hz (old lerp is not)');
 console.log(`PASS Camera offset spread time=${timeSpread.toFixed(2)} vs frame-lerp=${frameSpread.toFixed(2)}`);

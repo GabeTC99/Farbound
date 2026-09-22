@@ -6,7 +6,9 @@ An original game for Android touchscreens and desktop browsers. Inspired by the 
 
 ## Play on Android
 
-Open the hosted game in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner.
+**Fold 120 Hz:** sideload the Nullharbor APK (below). Chrome PWA / GitHub Pages cannot lock the display mode; native games can, and that is what the shell does.
+
+**Web / PWA (Pages beta):** Open https://gabetc99.github.io/Nullharbor/ in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner. Expect ~60 FPS while hands-off on Fold until the ship moves.
 
 ## Beta builds (share with testers)
 
@@ -14,11 +16,20 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.6**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.7**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
-This delivery contains a playable browser/PWA prototype and an Android application source project. **No compiled APK has been produced.** Native app installation and PWA installation have not been verified on a physical Android device.
+This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred; check **GitHub Releases** (or this PR’s Actions artifact) for a newer APK.
 
 ## Nullharbor 2.16
+
+### Candidate 2.16.7
+
+- **Sideload APK is the Fold 120 Hz path.** 2.16.6 compositor keep-alive + wake lock failed on Chrome PWA (still **60 until the ship moves**). Native games on the same Fold hold 120. Pages beta stays the fast web channel; PWA compositor hacks stay optional and are not expected to unlock 120.
+- **Package rename:** Android applicationId / namespace is `com.nullharbor.game` (was `com.farbound.game`). JS bridge is `NullharborAndroid`, with a `FarboundAndroid` alias so existing save-export JS still works.
+- **Native preferred refresh:** the WebView Activity locks `preferredDisplayModeId` + `preferredRefreshRate` to the highest mode at the current cover/inner resolution, calls `Surface.setFrameRate(..., FIXED_SOURCE, CHANGE_FRAME_RATE_ALWAYS)` on a 1 px hint surface (API 30+), sets `setPreferMinimalPostProcessing(true)`, re-applies on resume / fold / focus, and on API 35 votes `setRequestedFrameRate` + `setFrameContentVelocity` on the WebView and root. Immersive fullscreen and keep-screen-on stay. JS `refreshLock()` reports the requested Hz; the FPS meter may add `shell 120` — it does not rewrite the FPS number.
+- **Build:** `android/assemble-debug.sh` (or Android Studio / `./gradlew assembleDebug`) syncs `dist/` → `android/app/src/main/assets/` then builds. CI workflow **Android debug APK** uploads `nullharbor-2.16.7-debug`. Release signing / Play Store / in-app updater are later. PC `.exe` launcher is later.
+- **How to verify on Fold:** sideload the debug APK (steps under *Sideload the Android APK*), open Flight menu → Temporary DEV tools → **Show FPS**, cruise, lift your finger for 10 s. Success: the big number stays nearer **120** (not a hard 16.6 ms hold) and the detail can show `shell 120`. Pages PWA testers should still see 2.16.2–2.16.6 flash/AA/hitch/meter behavior; expect 60 until motion on Chrome.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.7`.
 
 ### Candidate 2.16.6
 
@@ -247,7 +258,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.6). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.7). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -290,27 +301,51 @@ node tests/sw-update.mjs
 node tests/offline.mjs
 ```
 
-Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA, physical Android input/audio, and native compilation were not run in the build environment.
+Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA and physical Fold sideload still need Gabe on-device. Native `assembleDebug` is scripted (Gradle wrapper + CI); a debug APK is produced when the SDK is available.
+
+## Sideload the Android APK (Fold)
+
+The 2.16.7 debug APK is `com.nullharbor.game`. Download it from this PR’s **Actions → Android debug APK** artifact (`nullharbor-2.16.7-debug`), or build it locally (next section). Check **GitHub Releases** later for a newer APK. Play Store and in-app auto-update are deferred.
+
+On the Fold:
+
+1. Copy `app-debug.apk` to the phone (USB, Drive, or Messages).
+2. Settings → Security / Install unknown apps → allow the Files / Chrome app you will use.
+3. Open the APK → **Install**. First sideload may need **Allow from this source**.
+4. Open **Nullharbor**. Grant nothing extra — the shell has no internet permission.
+5. Flight menu → Temporary DEV tools → **Show FPS**. Close the menu, cruise in Solace, lift your finger for 10 s.
+6. Look at the meter: big number = real RAF. Success is nearer **120** while hands-off, with detail like `8.3 ms · 1% 118 · shell 120`. A hard **60** / `16.6 ms` / `idle 60 / 120` means the display-mode lock did not stick (check Settings → Display → Motion smoothness → High / 120 Hz).
+7. Import an existing Pages save with Flight menu → Restore a pilot (document picker). Saves stay `farbound-save-v2`.
+
+Uninstalling the old `com.farbound.game` build is fine if you ever installed one; this id is a new app.
 
 ## Build the native Android app
 
-Open `android/` in Android Studio. Configure **JDK 17, Android SDK 35 and Gradle 8.9** for Android Gradle Plugin 8.7.3. This source distribution does not include a Gradle wrapper binary. Use an installed Gradle 8.9 distribution (Android Studio's Gradle settings can point at it), or generate a wrapper using that version:
+`android/` ships a Gradle 8.9 wrapper. Need **JDK 17** (21 also works) and **Android SDK 35**. From a machine with the SDK:
 
 ```sh
+# optional: echo "sdk.dir=/path/to/Android/Sdk" > android/local.properties
 cd android
-gradle wrapper --gradle-version 8.9
-./gradlew assembleDebug
+./assemble-debug.sh
+# same as: ./scripts/sync-web-assets.sh && ./gradlew assembleDebug
 ```
 
-The resulting development APK is at `android/app/build/outputs/apk/debug/app-debug.apk`. The first build downloads Android build dependencies. For distribution, create your own release signing key and signed release APK in Android Studio; no signing secrets are included.
+Or open `android/` in Android Studio (AGP 8.7.3) and Run / Build → Assemble Debug. Gradle `preBuild` copies `dist/` → `app/src/main/assets/` (excludes `*.zip`; `sw.js` is ignored in the APK). Output:
 
-The Android shell bundles `dist/` as offline assets, serves them through an intercepted HTTPS origin, uses no internet permission and exposes only a save-export bridge. Android 8.0+ and a current Android System WebView are required. Import uses the system document picker. The native shell is source-only and needs compile and device validation before release.
+`android/app/build/outputs/apk/debug/app-debug.apk`
+
+The first build downloads Android build dependencies. For a Play/distribution APK later, create your own release signing key in Android Studio; no signing secrets are in the repo.
+
+The shell serves bundled assets through an intercepted HTTPS origin (`https://appassets.androidplatform.net/assets/`), keeps the screen on, goes immersive fullscreen, and exposes `NullharborAndroid` / `FarboundAndroid` (`exportSave`, `refreshLock`). Android 8.0+ and a current Android System WebView are required.
+
+**Planned, not in this PR:** a PC `.exe` launcher (Electron/Tauri). Pages PWA remains the desktop/web channel.
 
 ## Reference research
 
 - Galaxy Genome, developer listing: https://play.google.com/store/apps/details?id=com.skvgames.GalaxyGenome
 - Elite Dangerous, official introduction: https://www.elitedangerous.com/news/getting-started-elite-dangerous
 - Android documentation, local WebView content: https://developer.android.com/develop/ui/views/layout/webapps/load-local-content
+- Android frame rate / display mode: https://developer.android.com/develop/background-work/background-tasks/ui/frame-rate
 - Android Gradle Plugin 8.7 documentation: https://developer.android.com/build/releases/past-releases/agp-8-7-0-release-notes
 
 Nullharbor is an independent prototype, unaffiliated with either reference game.
