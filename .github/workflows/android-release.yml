@@ -38,6 +38,7 @@ jobs:
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
           mkdir -p "$GITHUB_WORKSPACE/dist-apk"
           cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/dist-apk/nullharbor-${NAME}-vc${CODE}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/dist-apk/Nullharbor.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/dist-apk/nullharbor-${NAME}-vc${CODE}-debug.apk"
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -48,13 +49,16 @@ jobs:
           body: |
             Sideload APK for Fold testers (`com.nullharbor.game`).
 
-            **Download / update:** https://github.com/GabeTC99/Nullharbor/releases/latest
+            **Download / update:** https://github.com/GabeTC99/Nullharbor/releases/latest/download/Nullharbor.apk
+
+            Same bytes as `nullharbor-${{ steps.ver.outputs.name }}-vc${{ steps.ver.outputs.code }}.apk`. The stable `Nullharbor.apk` name is for site deep-links.
 
             versionName ${{ steps.ver.outputs.name }} · versionCode ${{ steps.ver.outputs.code }}.
             A newer APK with a higher versionCode, signed with the same sideload key, replaces the installed app. No in-app updater — check Releases when you want an update.
 
             Pages web testers stay on https://gabetc99.github.io/Nullharbor/
           files: |
+            dist-apk/Nullharbor.apk
             dist-apk/nullharbor-${{ steps.ver.outputs.name }}-vc${{ steps.ver.outputs.code }}.apk
             dist-apk/nullharbor-${{ steps.ver.outputs.name }}-vc${{ steps.ver.outputs.code }}-debug.apk
           fail_on_unmatched_files: true
