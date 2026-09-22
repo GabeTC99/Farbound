@@ -1,0 +1,15 @@
+{
+  "release": "2.16.9",
+  "name": "Nullharbor",
+  "date": "2026-09-22",
+  "notes": [
+    "APK-only cloud sync: AndroidManifest now declares INTERNET. usesCleartextTraffic stays false. Pages/PWA unchanged.",
+    "WebView intercept serves only appassets.androidplatform.net/assets/* from bundled files. Other HTTPS (Supabase auth/API) returns null so the request leaves the device. zip, path traversal, and non-https stay blocked. Top-level navigation still cannot leave the game origin.",
+    "Optional cloud sync is unchanged: same Supabase project, public anon key, RLS. Local play still works offline. Game assets remain offline-bundled.",
+    "versionName 2.16.9 · Android versionCode 11. 2.16.8 Flight-menu copy, click-free audio, and 120 Hz shell stay. Do not tag /releases/latest until this PR is merged. Service worker cache bumped to farbound-v2.16.9. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
