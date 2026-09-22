@@ -46,6 +46,7 @@ public final class MainActivity extends Activity {
     private static final String BRIDGE_ALIAS = "FarboundAndroid";
     private static final int IMPORT_FILE = 101, EXPORT_FILE = 102;
     private WebView web;
+    private final Runnable pauseWeb = () -> { if (web != null) web.onPause(); };
     private View root;
     private SurfaceView rateHint;
     private Surface rateSurface;
@@ -232,12 +233,28 @@ public final class MainActivity extends Activity {
     }
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && web != null) { immersive(); preferHighRefresh(); } }
     @Override public void onConfigurationChanged(Configuration config) { super.onConfigurationChanged(config); immersive(); preferHighRefresh(); }
-    @Override protected void onPause() { web.evaluateJavascript("window.dispatchEvent(new Event('pagehide'))", null); web.onPause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (web != null) { web.onResume(); preferHighRefresh(); } }
+    @Override protected void onPause() {
+        if (web != null) {
+            web.evaluateJavascript("window.dispatchEvent(new Event('nullharbor-pause'))", null);
+            web.removeCallbacks(pauseWeb);
+            web.postDelayed(pauseWeb, 70);
+        }
+        super.onPause();
+    }
+    @Override protected void onResume() {
+        super.onResume();
+        if (web != null) {
+            web.removeCallbacks(pauseWeb);
+            web.onResume();
+            preferHighRefresh();
+            web.evaluateJavascript("window.dispatchEvent(new Event('nullharbor-resume'))", null);
+        }
+    }
     @Override public void onBackPressed() { web.evaluateJavascript("document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true}))", null); }
     @Override protected void onDestroy() {
         if (fileCallback != null) fileCallback.onReceiveValue(null);
         if (web != null) {
+            web.removeCallbacks(pauseWeb);
             web.removeJavascriptInterface(BRIDGE);
             web.removeJavascriptInterface(BRIDGE_ALIAS);
             web.destroy();
