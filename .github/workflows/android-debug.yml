@@ -2,6 +2,8 @@ name: Android debug APK
 
 on:
   push:
+    branches:
+      - '**'
     paths:
       - 'android/**'
       - 'dist/**'
@@ -30,7 +32,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: android/scripts/ci-accept-licenses.sh
       - name: Sync web assets and assemble debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace

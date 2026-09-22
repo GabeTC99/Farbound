@@ -23,7 +23,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: android/scripts/ci-accept-licenses.sh
       - name: Assemble sideload-signed APKs
         working-directory: android
         run: ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
