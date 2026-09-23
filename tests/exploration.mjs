@@ -151,8 +151,8 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(app,/drawStarBody/);
  assert.match(app,/drawCraft/);
  assert.ok(!/aria-label="Station services"/.test(app));
- assert.match(sw,/farbound-v2\.16\.10/);
- assert.match(sw,/release:'2\.16\.10'/);
+ assert.match(sw,/farbound-v2\.16\.11/);
+ assert.match(sw,/release:'2\.16\.11'/);
  assert.match(sw,/sw-update\.mjs/);
  assert.match(sw,/SKIP_WAITING/);
  assert.match(sw,/planet-render\.mjs/);

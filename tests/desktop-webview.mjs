@@ -31,6 +31,7 @@ assert.match(main, /if \(decision === 'blocked'\) return new Response/);
 assert.match(main, /loadURL\(`https:\/\/\$\{HOST\}\/assets\/index.html`\)/);
 assert.match(main, /nullharbor-pause/);
 assert.match(main, /nullharbor-resume/);
+assert.match(main, /NULLHARBOR_SMOKE/);
 assert.match(main, /will-navigate/);
 assert.ok(!/webSecurity:\s*false/.test(main));
 assert.ok(!/nodeIntegration:\s*true/.test(main));

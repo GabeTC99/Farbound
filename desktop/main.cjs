@@ -77,6 +77,57 @@ function createWindow() {
     mainWindow.webContents.executeJavaScript("window.dispatchEvent(new Event('nullharbor-resume'))").catch(() => {});
   });
   mainWindow.loadURL(`https://${HOST}/assets/index.html`);
+  if (process.env.NULLHARBOR_SMOKE) runSmoke(mainWindow);
+}
+
+function runSmoke(win) {
+  const timer = setTimeout(() => {
+    console.error('SMOKE timeout waiting for the bundled game');
+    app.exit(1);
+  }, 25000);
+  win.webContents.once('did-fail-load', (_e, code, desc, url, isMainFrame) => {
+    if (!isMainFrame) return;
+    clearTimeout(timer);
+    console.error('SMOKE did-fail-load', code, desc, url);
+    app.exit(1);
+  });
+  win.webContents.once('did-finish-load', async () => {
+    try {
+      const result = await win.webContents.executeJavaScript(`(async()=>{
+        const host=location.hostname;
+        const desktop=!!window.NullharborDesktop;
+        const release=await (await fetch(new URL('release.mjs',location.href))).text();
+        const asset=await fetch(new URL('index.html',location.href));
+        const httpsNet=await fetch('https://example.com/');
+        const httpsBody=await httpsNet.text();
+        let httpBlock;
+        try{
+          const r=await fetch('http://example.com/');
+          httpBlock={status:r.status,len:(await r.text()).length};
+        }catch(e){ httpBlock={threw:String(e.message||e)}; }
+        return {
+          host, desktop, title:document.title,
+          release, assetStatus:asset.status,
+          httpsStatus:httpsNet.status, httpsLen:httpsBody.length,
+          httpBlock
+        };
+      })()`);
+      const releaseOk = /export const RELEASE='2\.16\.11'/.test(result.release);
+      const httpsOk = result.httpsStatus >= 200 && result.httpsStatus < 400 && result.httpsLen > 0;
+      const httpBlocked = !!(result.httpBlock && (
+        (result.httpBlock.status === 404 && result.httpBlock.len === 0) ||
+        /Failed to fetch|ERR_FAILED|blocked/i.test(result.httpBlock.threw || '')
+      ));
+      const ok = result.host === HOST && result.desktop && releaseOk && result.assetStatus === 200 && httpsOk && httpBlocked;
+      console.log(ok ? 'SMOKE PASS' : 'SMOKE FAIL', JSON.stringify(result));
+      clearTimeout(timer);
+      app.exit(ok ? 0 : 1);
+    } catch (err) {
+      clearTimeout(timer);
+      console.error('SMOKE error', err);
+      app.exit(1);
+    }
+  });
 }
 
 app.whenReady().then(() => {
