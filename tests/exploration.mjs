@@ -91,22 +91,34 @@ test('Docked station time keeps traffic and playtime moving',()=>{
  const g=new Game();assert(g.s.docked);assert(g.traffic.length);const start=g.traffic.map(t=>[t.x,t.y]),play=g.s.playtime;
  ticks(g,2);assert(g.s.docked);assert(g.s.playtime>play);assert(g.traffic.some((t,i)=>t.x!==start[i][0]||t.y!==start[i][1]));
 });
-test('Station close launches and version comes from release.mjs',()=>{
+test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.2\.0'/);
+ assert.match(release,/export const RELEASE='2\.7\.0'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
- assert.match(app,/const leaveStation=\(\)=>\{if\(game\.s\.docked\)\{if\(!game\.launch\(\)\)/);
- assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)leaveStation\(\)/);
- assert.match(sw,/farbound-v2\.2\.0/);
- assert.match(sw,/release:'2\.2\.0'/);
+ assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)closePanel\(\)/);
+ assert.match(app,/interactStation/);
+ assert.match(app,/renderOnFoot/);
+ assert.match(app,/openDesk/);
+ assert.match(app,/desk-terminal/);
+ assert.match(app,/desk-banner/);
+ assert.match(app,/Return to deck/);
+ assert.match(app,/SPRINT/);
+ assert.match(app,/scan-button/);
+ assert.ok(!/aria-label="Station services"/.test(app));
+ assert.match(sw,/farbound-v2\.7\.0/);
+ assert.match(sw,/release:'2\.7\.0'/);
+ assert.match(sw,/hull-defs\.mjs/);
+ assert.match(sw,/planet-layout\.mjs/);
  assert.match(sw,/dynamic-events\.mjs/);
  assert.match(sw,/station-robot\.mjs/);
  assert.match(sw,/system-layout\.mjs/);
+ assert.match(sw,/onfoot\.mjs/);
+ assert.match(sw,/station-layout\.mjs/);
  assert(sw.includes("'./release.mjs'"));
- const g=new Game();assert(g.s.docked);assert(g.launch());assert(!g.s.docked);
+ const g=new Game();assert(g.s.docked);assert(g.onfoot);assert(g.launch());assert(!g.s.docked);assert.equal(g.onfoot,null);
 });
 test('Security cutters and prospector boom use dedicated hull geometry',()=>{
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
@@ -214,16 +226,37 @@ test('Tutorial tip keeps its Got it button across HUD refreshes',()=>{
  assert.match(source,/if\(tipVisible&&tut\.dataset\.tip!==tipKey\)/);
  assert(!/if\(showTutorial&&started&&!panel\)\{tut\.innerHTML=/.test(source));
 });
-test('Player ships have distinct silhouettes, colors, and collision radii',()=>{
+test('Player ships have distinct silhouettes, colors, and collision radii',async()=>{
+ const {HULL_DEFS,getHullDef,hullPreviewSvg}=await import('../dist/hull-defs.mjs');
+ assert.equal(SHIPS.length,20);
+ assert.equal(Object.keys(HULL_DEFS).length,20);
+ assert.equal(new Set(SHIPS.map(s=>s.id)).size,20);
+ assert.equal(new Set(SHIPS.map(s=>s.name)).size,20);
+ assert.equal(new Set(SHIPS.map(s=>s.color)).size,20);
+ for(const ship of SHIPS){
+  assert(HULL_DEFS[ship.id],ship.id+' missing hull def');
+  assert(Array.isArray(getHullDef(ship.id).body)&&getHullDef(ship.id).body.length>=5);
+  assert(Number.isInteger(ship.slots)&&ship.slots>=5&&ship.slots<=8);
+  assert(['explorer','scout','trader','miner','courier','combat'].includes(ship.class),ship.id);
+  const svg=hullPreviewSvg(ship);assert.match(svg,/ship-preview/);assert.match(svg,/<polygon /);
+ }
+ assert(SHIPS.some(s=>s.id==='raptor'&&s.class==='combat'));
+ assert(SHIPS.some(s=>s.class==='explorer'&&s.id!=='wren'&&s.id!=='kestrel'));
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(source,/function drawPlayerShip/);
- assert.match(source,/function drawPlayerHull/);
- assert(source.includes("id==='mule'")&&source.includes("id==='kestrel'")&&source.includes("id==='wren'"));
- const views=readFileSync(new URL('../dist/frontier-views.mjs',import.meta.url),'utf8');
- assert(views.includes('ship-preview'));
- assert.equal(new Set(SHIPS.map(s=>s.color)).size,3);
- assert.deepEqual(SHIPS.map(s=>s.radius),[16,22,18]);
- const g=new Game();assert.equal(g.player.r,16);g.s.docked=true;g.s.credits=50000;assert(g.buyShip('mule'));assert.equal(g.s.ship,'mule');assert.equal(g.player.r,22);assert(g.buyShip('kestrel'));assert.equal(g.player.r,18);
+ assert.match(source,/drawHullDef/);
+ assert.match(source,/hull-defs\.mjs/);
+ const g=new Game();assert.equal(g.player.r,16);g.s.docked=true;g.s.credits=250000;
+ assert(g.buyShip('mule'));assert.equal(g.s.ship,'mule');assert.equal(g.player.r,22);
+ assert(g.buyShip('kestrel'));assert.equal(g.player.r,18);
+ assert(g.buyShip('eagle'));assert.equal(g.player.r,24);
+ assert(g.buyShip('sparrow'));assert.equal(g.player.r,14);
+});
+test('Legacy hangar saves pad loadouts for new hulls',()=>{
+ const g=new Game();const raw=g.serialize();
+ delete raw.loadouts.sparrow;delete raw.loadouts.eagle;delete raw.loadouts.goliath;
+ const loaded=validateSave(raw);assert(loaded);assert.deepEqual(loaded.loadouts.sparrow,[]);assert.deepEqual(loaded.loadouts.eagle,[]);assert.deepEqual(loaded.loadouts.goliath,[]);
+ assert.equal(loaded.ship,'wren');assert(loaded.fleet.includes('wren'));
 });
 test('Player thrust and boost never control another ship’s exhaust',()=>{
  const g=new Game();g.launch();g.update(1/30,{thrust:1,boost:true});assert.equal(g.player.thrust,1);assert(g.player.boost);const patrol=g.patrols[0].thrust;g.update(1/30,{});assert.equal(g.player.thrust,0);assert(!g.player.boost);assert.equal(g.patrols[0].thrust,patrol);
@@ -297,6 +330,27 @@ test('Dynamic events start, resolve, and reuse living NPCs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/case 'dev-event'/);assert.match(app,/triggerDynamicEvent/);
  assert.match(app,/function drawEdgeArrow/);assert.match(app,/eventArrowTargets\(game\)/);
+ assert.match(app,/gravityLens|radioStorm|silentRelic/);
+});
+test('Space anomalies catalog with anomaly log type and dwell scan',()=>{
+ const g=new Game();g.launch();
+ assert(g.triggerDynamicEvent('anomalyActivity'));
+ const ev=g.dyn.active.find(e=>e.type==='anomalyActivity');assert(ev);
+ assert(['gravityLens','radioStorm','silentRelic'].includes(ev.anomalyKind));
+ if(ev.anomalyKind==='silentRelic'){
+  const d=g.derelicts.find(x=>x.id===ev.derelictId);assert(d);assert.equal(d.anomalyKind,'silentRelic');
+  g.target=d;g.player.x=d.x;g.player.y=d.y;g.player.vx=g.player.vy=0;
+  assert(g.scanDynamic());assert(d.scanned);
+  assert(g.s.explorationLog.some(e=>e.id===d.id&&e.type==='anomaly'));
+ }else{
+  const sig=g.signals.find(s=>s.id===ev.signalId);assert(sig);assert(sig.anomalyKind);
+  g.target=sig;g.player.x=sig.x;g.player.y=sig.y;g.player.vx=g.player.vy=0;
+  assert(g.scanDynamic());assert(g.dynScan);
+  ticks(g,4);assert(sig.scanned);assert(!g.dynScan);
+  assert(g.s.explorationLog.some(e=>e.id===sig.id&&e.type==='anomaly'));
+ }
+ const save=validateSave(JSON.parse(JSON.stringify(g.serialize())));
+ assert(save);assert(save.explorationLog.some(e=>e.type==='anomaly'));
 });
 test('Event direction arrows require discovery or combat alert',()=>{
  const g=new Game();g.launch();

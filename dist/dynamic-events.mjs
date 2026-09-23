@@ -3,7 +3,7 @@
  * Registry-driven: add defs to EVENT_DEFS without rewriting the manager.
  */
 import {FACTIONS} from './catalog.mjs';
-import {dist,clamp,jumpDistance,SYSTEMS} from './core.mjs';
+import {dist,clamp,jumpDistance,SYSTEMS,getStats,cargoUsed} from './core.mjs';
 import {pickTradeDestination} from './atmosphere.mjs';
 
 export const EVENT_CONFIG={
@@ -337,36 +337,54 @@ export const EVENT_DEFS={
  },
 
  anomalyActivity:{
-  id:'anomalyActivity',label:'Anomaly activity',
-  weight:g=>g.sys.uncharted?.8:.25,
+  id:'anomalyActivity',label:'Space anomaly',
+  weight:g=>g.sys.uncharted?.95:.3,
   canStart:g=>true,
   start(g,ev){
-   // Space-side stand-in near a world / deep space (surface anomalies stay untouched)
    const world=g.planets?.[0]||g.star;
-   const at=awayFrom(g,{x:world.x,y:world.y+(world.r||200)+400},200);
+   const at=awayFrom(g,{x:world.x,y:world.y+(world.r||200)+420},220);
    const roll=Math.random();
-   ev.mode=g.sys.uncharted?(roll<.5?'explorer':roll<.8?'pirates':'research'):(roll<.4?'security':roll<.75?'research':'pirates');
-   const sig=spawnSignal(g,{x:at.x,y:at.y,kind:'anomaly',name:'Anomalous reading',life:110,payload:{mode:ev.mode}});
-   ev.signalId=sig.id;ev.spawned=[];
-   if(ev.mode==='pirates'){const p=spawnPirate(g,awayFrom(g,sig,300),{name:'Anomaly stalker'});if(p)ev.spawned.push(p.id);}
-   if(ev.mode==='explorer'||ev.mode==='research'){
-    // Light civilian presence via temporary traffic-like contact as signal only
-    sig.name=ev.mode==='research'?'Research probe ping':'Explorer beacon';
+   // Weighted pick among three distinct anomaly kinds (FB-001).
+   ev.anomalyKind=g.sys.uncharted
+    ?(roll<.4?'gravityLens':roll<.75?'radioStorm':'silentRelic')
+    :(roll<.35?'gravityLens':roll<.7?'radioStorm':'silentRelic');
+   ev.spawned=[];
+   if(ev.anomalyKind==='silentRelic'){
+    const id=uid('relic');
+    const d={id,type:'derelict',name:'Silent relic',x:at.x,y:at.y,r:28,angle:Math.random()*6.28,life:130,scanned:false,discovered:false,anomalyKind:'silentRelic',lootChance:.4};
+    g.derelicts.push(d);ev.derelictId=d.id;
+    if(nearbyPlayer(g,d,EVENT_CONFIG.signalRange)){d.discovered=true;g.notify('Silent relic on sensors.');}
+   }else{
+    const names={gravityLens:'Gravity lens',radioStorm:'Radio storm'};
+    const sig=spawnSignal(g,{x:at.x,y:at.y,kind:'anomaly',name:names[ev.anomalyKind],life:120,payload:{anomalyKind:ev.anomalyKind}});
+    sig.anomalyKind=ev.anomalyKind;
+    ev.signalId=sig.id;
+    if(nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify(names[ev.anomalyKind]+' detected.');}
    }
-   if(ev.mode==='security'&&g.patrols[0]){const p=g.patrols[0];p.status='RESPONDING';p.responseTarget=sig.id;}
-   if(nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Anomalous reading detected.');}
-   log('start anomalyActivity',ev.mode);return true;
+   log('start anomalyActivity',ev.anomalyKind);return true;
   },
-  update(g,ev){
+  update(g,ev,dt){
+   if(ev.anomalyKind==='silentRelic'){
+    const d=g.derelicts.find(x=>x.id===ev.derelictId);
+    if(!d){resolve(ev,'gone');return;}
+    if(!d.discovered&&nearbyPlayer(g,d,EVENT_CONFIG.signalRange)){d.discovered=true;g.notify('Silent relic on sensors.');}
+    if(d.scanned||ev.age>d.life)resolve(ev,d.scanned?'scanned':'expired');
+    return;
+   }
    const sig=g.signals.find(s=>s.id===ev.signalId);
    if(!sig){resolve(ev,'gone');return;}
-   if(!sig.discovered&&nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify('Anomalous reading detected.');}
+   if(!sig.discovered&&nearbyPlayer(g,sig,EVENT_CONFIG.signalRange)){sig.discovered=true;g.notify(sig.name+' detected.');}
+   // Radio storm: mild heat while inside the contact radius.
+   if(ev.anomalyKind==='radioStorm'&&nearbyPlayer(g,sig,380))g.s.heat=Math.min(150,(g.s.heat||25)+2*dt);
    if(sig.scanned||ev.age>sig.life)resolve(ev,sig.scanned?'scanned':'expired');
   },
   cleanup(g,ev){
-   g.signals=g.signals.filter(s=>s.id!==ev.signalId);
-   for(const id of ev.spawned||[]){const e=g.enemies.find(x=>x.id===id);if(e&&e.eventOwned&&!e.playerHit)g.enemies=g.enemies.filter(x=>x!==e);}
-   if(g.target?.id===ev.signalId)g.target=g.station||g.star;
+   if(ev.signalId)g.signals=g.signals.filter(s=>s.id!==ev.signalId);
+   if(ev.derelictId){
+    g.derelicts=g.derelicts.filter(d=>d.id!==ev.derelictId||(ev.resolveReason==='scanned'&&d.scanned));
+    const d=g.derelicts.find(x=>x.id===ev.derelictId);if(d&&d.scanned)d.life=Math.min(d.life||0,12);
+   }
+   if(g.target?.id===ev.signalId||g.target?.id===ev.derelictId)g.target=g.station||g.star;
   }
  }
 };
@@ -443,16 +461,24 @@ export function scanDynamicTarget(game){
  const t=game.target;if(!t)return false;
  if(t.type==='signal'){
   if(dist(game.player,t)>280){game.notify('Approach within 280 m to resolve the signal.');return false;}
-  if(Math.hypot(game.player.vx,game.player.vy)>140){game.notify('Slow below 140 m/s to resolve the signal.');return false;}
+  const speed=Math.hypot(game.player.vx,game.player.vy);
+  const kind=t.anomalyKind||t.payload?.anomalyKind;
+  const needSlow=kind==='radioStorm'?90:kind==='gravityLens'?110:140;
+  if(speed>needSlow){game.notify(`Slow below ${needSlow} m/s to resolve the signal.`);return false;}
+  if(kind==='gravityLens'||kind==='radioStorm'){
+   if(game.dynScan)return false;
+   const need=kind==='radioStorm'?3.2:2.5;
+   game.dynScan={id:t.id,progress:0,need,kind};
+   game.notify('Scanning '+t.name.toLowerCase()+'. Hold position.');
+   return true;
+  }
   t.scanned=true;
   if(t.kind==='distress'){
    const value=Math.round(120+Math.random()*180);game.s.data+=value;
    game.logExploration?.({id:t.id,type:'legacy',system:game.s.system,name:'Distress log · '+((t.payload&&t.payload.cause)||'unknown'),value});
    game.notify(`Distress log recovered · +${value} cr data`,'good');
   }else if(t.kind==='anomaly'){
-   const value=Math.round(200+Math.random()*280);game.s.data+=value;
-   game.logExploration?.({id:t.id,type:'legacy',system:game.s.system,name:'Anomalous reading',value});
-   game.notify(`Anomalous reading cataloged · +${value} cr data`,'good');
+   completeAnomalyScan(game,t);
   }else game.notify('Signal resolved.');
   return true;
  }
@@ -460,11 +486,47 @@ export function scanDynamicTarget(game){
   if(dist(game.player,t)>260){game.notify('Approach the derelict to scan it.');return false;}
   if(Math.hypot(game.player.vx,game.player.vy)>120){game.notify('Slow below 120 m/s to scan the wreck.');return false;}
   t.scanned=true;
+  if(t.anomalyKind==='silentRelic'){
+   completeAnomalyScan(game,t);
+   return true;
+  }
   const value=Math.round(180+Math.random()*320);game.s.data+=value;
   game.logExploration?.({id:t.id,type:'legacy',system:game.s.system,name:'Derelict survey',value});
-  // Future salvage hook: t.lootChance
   game.notify(`Derelict surveyed · +${value} cr data`+(t.lootChance?'. Salvage systems pending.':''),'good');
   return true;
  }
  return false;
 }
+
+function completeAnomalyScan(game,t){
+ const kind=t.anomalyKind||t.payload?.anomalyKind||'gravityLens';
+ const ranges={gravityLens:[280,520],radioStorm:[320,600],silentRelic:[240,480]};
+ const [lo,hi]=ranges[kind]||[240,480];
+ const value=Math.round(lo+Math.random()*(hi-lo));
+ game.s.data+=value;
+ const labels={gravityLens:'Gravity lens survey',radioStorm:'Radio storm catalog',silentRelic:'Silent relic survey'};
+ game.logExploration?.({id:t.id,type:'anomaly',system:game.s.system,name:labels[kind]||'Space anomaly',value});
+ let extra='';
+ if(kind==='silentRelic'&&Math.random()<.4){
+  const goods=['ore','meds','tech'].filter(id=>game.s.cargo&&id in game.s.cargo);
+  const good=goods[Math.floor(Math.random()*Math.max(1,goods.length))]||'ore';
+  const st=getStats(game.s),used=cargoUsed(game.s);
+  if(used>=st.cargo){const cr=80+Math.floor(Math.random()*61);game.s.credits+=cr;extra=` · hold full, +${cr} cr`;}
+  else{game.s.cargo[good]=(game.s.cargo[good]||0)+1;extra=` · +1 t ${good}`;}
+ }
+ game.notify(`${labels[kind]||'Anomaly'} · +${value} cr data${extra}`,'good');
+}
+
+export function tickDynScan(game,dt){
+ const scan=game.dynScan;if(!scan)return;
+ const t=game.signals.find(s=>s.id===scan.id)||game.derelicts.find(d=>d.id===scan.id);
+ if(!t||t.scanned||game.target?.id!==scan.id){game.dynScan=null;game.notify('Anomaly scan interrupted.');return;}
+ const range=t.type==='derelict'?260:280;
+ const needSlow=scan.kind==='radioStorm'?90:110;
+ if(dist(game.player,t)>range||Math.hypot(game.player.vx,game.player.vy)>needSlow){game.dynScan=null;game.notify('Anomaly scan interrupted.');return;}
+ scan.progress+=dt;
+ if(scan.progress>=scan.need){
+  t.scanned=true;game.dynScan=null;completeAnomalyScan(game,t);
+ }
+}
+

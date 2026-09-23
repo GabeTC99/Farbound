@@ -1,0 +1,13 @@
+{
+  "release": "2.7.2",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Restore full retina canvas resolution on phones (the 2.7.1 sharpness drop was the DPR cap).",
+    "Keep phones smooth without soft focus: skip the full-screen nebula blit, simplify planets/stars, throttle radar, and drop shot glow / ion streaks on touch devices."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

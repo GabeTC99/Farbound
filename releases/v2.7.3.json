@@ -1,0 +1,12 @@
+{
+  "release": "2.7.3",
+  "name": "Frontiers",
+  "date": "2026-09-10",
+  "notes": [
+    "Space-flight mobile lag: cheap asteroids, no orbit rings, fewer particles/trails/labels, simpler stations and signals — without dropping canvas resolution."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
