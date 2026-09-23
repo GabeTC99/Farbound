@@ -16,11 +16,21 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.9**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.10**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
 This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. APK testers download from **[Releases](https://github.com/GabeTC99/Nullharbor/releases/latest)**. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred.
 
 ## Nullharbor 2.16
+
+### Candidate 2.16.10
+
+- **Hort:** Solace station messenger easter egg. Walk the concourse to the **Messenger desk** (hub, off the Cartographics arm) and talk. Horse-flavored rumors, no questline.
+- **Portrait:** Station-card painting from the cleared likeness — sandy-blonde hair, light blue-green eyes, dark brows, moles, gold nose hoop, blue hoodie. Not a raw photo dump.
+- **Hortreach:** Uncharted Reach system **UR-042**. Discovered name **Hortreach**; scouts also call it **Hort's Pasture**. Chart search matches Hort, Pasture, Hortreach, or UR-042. Name stays hidden until you visit.
+- **Credits:** Flight menu → **Credits**. Gabriel Trindade-Coffland (Founder / Creative Director), Gillian Trindade-Coffland (Assistant Producer), Oryanna Nelson (Special Appearance · Hort). Real names stay off the galaxy chart. No emails or addresses.
+- **Ship:** versionName **2.16.10** · Android **versionCode 12**. Do **not** tag a Release until this PR merges to `beta`. After merge, tag the beta tip so https://github.com/GabeTC99/Nullharbor/releases/latest updates.
+- **How to find:** Dock at Solace → walk to Messenger desk (or Flight menu → Temporary DEV tools → Hort). Galaxy chart search **Hort** or **UR-042**. DEV → Teleport · Hortreach. Credits: Flight menu → Credits.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.10`. 2.16.2–2.16.9 flash/AA/APK/cloud sync paths stay.
 
 ### Candidate 2.16.9
 
@@ -277,7 +287,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.9). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.10). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -320,6 +330,8 @@ node tests/cloud-sync.mjs
 node tests/android-webview.mjs
 node tests/sw-update.mjs
 node tests/offline.mjs
+node tests/hort.mjs
+node tests/credits.mjs
 ```
 
 Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA and physical Fold sideload still need Gabe on-device. Native `assembleDebug` is scripted (Gradle wrapper + CI); a debug APK is produced when the SDK is available.
@@ -334,7 +346,7 @@ That URL stays stable. Each Android Release also keeps a versioned asset (`nullh
 
 ### First install (one-time unknown-apps)
 
-1. Download **Nullharbor.apk** from the latest Release (or the versioned twin `nullharbor-2.16.9-vc11.apk`).
+1. Download **Nullharbor.apk** from the latest Release (or the versioned twin `nullharbor-2.16.10-vc12.apk`).
 2. **One-time:** Settings → Security / Install unknown apps → allow the Files, Chrome, or Messages app you will use to open the file.
 3. Open the APK → **Install**. First sideload may need **Allow from this source**.
 4. Open **Nullharbor**. Game assets are offline-bundled; play works without a network. The APK may use HTTPS for optional **Cloud sync** (create account / sign in / upload-download) only.
@@ -351,7 +363,7 @@ Download the newer APK from the same Releases page and open it. Android **replac
 
 You do not uninstall first. Saves stay on device. If Android says the package conflicts or is not signed by the same certificate, uninstall once and install again.
 
-This tree is **versionName 2.16.9 · versionCode 11**. Published `/releases/latest` stays on the last tagged APK until PM tags the merged beta tip. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
+This tree is **versionName 2.16.10 · versionCode 12**. Published `/releases/latest` stays on the last tagged APK until PM tags the merged beta tip. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
 
 ### Fold 120 Hz check
 

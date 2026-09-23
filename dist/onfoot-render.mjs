@@ -102,6 +102,9 @@ function drawIcon(ctx,x,y,s,kind,color){
   ctx.strokeRect(-u,-u,u*2,u*2);
   ctx.beginPath();ctx.moveTo(-u*.35,-u*.2);ctx.lineTo(-u*.35,u*.5);ctx.lineTo(u*.35,u*.5);ctx.lineTo(u*.35,-u*.2);ctx.stroke();
   ctx.beginPath();ctx.arc(0,-u*.2,u*.35,Math.PI,0);ctx.stroke();
+ }else if(kind==='messenger'){
+  ctx.strokeRect(-u*1.05,-u*.7,u*2.1,u*1.4);
+  ctx.beginPath();ctx.moveTo(-u*1.05,-u*.7);ctx.lineTo(0,u*.15);ctx.lineTo(u*1.05,-u*.7);ctx.stroke();
  }else{
   ctx.beginPath();ctx.arc(0,0,u,0,Math.PI*2);ctx.stroke();
  }
@@ -186,7 +189,8 @@ function drawStandingCrew(ctx,x,y,scale,facing,walk,color,suit,opts={}){
   ctx.beginPath();rr(ctx,-6.8*scale,-6.6*scale+stride*.45*scale,2.1*scale,6.6*scale,1);ctx.fill();
   ctx.beginPath();rr(ctx,4.7*scale,-6.6*scale-stride*.45*scale,2.1*scale,6.6*scale,1);ctx.fill();
  }
- ctx.fillStyle='#b7a088';
+ const hort=opts.look==='hort';
+ ctx.fillStyle=hort?'#e0c4a4':'#b7a088';
  ctx.beginPath();ctx.arc(0,headY,4.1*scale,0,Math.PI*2);ctx.fill();
  ctx.fillStyle='rgba(0,0,0,.18)';
  ctx.beginPath();ctx.arc(1.3*scale,headY+.4*scale,3.2*scale,0,Math.PI*2);ctx.fill();
@@ -196,6 +200,21 @@ function drawStandingCrew(ctx,x,y,scale,facing,walk,color,suit,opts={}){
   if(toward){
    ctx.fillStyle='rgba(159,240,224,.55)';
    ctx.beginPath();ctx.ellipse(.3*scale,headY+1*scale,2.4*scale,1.7*scale,0,0,Math.PI*2);ctx.fill();
+  }
+ }else if(hort){
+  ctx.fillStyle='#c9b07a';
+  ctx.beginPath();ctx.ellipse(0,headY-1.7*scale,4.3*scale,3.1*scale,0,Math.PI,0);ctx.fill();
+  ctx.beginPath();ctx.ellipse(-2.6*scale,headY+.2*scale,1.7*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(2.8*scale,headY+.8*scale,1.5*scale,3.8*scale,0,0,Math.PI*2);ctx.fill();
+  if(toward){
+   ctx.fillStyle='#3a2418';
+   ctx.beginPath();ctx.ellipse(-1.15*scale,headY-.15*scale,1.05*scale,.32*scale,0,0,Math.PI*2);ctx.fill();
+   ctx.beginPath();ctx.ellipse(1.15*scale,headY-.15*scale,1.05*scale,.32*scale,0,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#6a9aa4';
+   ctx.beginPath();ctx.ellipse(-1.1*scale,headY+.45*scale,.42*scale,.48*scale,0,0,Math.PI*2);ctx.fill();
+   ctx.beginPath();ctx.ellipse(1.1*scale,headY+.45*scale,.42*scale,.48*scale,0,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#d4a11a';
+   ctx.beginPath();ctx.arc(-.55*scale,headY+.85*scale,.28*scale,0,Math.PI*2);ctx.fill();
   }
  }else{
   ctx.fillStyle=mix(accent,'#1a242c',.25);
@@ -964,7 +983,7 @@ function renderStationConcourse(ctx,width,height,s,clock){
   sprites.push({depth:proj.depth(n.x,n.y),draw:()=>{
    const p=proj.p(n.x,n.y,DECK_H);
    if(n.role==='robot')drawRobotUnit(ctx,p.x,p.y,spriteScale*1.02,n.color||accent,clock);
-   else drawStandingCrew(ctx,p.x,p.y,spriteScale,n.facing||0,n.walk||0,n.color||'#8aa3b0',n.suit||'#2a3d48',{crate:n.role==='hauler',sit:!!n.sit||n.role==='sitter'});
+   else drawStandingCrew(ctx,p.x,p.y,spriteScale,n.facing||0,n.walk||0,n.color||'#8aa3b0',n.suit||'#2a3d48',{crate:n.role==='hauler',sit:!!n.sit||n.role==='sitter',look:n.look||null});
    if(n.line)overlays.push(()=>drawSpeech(ctx,p.x,p.y,spriteScale,n.line));
    else if(Math.hypot(n.x-s.x,n.y-s.y)<78&&Math.hypot(n.x-s.x,n.y-s.y)>18)overlays.push(()=>drawNameplate(ctx,p.x,p.y,spriteScale,n.name));
   }});

@@ -38,6 +38,8 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
+- September 23, 2026: Candidate 2.16.10 Solace messenger easter egg (Hort) plus Uncharted Reach chart tag Hortreach / Hort's Pasture (UR-042). Flight menu Credits (Gabe / Gillian / Oryanna as Hort). Station-card portrait, horse-flavored desk talk, no starring quest. Real names stay off the chart. versionName 2.16.10 / versionCode 12. Do not tag Releases until merge. Service worker cache bumped to `farbound-v2.16.10`. Save keys stay `farbound-save-v2`. Rollback tag `v2.16.9`.
+
 - September 22, 2026: Candidate 2.16.9 APK optional cloud sync: INTERNET permission + WebView intercept pass-through for non-appassets HTTPS (Supabase). zip/`..`/non-https stay blocked. usesCleartextTraffic false. RLS and anon key unchanged. Game assets remain offline-bundled. versionName 2.16.9 / versionCode 11. Do not tag Releases until merge. Service worker cache bumped to `farbound-v2.16.9`. Rollback tag `v2.16.8`.
 
 - September 22, 2026: Candidate 2.16.8 APK Flight-menu polish: short generic Graphics copy; hide Install app behind NullharborAndroid; click-free ambience (loop-edge fade, pause/resume ramp, no blur mute). versionName 2.16.8 / versionCode 10. Do not tag Releases until merge. Service worker cache bumped to `farbound-v2.16.8`. Rollback tag `v2.16.7`.
