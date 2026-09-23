@@ -127,7 +127,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.16\.10'/);
+ assert.match(release,/export const RELEASE='2\.16\.11'/);
  assert.match(release,/export const RELEASE_NAME='Nullharbor'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/import \{applyAppUpdate,detectAppUpdate\} from '\.\/sw-update\.mjs'/);
@@ -201,8 +201,11 @@ test('Player-facing product strings are Nullharbor; save keys stay farbound',()=
  assert.match(app,/GabeTC99\/Nullharbor\/releases\/latest/);
  assert.match(loop,/NullharborAndroid/);
  assert.match(loop,/FarboundAndroid/);
+ assert.match(loop,/NullharborDesktop/);
+ assert.match(loop,/bundledAssetHost/);
  assert.match(classic,/NullharborAndroid/);
  assert.match(classic,/FarboundAndroid/);
+ assert.match(classic,/NullharborDesktop/);
  assert.equal(SAVE_KEY,'farbound-save-v2');
  assert.match(app,/data-action="update-app"/);
 });
@@ -284,7 +287,7 @@ test('Engine volume uses the full slider and stays silent at zero',()=>{
  assert.match(app,/case 'sound':[\s\S]*muteAll/);
  assert.ok(!/blur'\)=>\{resetControls\(\);engine\.muteAll/.test(app),'blur must not hard-cut audio');
 });
-test('Flight menu Graphics copy is short and Install app hides in the APK',()=>{
+test('Flight menu Graphics copy is short and Install app hides in native shells',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const g=app.slice(app.indexOf('<h3>Graphics</h3>'),app.indexOf('<h3>Engine & station ambience</h3>'));
  assert.match(g,/Full keeps the intended visuals/);

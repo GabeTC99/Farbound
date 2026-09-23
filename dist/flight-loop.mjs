@@ -457,9 +457,14 @@ export function createGpuKeepAlive(doc=globalThis.document){
  };
 }
 
-/** Preferred NullharborAndroid, then the FarboundAndroid alias. */
+/** Bundled APK / Windows exe hosts skip the Pages service worker. */
+export function bundledAssetHost(host){
+ return host==='appassets.androidplatform.net'||host==='appassets.nullharbor.local';
+}
+
+/** Preferred NullharborAndroid, then aliases (FarboundAndroid, NullharborDesktop). */
 export function nativeAndroidBridge(win=globalThis){
- return win?.NullharborAndroid||win?.FarboundAndroid||null;
+ return win?.NullharborAndroid||win?.FarboundAndroid||win?.NullharborDesktop||null;
 }
 
 /** Read the Android shell refresh lock. Never used as a fake FPS number. */

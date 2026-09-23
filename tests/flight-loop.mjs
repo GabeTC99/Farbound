@@ -8,7 +8,7 @@ import {
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,createFpsMeter,FPS_STALL_MS,
  inferCadence,idleRefreshThrottle,CADENCE_HZ,mountRefreshKeepAlive,setRefreshKeepAlive,
  createFlightWakeLock,HZ_KEEP_ID,HZ_KEEP_CLASS,HZ_KEEP_ANIM,
- createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,GPU_KEEP_ID,
+ createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,bundledAssetHost,GPU_KEEP_ID,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
  hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,strokeBand,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
@@ -317,12 +317,16 @@ const preferred={refreshLock:()=>'ok'};
 assert.equal(nativeAndroidBridge({}),null);
 assert.equal(nativeAndroidBridge({FarboundAndroid:preferred}),preferred);
 assert.equal(nativeAndroidBridge({NullharborAndroid:preferred,FarboundAndroid:{}}),preferred);
+assert.equal(nativeAndroidBridge({NullharborDesktop:preferred}),preferred);
+assert.equal(bundledAssetHost('appassets.androidplatform.net'),true);
+assert.equal(bundledAssetHost('appassets.nullharbor.local'),true);
+assert.equal(bundledAssetHost('gabetc99.github.io'),false);
 
 const gradle=readFileSync(new URL('../android/app/build.gradle',import.meta.url),'utf8');
 assert.match(gradle,/applicationId 'com\.nullharbor\.game'/);
 assert.match(gradle,/namespace 'com\.nullharbor\.game'/);
 assert.match(gradle,/syncWebAssets/);
-assert.match(gradle,/versionName '2\.16\.10'/);
+assert.match(gradle,/versionName '2\.16\.11'/);
 assert.match(gradle,/versionCode 12/);
 assert.match(gradle,/signingConfigs/);
 assert.match(gradle,/sideload/);

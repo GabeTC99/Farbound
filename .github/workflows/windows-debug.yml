@@ -1,0 +1,52 @@
+name: Windows debug exe
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'desktop/**'
+      - 'dist/**'
+      - '.github/workflows/windows-debug.yml'
+  pull_request:
+    branches: [beta]
+    paths:
+      - 'desktop/**'
+      - 'dist/**'
+      - '.github/workflows/windows-debug.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install desktop toolchain
+        working-directory: desktop
+        run: npm ci
+      - name: Sync web assets
+        shell: bash
+        run: desktop/scripts/sync-web-assets.sh
+      - name: Build portable exe
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run pack
+      - name: Upload Nullharbor debug exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: nullharbor-2.16.11-win
+          path: desktop/release/Nullharbor.exe
+          if-no-files-found: error

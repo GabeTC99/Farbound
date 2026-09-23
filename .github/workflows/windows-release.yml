@@ -1,0 +1,71 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - 'windows-v*'
+      - 'v*-windows'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install desktop toolchain
+        working-directory: desktop
+        run: npm ci
+      - name: Sync web assets
+        shell: bash
+        run: desktop/scripts/sync-web-assets.sh
+      - name: Build portable exe
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run pack
+      - name: Name artifacts from package version
+        id: ver
+        shell: bash
+        run: |
+          NAME=$(node -p "require('./desktop/package.json').version")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          mkdir -p "$GITHUB_WORKSPACE/dist-win"
+          cp desktop/release/Nullharbor.exe "$GITHUB_WORKSPACE/dist-win/Nullharbor.exe"
+          cp desktop/release/Nullharbor.exe "$GITHUB_WORKSPACE/dist-win/nullharbor-${NAME}-win.exe"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('windows-v{0}', steps.ver.outputs.name) }}
+          name: Nullharbor Windows ${{ steps.ver.outputs.name }}
+          generate_release_notes: true
+          make_latest: false
+          body: |
+            Portable Windows `.exe` for PC testers. Bundles the same `dist/` web game as Pages / the Android APK.
+
+            **Download / update:** https://github.com/GabeTC99/Nullharbor/releases/download/${{ github.ref_type == 'tag' && github.ref_name || format('windows-v{0}', steps.ver.outputs.name) }}/Nullharbor.exe
+
+            Same bytes as `nullharbor-${{ steps.ver.outputs.name }}-win.exe`. The stable `Nullharbor.exe` name is for site deep-links later.
+
+            This Windows tag does **not** become GitHub `/releases/latest` — that URL stays the newest Android APK (`Nullharbor.apk`).
+
+            Unsigned sideload: SmartScreen may warn. More info → Run anyway. No in-app updater — download a newer `windows-v*` exe when you want an update. Saves stay on this PC (`farbound-save-v2`).
+
+            Game files are offline-bundled. HTTPS is open for optional **Cloud sync** (Supabase), same as the APK.
+
+            Pages web testers stay on https://gabetc99.github.io/Nullharbor/
+          files: |
+            dist-win/Nullharbor.exe
+            dist-win/nullharbor-${{ steps.ver.outputs.name }}-win.exe
+          fail_on_unmatched_files: true

@@ -8,6 +8,8 @@ An original game for Android touchscreens and desktop browsers. Inspired by the 
 
 **Fold 120 Hz:** sideload the Nullharbor APK from **https://github.com/GabeTC99/Nullharbor/releases/latest/download/Nullharbor.apk** (stable filename; steps under *Android sideload*). Chrome PWA / GitHub Pages cannot lock the display mode; native games can, and that is what the shell does. Check Releases for a newer APK.
 
+**Windows PC:** download **https://github.com/GabeTC99/Nullharbor/releases/download/windows-v2.16.11/Nullharbor.exe** (stable filename on that tag; steps under *Windows sideload*). SmartScreen may warn on the unsigned build. Check Releases for a newer `windows-v*` exe.
+
 **Web / PWA (Pages beta):** Open https://gabetc99.github.io/Nullharbor/ in Chrome, then use **Menu → Add to Home screen → Install**. If Chrome offers a shortcut instead, it still opens the game in your browser. Open the game online once and check **Flight menu → Install on Android** for the offline-files-ready message before relying on offline access. The first hosted visit may require signing in as the Site owner. Expect ~60 FPS while hands-off on Fold until the ship moves.
 
 ## Beta builds (share with testers)
@@ -16,11 +18,21 @@ Public beta builds are deployed from the `beta` branch to GitHub Pages:
 
 **https://gabetc99.github.io/Nullharbor/**
 
-To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.10**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
+To publish a new beta: merge or cherry-pick the build you want onto `beta`, push, and wait for the **Deploy beta** GitHub Action to finish. Testers only need the link above. After a new build deploys, open **Flight menu → Update** to pick up the new service worker and assets. The welcome chip should read **Nullharbor 2.16.11**. Hard-refresh only if an old worker still sticks. To restore the bird’s-eye station, `git checkout v2.12.1`.
 
-This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`). GitHub Pages beta stays the fast web channel. APK testers download from **[Releases](https://github.com/GabeTC99/Nullharbor/releases/latest)**. A PC `.exe` launcher is planned for a later PR — do not expect Electron/Tauri in this drop. Play Store listing and in-app auto-update are deferred.
+This delivery contains a playable browser/PWA prototype, a Fold-ready **Nullharbor Android sideload APK** (`com.nullharbor.game`), and a **Windows portable `.exe`**. GitHub Pages beta stays the fast web channel. APK testers download from **[Releases](https://github.com/GabeTC99/Nullharbor/releases/latest)** (`Nullharbor.apk`). Windows testers download from a `windows-v*` Release (`Nullharbor.exe`) — those tags do not replace GitHub `/releases/latest`. Play Store listing and in-app auto-update are deferred.
 
 ## Nullharbor 2.16
+
+### Candidate 2.16.11
+
+- **Windows `.exe`:** portable Electron shell for any Windows PC (x64). Bundles the same `dist/` web game as Pages / the APK. Download **Nullharbor.exe** from a `windows-v*` GitHub Release. Unsigned — SmartScreen may warn; More info → Run anyway.
+- **Network:** game files stay on-disk. HTTPS is open for optional **Cloud sync** (Supabase), same as the APK. Not an offline-only lockdown.
+- **Install app:** hidden in the desktop shell (`NullharborDesktop`) and the APK (`NullharborAndroid` / `FarboundAndroid`). Pages PWA still shows the row.
+- **Releases:** tag `windows-v*` / `v*-windows` runs **Windows Release** on `windows-latest` and uploads `Nullharbor.exe` plus `nullharbor-2.16.11-win.exe`. `make_latest: false` so `/releases/latest/download/Nullharbor.apk` stays the newest Android APK.
+- **Ship:** versionName **2.16.11** · Android **versionCode 12** (this ship is the PC exe; no new APK). Do **not** tag a Release until this PR merges to `beta`. After merge, tag `windows-v2.16.11` on the beta tip.
+- **How to verify:** run `Nullharbor.exe`, confirm the welcome chip reads **Nullharbor 2.16.11**, Flight menu has no Install app row, and Cloud sync can still reach Supabase when signed in. Pages still shows Install. Existing Node tests stay green.
+- **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.11`. 2.16.2–2.16.10 flash/AA/APK/cloud sync paths stay.
 
 ### Candidate 2.16.10
 
@@ -287,7 +299,7 @@ This update is prepared for review; publishing is a separate step. The preserved
 - **Engine audio:** a quiet synthesized hum follows motion and boost, pauses in menus and the background, and has a separate volume slider alongside the sound toggle.
 - **Other improvements:** fuel scooping at stars enables deep exploration without stations; eight expedition relays provide services in the Reach. Depleted asteroids and defeated ships persist across reloads. Boost affects acceleration, station approach is stable, and market rounding preserves the buy/sell spread even with rewards and faction discounts.
 
-The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.10). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
+The original trading, mining, combat, contracts, twenty ships, touch controls, and orbital surveys remain. Most menus pause the simulation; station desks leave local space running, and closing them returns you to the walkable deck rather than launching. Player-facing version lives in `dist/release.mjs` (2.16.11). This is a solo prototype with local progression, without multiplayer. On-foot play covers station decks and local planetary sites after skiff touchdown. Faction standing is a pilot-level simulation rather than a shared online universe.
 
 ## Controls
 
@@ -328,6 +340,7 @@ node tests/flight-loop.mjs
 node tests/engine-audio.mjs
 node tests/cloud-sync.mjs
 node tests/android-webview.mjs
+node tests/desktop-webview.mjs
 node tests/sw-update.mjs
 node tests/offline.mjs
 node tests/hort.mjs
@@ -363,7 +376,7 @@ Download the newer APK from the same Releases page and open it. Android **replac
 
 You do not uninstall first. Saves stay on device. If Android says the package conflicts or is not signed by the same certificate, uninstall once and install again.
 
-This tree is **versionName 2.16.10 · versionCode 12**. Published `/releases/latest` stays on the last tagged APK until PM tags the merged beta tip. Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
+This tree is **versionName 2.16.11 · versionCode 12**. Published `/releases/latest` stays on the last tagged APK until PM tags a newer `android-v*` (Windows `windows-v*` tags set `make_latest: false` so they do not steal that URL). Every new APK ship must bump `versionCode` (and `versionName` when the player-facing build changes) in `android/app/build.gradle`.
 
 ### Fold 120 Hz check
 
@@ -412,7 +425,62 @@ The first build downloads Android build dependencies. Debug and release APKs for
 
 The shell serves bundled game assets through an intercepted HTTPS origin (`https://appassets.androidplatform.net/assets/`). Other HTTPS requests (optional Supabase cloud sync) pass through to the real network. The APK may use the network for that opt-in account flow; play itself stays offline. The shell keeps the screen on, goes immersive fullscreen, and exposes `NullharborAndroid` / `FarboundAndroid` (`exportSave`, `refreshLock`). Android 8.0+ and a current Android System WebView are required.
 
-**Planned, not in this PR:** a PC `.exe` launcher (Electron/Tauri). Pages PWA remains the desktop/web channel.
+## Windows sideload
+
+PC testers download the portable exe from a dedicated Windows tag (not GitHub `/releases/latest` — that URL is the Android APK):
+
+**https://github.com/GabeTC99/Nullharbor/releases/download/windows-v2.16.11/Nullharbor.exe**
+
+That filename stays stable on each `windows-v*` release. Each Windows Release also keeps a versioned twin (`nullharbor-2.16.11-win.exe`) with the same bytes. There is **no in-app auto-updater** — when you want a newer build, download a newer `windows-v*` exe. Mac/Linux launchers are later.
+
+### First run
+
+1. Download **Nullharbor.exe** from the `windows-v*` Release (or the versioned twin `nullharbor-2.16.11-win.exe`).
+2. Windows SmartScreen may say the app is unrecognized (unsigned sideload, no paid certificate). Choose **More info → Run anyway**.
+3. Open **Nullharbor**. Game assets are offline-bundled; play works without a network. The exe may use HTTPS for optional **Cloud sync** (create account / sign in / upload-download) only.
+4. Optional: Flight menu → Restore a pilot to import a Pages or APK save (`farbound-save-v2`).
+
+Saves live in the Electron userData folder on that PC. They do not migrate automatically from the browser.
+
+### Updates
+
+Download the newer `Nullharbor.exe` from a newer `windows-v*` tag and replace the old file. Higher display version (2.16.11 → later) is the signal that it is newer. You do not uninstall first. Saves stay on disk.
+
+This tree is **Nullharbor 2.16.11** for the Windows portable exe. Published `/releases/latest` stays the last tagged **Android** APK. Tag the merged beta tip with `windows-v2.16.11` so the Windows assets appear.
+
+### Publish a new exe (maintainers)
+
+1. Bump `desktop/package.json` `version` (and `dist/release.mjs` when the player-facing build changes).
+2. Preferred — tag and push (CI **Windows Release** builds on `windows-latest` and uploads `Nullharbor.exe` plus the versioned twin):
+   ```sh
+   git tag windows-v2.16.11
+   git push origin windows-v2.16.11
+   # also accepted: v2.16.11-windows
+   # helper (prints the same commands): desktop/scripts/cut-windows-release.sh
+   ```
+3. Do **not** use a generic `v2.16.11` tag for the exe — that would mix with Android `/releases/latest`. Windows tags stay in the `windows-v*` / `v*-windows` namespace and set `make_latest: false`.
+
+PR **Actions → Windows debug exe** is a CI smoke artifact, not the tester channel.
+
+## Build the native Windows app
+
+`desktop/` is an Electron portable shell. Need **Node 22** and a Windows machine (or GitHub `windows-latest`) to produce the `.exe`. From a Windows checkout:
+
+```sh
+# from repo root
+bash desktop/scripts/sync-web-assets.sh
+cd desktop
+npm ci
+npm run pack
+```
+
+Output:
+
+`desktop/release/Nullharbor.exe`
+
+The first pack downloads Electron. The portable exe is **unsigned** (SmartScreen will warn). Paid code signing is later. `desktop/scripts/sync-web-assets.sh` copies `dist/` → `desktop/game/` (excludes `*.zip` and `sw.js`, same idea as the APK). The shell serves bundled game assets through an intercepted HTTPS origin (`https://appassets.nullharbor.local/assets/`). Other HTTPS requests (optional Supabase cloud sync) pass through to the real network. It exposes `NullharborDesktop` (`exportSave`, `refreshLock`). Local `npm start` loads `../dist` the same way without packing.
+
+Pages PWA remains the desktop/web channel for browsers. This exe is the offline-capable PC sideload.
 
 ## Reference research
 
