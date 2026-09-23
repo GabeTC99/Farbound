@@ -1,5 +1,6 @@
 import {SYSTEMS,SHIPS,GOODS,UPGRADES,getStats,jumpDistance,jumpCost,findRoute,systemName,guildProgress,operationDetails,FACTIONS,GUILDS,MODULES,moduleSlots,systemLayoutMeta,systemSky,marketBulletin,systemPresence,bestExport} from './frontier.mjs';
 import {STATION_ROBOT,ensureRobotState} from './station-robot.mjs';
+import {ensureHortState,hortFaceHtml,STATION_HORT} from './station-hort.mjs';
 import {hullPreviewSvg} from './ship-render.mjs';
 const fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),row=(a,b)=>`<div class="data-row"><span>${a}</span>${b}</div>`;
 function robotFaceSvg(expression='neutral'){
@@ -22,6 +23,19 @@ function robotFaceSvg(expression='neutral'){
 }
 function robotActions(docked){
  return `<div class="section-actions robot-actions"><button class="primary" data-action="robot-talk" ${!docked?'disabled':''}>Talk</button><button data-action="robot-tip" ${!docked?'disabled':''}>Ask for a tip</button></div>`;
+}
+/** Compact face + dialogue strip shown on the Solace messenger desk. */
+export function hortStrip(game){
+ const state=ensureHortState(game);
+ const quote=state.lastText||'Packets are moving. Tap Talk if you want a rumor.';
+ return `<aside class="robot-strip hort-strip" aria-label="${esc(STATION_HORT.displayName)} station messenger">
+  <div class="robot-strip-face hort-strip-face">${hortFaceHtml()}</div>
+  <div class="robot-strip-copy">
+   <div class="robot-strip-head"><div class="eyebrow">${esc(STATION_HORT.roleLabel)}</div><strong>${esc(STATION_HORT.displayName)}</strong></div>
+   <blockquote class="robot-quote"><p>${esc(quote)}</p></blockquote>
+   <div class="section-actions robot-actions"><button class="primary" data-action="hort-talk">Talk</button><button data-action="hort-tip">Ask about the Reach</button></div>
+  </div>
+ </aside>`;
 }
 /** Compact face + dialogue strip shown on the Market tab. */
 export function robotStrip(game){
@@ -54,7 +68,7 @@ export function systemMapView(game){
  const mode=s.docked?'Docked at station':game.surface?'On planetary surface':game.onfoot?'On station deck':'In free flight';
  return `<div class="map-layout"><div class="map-surface"><canvas class="galaxy-map system-map" id="system-map" aria-label="System map. Drag to pan, pinch to zoom, tap a body to target."></canvas><div class="chart-controls"><button data-action="system-zoom" data-id="in" aria-label="Zoom in">+</button><button data-action="system-zoom" data-id="out" aria-label="Zoom out">−</button><button data-action="system-home">Locate me</button><button data-action="system-fit">Fit system</button></div><div class="map-legend"><span class="accent">▲ You</span><span>● World</span><span>■ Station</span></div></div><div class="map-side"><span class="tag">${sys.uncharted?(known?'Discovered':'Uncharted'):'Local space'}</span><h2>${systemName(sys,s)}</h2>${row('Status',mode)}${row('Sky',sky.label)}${row('Stars',String(stars))}${row('Bodies shown',String(bodies))}${row('Stations',docks?String(docks):'None')}<p class="detail-text" style="margin-top:14px">Tap a body to set your navigation target. Unknown worlds appear after a discovery pulse.</p></div></div><p class="intro chart-note">Local chart of your current system. Position updates live while this panel is open.</p>`;
 }
- export function mapView(game,selected,query='',filter='all'){const s=game.s,st=getStats(s),sys=SYSTEMS[selected],known=!sys.uncharted||s.visited.includes(sys.id),current=selected===s.system,path=findRoute(s.system,selected,st.range),route=s.route,next=route?.path?.[0],fuel=path?.reduce((sum,id,i)=>sum+jumpCost(i?path[i-1]:s.system,id,s),0)||0,matches=SYSTEMS.filter(x=>(filter==='all'||filter==='charted'&&!x.uncharted||filter==='uncharted'&&x.uncharted||filter==='visited'&&s.visited.includes(x.id))&&(!query||systemName(x,s).toLowerCase().includes(query.toLowerCase())||(x.catalog||'').toLowerCase().includes(query.toLowerCase()))).sort((a,b)=>jumpDistance(s.system,a.id)-jumpDistance(s.system,b.id)),can=!s.docked&&!game.surface&&!game.jump&&next!=null&&s.fuel>=jumpCost(s.system,next,s)&&jumpDistance(s.system,next)<=st.range;
+ export function mapView(game,selected,query='',filter='all'){const s=game.s,st=getStats(s),sys=SYSTEMS[selected],known=!sys.uncharted||s.visited.includes(sys.id),current=selected===s.system,path=findRoute(s.system,selected,st.range),route=s.route,next=route?.path?.[0],fuel=path?.reduce((sum,id,i)=>sum+jumpCost(i?path[i-1]:s.system,id,s),0)||0,matches=SYSTEMS.filter(x=>(filter==='all'||filter==='charted'&&!x.uncharted||filter==='uncharted'&&x.uncharted||filter==='visited'&&s.visited.includes(x.id))&&(!query||systemName(x,s).toLowerCase().includes(query.toLowerCase())||(x.catalog||'').toLowerCase().includes(query.toLowerCase())||(x.name||'').toLowerCase().includes(query.toLowerCase())||(x.search||'').toLowerCase().includes(query.toLowerCase()))).sort((a,b)=>jumpDistance(s.system,a.id)-jumpDistance(s.system,b.id)),can=!s.docked&&!game.surface&&!game.jump&&next!=null&&s.fuel>=jumpCost(s.system,next,s)&&jumpDistance(s.system,next)<=st.range;
  const meta=systemLayoutMeta(sys),starTag=meta.starCount===3?'Trinary':meta.starCount===2?'Binary':'Single star';
  const note=known?marketBulletin(sys,s.playtime):null;
  const presence=known?systemPresence(sys,s):null;

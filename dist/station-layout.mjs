@@ -29,7 +29,8 @@ export const STATION_CHAT={
  talker:['Don’t fly wanted.','Core’s humming loud tonight.','Another quiet arrival.','That hull looks interpretive.'],
  clerk:['Next.','I can wait.','Sign here. Mentally.'],
  tech:['Pad three’s open.','Mind the fold wash.','Hold short of the stripe.'],
- sitter:['Coffee’s burnt again.','Give the core a minute.','Heard Sundog’s paying.']
+ sitter:['Coffee’s burnt again.','Give the core a minute.','Heard Sundog’s paying.'],
+ messenger:['Packets first.','Horses later.','Hortreach is quiet.']
 };
 
 /**
@@ -119,8 +120,10 @@ function makeNpcs(r,hull,zones,look){
  desks.forEach((z,i)=>{
   const a=Math.atan2(z.y-hull.cy,z.x-hull.cx);
   const pos=polar(z.x,z.y,a+Math.PI,26);
-  npcs.push(npcBase('clerk-'+z.id,'clerk',takeName(CLERK_NAMES,used),pos.x,pos.y,{
-   facing:a,color:NPC_COLORS[i%NPC_COLORS.length],suit:look.floor,service:z.service,speed:0,phase:i*.85
+  const hort=z.service==='messenger';
+  if(hort)used.add('Hort');
+  npcs.push(npcBase('clerk-'+z.id,hort?'messenger':'clerk',hort?'Hort':takeName(CLERK_NAMES,used),pos.x,pos.y,{
+   facing:a,color:hort?'#c9b48a':NPC_COLORS[i%NPC_COLORS.length],suit:hort?'#2b5a9a':look.floor,service:z.service,speed:0,phase:i*.85,look:hort?'hort':null
   }));
  });
  for(let i=0;i<4;i++){
@@ -215,7 +218,7 @@ function makeSigns(hull,zones){
 }
 
 /**
- * @param {{name?:string,roleLabel?:string,prison?:boolean,detained?:boolean,dockId?:string,seed?:number,faction?:string,factionColor?:string,robotName?:string}} opts
+ * @param {{name?:string,roleLabel?:string,prison?:boolean,detained?:boolean,dockId?:string,seed?:number,faction?:string,factionColor?:string,robotName?:string,solace?:boolean}} opts
  */
 export function createStationLayout(opts={}){
  const prison=!!(opts.prison||opts.detained);
@@ -225,6 +228,10 @@ export function createStationLayout(opts={}){
  const width=1100,height=1100,cx=width/2,cy=height/2;
  const hull=wheelHull(cx,cy);
  const zones=prison?prisonZones(hull):normalZones(hull);
+ if(opts.solace&&!prison){
+  const pos=polar(hull.cx,hull.cy,spokeAngle(hull,2)+.55,hull.hubR*.38);
+  zones.push(zone('messenger','Messenger desk','messenger',pos.x,pos.y,36,'messenger'));
+ }
  for(const z of zones){
   if(z.launch)continue;
   z.x=clamp(z.x+(r()-.5)*12,40,width-40);

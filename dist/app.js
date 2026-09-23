@@ -7,8 +7,9 @@ import {readPilot,writePilot,readCheckpoint} from './pilot-storage.mjs';
 import {cloudConfigured} from './cloud-config.mjs';
 import {ensureCloudSession,cloudSignUp,cloudSignIn,cloudSignOut,cloudUserEmail,uploadCloudPilot,downloadCloudPilot,fetchCloudPilotMeta,cloudAutosyncEnabled,setCloudAutosync,consumeAuthRedirect,comparePilotFreshness,pilotProgressSummary} from './cloud-sync.mjs';
 import {EngineAudio} from './engine-audio.mjs';
-import {moduleView,fleetView,guildView,factionView,mapView as galaxyHTML,systemMapView,robotStrip} from './frontier-views.mjs';
+import {moduleView,fleetView,guildView,factionView,mapView as galaxyHTML,systemMapView,robotStrip,hortStrip} from './frontier-views.mjs';
 import {STATION_ROBOT} from './station-robot.mjs';
+import {STATION_HORT,HORT_SYSTEM_ID,HORT_SYSTEM_NAME} from './station-hort.mjs';
 import {GalaxyChart,galaxyDisplay} from './galaxy-chart.mjs';
 import {SystemChart} from './system-chart.mjs';
 import {renderSurface} from './surface-render.mjs';
@@ -323,7 +324,8 @@ const DESK_META={
  shipyard:{title:'Hangar office',clerk:'Yard master',blurb:'Switch hulls, buy ships, and manage the hangar.'},
  guilds:{title:'Guild desks',clerk:'Guild liaison',blurb:'Join guilds and claim commission rewards.'},
  factions:{title:'Faction office',clerk:'Political attaché',blurb:'Pledge allegiance and run faction operations.'},
- detention:{title:'Detention desk',clerk:'Barge officer',blurb:'Clear bounties and process release.'}
+ detention:{title:'Detention desk',clerk:'Barge officer',blurb:'Clear bounties and process release.'},
+ messenger:{title:'Messenger desk',clerk:'Station messenger',blurb:'Packets, folds, and the occasional rumor from the Reach.'}
 };
 function openDesk(service){
  stationTab=service||'market';deskVisit=true;try{engine.unlock();}catch{}
@@ -351,9 +353,10 @@ function renderPanel(){
   if(stationTab==='shipyard')body=fleetView(game,shipFilter);
   if(stationTab==='guilds')body=guildView(game);
   if(stationTab==='factions')body=factionView(game);
+  if(stationTab==='messenger'){if(!game.hortState?.lastText)game.talkHort('greeting');body=hortStrip(game)+`<p class="intro">Hort keeps Solace’s quiet slips. No fuel, no contracts — just packets and whatever the Reach is whispering.</p>`;}
   if(stationTab==='market')body=robotStrip(game)+body;
   const launchBtn=stationTab==='shipyard'?`<button class="primary" data-action="launch" ${detained?'disabled':''}>${detained?'Held · pay fine':'Launch →'}</button>`:`<button data-action="close">Return to deck</button>`;
-  const intro=`<div class="desk-banner"><div class="desk-clerk" aria-hidden="true"></div><div><div class="eyebrow">${esc(meta.clerk).toUpperCase()}</div><p>${esc(meta.blurb)}</p></div></div>`;
+  const intro=`<div class="desk-banner${stationTab==='messenger'?' hort-banner':''}"><div class="desk-clerk" aria-hidden="true"></div><div><div class="eyebrow">${esc(meta.clerk).toUpperCase()}</div><p>${esc(meta.blurb)}</p></div></div>`;
   html=modalShell(meta.title,(game.station?.name||game.sys.station)+' · deck terminal',intro+body,{desk:true,actions:launchBtn,footer:`<span class="muted">Walk the deck to visit other services</span><span class="accent">${fmt(s.credits)} cr</span>`});
  }
  if(panel==='map')html=modalShell('The frontier','GALAXY CHART · '+s.visited.length+' / 192 SYSTEMS VISITED',galaxyHTML(game,selectedSystem,mapQuery,mapFilter),{actions:s.docked?'<button class="primary" data-action="launch-map">Launch →</button>':''});
@@ -382,6 +385,8 @@ function renderPanel(){
 <div class="setting-row"><div><h3>Stellar atlas</h3><p>Sit off a primary of each spectral class.</p></div><div class="section-actions">${Object.keys(STAR_TYPES).map(id=>`<button data-action="dev-star" data-id="${id}">${id} · ${esc(STAR_TYPES[id].label)}</button>`).join('')}</div></div>
 <div class="setting-row"><div><h3>Home station</h3><p>Return to Solace docked.</p></div><button data-action="dev-home">Dock at Solace</button></div>
 <div class="setting-row"><div><h3>${esc(STATION_ROBOT.displayName)} · Market strip</h3><p>Dock at Solace Market and force a dialogue line on the strip.</p></div><div class="section-actions"><button data-action="dev-concierge">Open market</button><button data-action="dev-robot-talk">Force line</button></div></div>
+<div class="setting-row"><div><h3>${esc(STATION_HORT.displayName)} · Messenger desk</h3><p>Dock at Solace and open Hort’s packet desk.</p></div><div class="section-actions"><button data-action="dev-hort">Open desk</button><button data-action="dev-hort-talk">Force line</button></div></div>
+<div class="setting-row"><div><h3>Teleport · ${esc(HORT_SYSTEM_NAME)}</h3><p>Uncharted Reach easter egg · UR-042.</p></div><button data-action="dev-hortreach">Go</button></div>
 <div class="setting-row"><div><h3>Nearest prison barge</h3><p>Teleport docked to a detention barge.</p></div><button data-action="dev-prison">Go to prison</button></div>
 <div class="setting-row"><div><h3>Simulate security kill</h3><p>Force a detention transfer as if security disabled you.</p></div><button class="danger" data-action="dev-detain">Detain me</button></div>
 <div class="setting-row"><div><h3>Spawn wake</h3><p>Create a scannable outbound wake near you.</p></div><button data-action="dev-wake">Spawn wake</button></div>
@@ -474,6 +479,9 @@ async function action(a,id){
   case 'dev-home':game.teleportTo(0,{docked:true});game.s.detained=false;panel='station';renderPanel();save();break;
   case 'dev-concierge':game.teleportTo(0,{docked:true});game.s.detained=false;stationTab='market';panel='station';renderPanel();save();break;
   case 'dev-robot-talk':{if(!game.s.docked)game.teleportTo(game.s.system,{docked:true});const line=game.talkRobot();if(line)game.notify(STATION_ROBOT.displayName+' · '+line.text,'good');stationTab='market';panel='station';renderPanel();save();break;}
+  case 'dev-hort':{game.teleportTo(0,{docked:true});game.s.detained=false;const hort=game.onfoot?.zones.find(z=>z.service==='messenger');if(hort){game.onfoot.x=hort.x;game.onfoot.y=hort.y;game.s.stationPos={x:hort.x,y:hort.y};}stationTab='messenger';panel='station';renderPanel();save();break;}
+  case 'dev-hort-talk':{if(!game.s.docked||game.s.system!==0)game.teleportTo(0,{docked:true});const line=game.talkHort();if(line)game.notify(STATION_HORT.displayName+' · '+line.text,'good');stationTab='messenger';panel='station';renderPanel();save();break;}
+  case 'dev-hortreach':game.teleportTo(HORT_SYSTEM_ID,{docked:false});if(!game.s.visited.includes(HORT_SYSTEM_ID))game.s.visited.push(HORT_SYSTEM_ID);closePanel();save();break;
   case 'dev-prison':{const prison=SYSTEMS.find(sys=>sys.prison)||SYSTEMS[game.nearestPrison()];game.teleportTo(prison.id,{docked:true});stationTab='detention';panel='station';renderPanel();save();break;}
   case 'dev-detain':{if(game.s.docked)game.s.docked=false;const loss=Math.ceil(game.s.credits*.12);game.s.credits=Math.max(0,game.s.credits-loss);for(const g of GOODS)game.s.cargo[g.id]=0;game.s.data=0;game.s.missions=game.s.missions.filter(m=>m.type!=='delivery');const st=getStats(game.s);game.s.hull=st.hull;game.s.shield=st.shield;game.s.fuel=st.fuel;game.s.docked=true;game.onCombatLoss(loss,{security:true});stationTab='detention';panel='station';renderPanel();save();break;}
   case 'dev-wake':{if(game.s.docked)game.launch();const to=SYSTEMS.find(sys=>sys.id!==game.s.system&&sys.hasStation)?.id||1;const wake={id:'wake-dev-'+Math.floor(game.time*10),type:'wake',name:'Test freighter wake',x:game.player.x+140,y:game.player.y-40,r:30,from:game.s.system,to,shipName:'Test freighter',hull:'freighter',color:'#d2b48c',size:17,uid:'dev-wake',scanned:false,life:120};game.wakes.push(wake);game.target=wake;game.notify('DEV · wake spawned. Approach and SCAN WAKE.','good');closePanel();save();break;}
@@ -508,6 +516,8 @@ async function action(a,id){
   case 'sell-data':game.sellExplorationData();renderPanel();save();break;
   case 'robot-talk':{game.talkRobot();renderPanel();save();break;}
   case 'robot-tip':{game.talkRobot('tip');renderPanel();save();break;}
+  case 'hort-talk':{game.talkHort();renderPanel();save();break;}
+  case 'hort-tip':{game.talkHort('tip');renderPanel();save();break;}
   case 'buy':game.buy(id,qty);renderPanel();save();break;
   case 'sell':game.sell(id,qty);renderPanel();save();break;
   case 'upgrade':game.upgrade(id);renderPanel();save();break;

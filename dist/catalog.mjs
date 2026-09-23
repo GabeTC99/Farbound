@@ -1,4 +1,6 @@
+import {HORT_SYSTEM_ID,HORT_SYSTEM_NAME,HORT_SYSTEM_NICK} from './station-hort.mjs';
 export {RELEASE,RELEASE_NAME} from './release.mjs';
+export {HORT_SYSTEM_ID,HORT_SYSTEM_NAME,HORT_SYSTEM_NICK};
 export const GALAXY_CORE={x:0,y:0,radius:34};
 export const FACTIONS=[
  {id:'concord',name:'Orion Concord',color:'#8fdbc9',desc:'A coalition protecting trade and scientific access.',rival:'directorate'},
@@ -56,5 +58,11 @@ export function expandGalaxy(systems,rng){
   sys.prison=true;
   sys.station='Prison barge '+barge[sys.id%barge.length];
   sys.lore='A remote detention barge holds pilots who crossed local security. Fines clear here.';
+ }
+ const hort=systems[HORT_SYSTEM_ID];
+ if(hort&&hort.uncharted){
+  hort.name=HORT_SYSTEM_NAME;
+  hort.search=HORT_SYSTEM_NICK;
+  hort.lore='Scouts tagged this quiet agricultural fold Hortreach — a grass of stars they still call Hort\'s Pasture.';
  }
 }

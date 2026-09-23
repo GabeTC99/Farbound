@@ -114,13 +114,13 @@ export function updateOnFoot(s,dt,input={}){
   if(path.length<2){
    n.moving=0;
    n.walk=(n.walk||0)+dt*.35;
-   if(n.role==='talker'||n.role==='robot'||n.role==='clerk'||n.role==='tech'||n.role==='sitter'){
+   if(n.role==='talker'||n.role==='robot'||n.role==='clerk'||n.role==='tech'||n.role==='sitter'||n.role==='messenger'){
     if((n.lineUntil||0)<=0&&nearby&&chatter<2&&((n.phase=(n.phase||0)+dt)>1.8+((n.id||'').length%5)*.25)){
      n.phase=0;
      n.line=pickStationChat(n,s.x+s.y+(n.x||0));
      n.lineUntil=2.2+(n.id||'').length%3;
     }
-    if(n.role==='clerk'&&s)n.facing=Math.atan2(s.y-n.y,s.x-n.x);
+    if((n.role==='clerk'||n.role==='messenger')&&s)n.facing=Math.atan2(s.y-n.y,s.x-n.x);
    }
    continue;
   }
