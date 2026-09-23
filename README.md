@@ -27,8 +27,9 @@ This delivery contains a playable browser/PWA prototype and a Fold-ready **Nullh
 - **Hort:** Solace station messenger easter egg. Walk the concourse to the **Messenger desk** (hub, off the Cartographics arm) and talk. Horse-flavored rumors, no questline.
 - **Portrait:** Station-card painting from the cleared likeness — sandy-blonde hair, light blue-green eyes, dark brows, moles, gold nose hoop, blue hoodie. Not a raw photo dump.
 - **Hortreach:** Uncharted Reach system **UR-042**. Discovered name **Hortreach**; scouts also call it **Hort's Pasture**. Chart search matches Hort, Pasture, Hortreach, or UR-042. Name stays hidden until you visit.
+- **Credits:** Flight menu → **Credits**. Gabriel Trindade-Coffland (Founder / Creative Director), Gillian Trindade-Coffland (Assistant Producer), Oryanna Nelson (Special Appearance · Hort). Real names stay off the galaxy chart. No emails or addresses.
 - **Ship:** versionName **2.16.10** · Android **versionCode 12**. Do **not** tag a Release until this PR merges to `beta`. After merge, tag the beta tip so https://github.com/GabeTC99/Nullharbor/releases/latest updates.
-- **How to find:** Dock at Solace → walk to Messenger desk (or Flight menu → Temporary DEV tools → Hort). Galaxy chart search **Hort** or **UR-042**. DEV → Teleport · Hortreach.
+- **How to find:** Dock at Solace → walk to Messenger desk (or Flight menu → Temporary DEV tools → Hort). Galaxy chart search **Hort** or **UR-042**. DEV → Teleport · Hortreach. Credits: Flight menu → Credits.
 - **Saves:** keys stay `farbound-save-v2`. Service worker cache bumped to `farbound-v2.16.10`. 2.16.2–2.16.9 flash/AA/APK/cloud sync paths stay.
 
 ### Candidate 2.16.9
@@ -330,6 +331,7 @@ node tests/android-webview.mjs
 node tests/sw-update.mjs
 node tests/offline.mjs
 node tests/hort.mjs
+node tests/credits.mjs
 ```
 
 Validation includes 9 retained classic gameplay checks, Frontiers progression and migration checks (including station space legs), exploration regression checks, and offline/static integration checks. The tests cover every system’s connectivity, fuel and routing, landing and signal sales, guild reward uniqueness, physical module transfers, faction operations, market spreads, walkable station docks, malformed saves, and all cached assets. Browser visual QA and physical Fold sideload still need Gabe on-device. Native `assembleDebug` is scripted (Gradle wrapper + CI); a debug APK is produced when the SDK is available.

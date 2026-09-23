@@ -5,6 +5,7 @@
   "notes": [
     "Solace messenger easter egg: Hort keeps a small packet desk on the concourse with horse-flavored rumors. Desk portrait is a station-card painting, not a photo dump.",
     "Uncharted Reach chart tag Hortreach (catalog UR-042; scouts also say Hort's Pasture). Search Hort, Pasture, or UR-042. Name stays hidden until the system is visited.",
+    "Flight menu Credits: Gabriel Trindade-Coffland (Founder / Creative Director), Gillian Trindade-Coffland (Assistant Producer), Oryanna Nelson (Special Appearance · Hort). Real names stay off the galaxy chart.",
     "No starring quest. Existing Solace desks, saves (farbound-save-v2), and 2.16.2–2.16.9 flash/AA/APK/cloud sync paths stay.",
     "versionName 2.16.10 · Android versionCode 12. Do not tag /releases/latest until this PR is merged. Service worker cache bumped to farbound-v2.16.10. Save keys stay farbound-save-v2."
   ],

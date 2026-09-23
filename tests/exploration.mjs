@@ -167,6 +167,7 @@ test('Station desks return to the deck and version comes from release.mjs',()=>{
  assert.match(sw,/cloud-sync\.mjs/);
  assert.match(sw,/station-robot\.mjs/);
  assert.match(sw,/station-hort\.mjs/);
+ assert.match(sw,/credits\.mjs/);
  assert.match(sw,/hort-portrait\.png/);
  assert.match(sw,/system-layout\.mjs/);
  assert.match(sw,/onfoot\.mjs/);
