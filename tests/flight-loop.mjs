@@ -8,7 +8,7 @@ import {
  lerp,lerpAngle,canvasScale,viewportSize,chaseOffset,createPacer,createFpsMeter,FPS_STALL_MS,
  inferCadence,idleRefreshThrottle,CADENCE_HZ,mountRefreshKeepAlive,setRefreshKeepAlive,
  createFlightWakeLock,HZ_KEEP_ID,HZ_KEEP_CLASS,HZ_KEEP_ANIM,
- createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,GPU_KEEP_ID,
+ createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,bundledAssetHost,GPU_KEEP_ID,
  wrapUnit,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,snapWorldCam,
  hairline,worldStroke,HAIRLINE_DEVICE,SILHOUETTE_DEVICE,strokeSilhouette,strokeBand,
  SKY_PARALLAX,SPACE_CLEAR,SPACE_CONTEXT,BACKING_SLACK,backingSize,backingNeedsReset
@@ -317,12 +317,16 @@ const preferred={refreshLock:()=>'ok'};
 assert.equal(nativeAndroidBridge({}),null);
 assert.equal(nativeAndroidBridge({FarboundAndroid:preferred}),preferred);
 assert.equal(nativeAndroidBridge({NullharborAndroid:preferred,FarboundAndroid:{}}),preferred);
+assert.equal(nativeAndroidBridge({NullharborDesktop:preferred}),preferred);
+assert.equal(bundledAssetHost('appassets.androidplatform.net'),true);
+assert.equal(bundledAssetHost('appassets.nullharbor.local'),true);
+assert.equal(bundledAssetHost('gabetc99.github.io'),false);
 
 const gradle=readFileSync(new URL('../android/app/build.gradle',import.meta.url),'utf8');
 assert.match(gradle,/applicationId 'com\.nullharbor\.game'/);
 assert.match(gradle,/namespace 'com\.nullharbor\.game'/);
 assert.match(gradle,/syncWebAssets/);
-assert.match(gradle,/versionName '2\.16\.10'/);
+assert.match(gradle,/versionName '2\.16\.11'/);
 assert.match(gradle,/versionCode 12/);
 assert.match(gradle,/signingConfigs/);
 assert.match(gradle,/sideload/);
@@ -353,7 +357,7 @@ assert.match(pages,/path: dist/);
 assert.ok(!pages.includes('assembleDebug'),'Pages deploy must stay web-only');
 const apkCi=readFileSync(new URL('../.github/workflows/android-debug.yml',import.meta.url),'utf8');
 assert.match(apkCi,/assembleDebug/);
-assert.match(apkCi,/nullharbor-2\.16\.10-debug/);
+assert.match(apkCi,/nullharbor-2\.16\.11-debug/);
 assert.match(apkCi,/ci-accept-licenses/);
 assert.ok(!apkCi.includes('android-actions/setup-android'),'obsolete sdkmanager tools package breaks CI');
 const apkRel=readFileSync(new URL('../.github/workflows/android-release.yml',import.meta.url),'utf8');
@@ -365,7 +369,9 @@ assert.match(apkRel,/Nullharbor\.apk/);
 assert.ok(!apkRel.includes('android-actions/setup-android'),'obsolete sdkmanager tools package breaks CI');
 const readme=readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.match(readme,/## Android sideload/);
+assert.match(readme,/## Windows sideload/);
 assert.match(readme,/github.com\/GabeTC99\/Nullharbor\/releases\/latest\/download\/Nullharbor\.apk/);
+assert.match(readme,/releases\/download\/windows-v2\.16\.11\/Nullharbor\.exe/);
 assert.match(readme,/versionCode/);
 assert.match(readme,/optional \*\*Cloud sync\*\*/);
 assert.ok(!/The shell has no internet permission/.test(readme));
@@ -379,7 +385,7 @@ assert.match(manifest,/"fullscreen"/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.10/);
+assert.match(sw,/farbound-v2\.16\.11/);
 const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
 assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
 assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);

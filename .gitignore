@@ -1,4 +1,7 @@
 node_modules/
+desktop/node_modules/
+desktop/release/
+desktop/game/
 .DS_Store
 android/.gradle/
 android/local.properties

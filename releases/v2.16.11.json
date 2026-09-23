@@ -1,0 +1,16 @@
+{
+  "release": "2.16.11",
+  "name": "Nullharbor",
+  "date": "2026-09-23",
+  "notes": [
+    "Windows portable .exe launcher (Electron) bundles the same dist/ web game as Pages and the Android APK.",
+    "Tag windows-v* / v*-windows runs Windows Release CI on windows-latest and uploads Nullharbor.exe plus nullharbor-X.Y.Z-win.exe. Those releases set make_latest false so /releases/latest/download/Nullharbor.apk stays the newest Android APK.",
+    "Install app / PWA CTA is hidden in the desktop shell (NullharborDesktop) the same way the APK hides it (NullharborAndroid). Pages still shows Install.",
+    "HTTPS stays open for optional Supabase cloud sync. Game files are offline-bundled. Unsigned sideload — SmartScreen may warn. No in-app updater.",
+    "versionName 2.16.11 · Android versionCode stays 12 (this ship is the PC exe, not a new APK). Do not tag a Windows or Android Release until this PR is merged. Service worker cache bumped to farbound-v2.16.11. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
