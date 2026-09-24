@@ -24,6 +24,14 @@ This delivery contains a playable browser/PWA prototype, a Fold-ready **Nullharb
 
 ## Nullharbor 3.0 — New Frontier
 
+### Candidate 3.0.0 · landing vista
+
+- **Vertical motion:** Far cinematic plate is locked to screen space. Farthest hill ridges no longer share the skiff's `cameraY`, so climb/descent does not drag the horizon 1:1. Horizontal parallax on `cameraX` stays subtle.
+- **Crop / blend:** Taller plate crop and fuller-bleed dest height, with multiply tint plus soft sponges into sky and ridge tops (no hard clipped strip).
+- **Per-kind hooks:** Each `SURFACE_PALETTES` kindId maps to optional `landing-{kind}.png` / `surface-{kind}.png` under `dist/assets/new-frontier/`, falling back to shipped `landing-a/b` and `planet-surface-a/b`. Prefetch lists every known name; drop PNGs in a follow-up. Kind files are **not** in the service-worker `FILES` list until they ship.
+- **Ship:** Player-facing version stays **3.0.0**. Service worker cache is `farbound-v3.0.0-vista` so Pages testers pick up the JS. Android `versionCode` stays **13**. Do **not** tag Android or Windows Releases.
+- **How to verify:** Land volcanic / ice / arid. Climb and descend — the far vista should stay put. Graphics → Performance still skips the plate.
+
 ### Candidate 3.0.0 · Phase 1
 
 - **Lighting & shading:** Local-space planets get a sharper day/night terminator, twilight band, sunward atmosphere rim, and baked relief. Performance mode still shades the disk (no more flat billboards). Orbital stations and asteroids take star-relative rim light so cruise matches the 2.5D concourse language more closely.

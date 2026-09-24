@@ -3,7 +3,8 @@ import {samplePlanetColor} from './planet-render.mjs';
 import {
  surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex,
  prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
- surfaceTextureName,landingPlateName,plateCrop,tileBakeSize,tileScreenRepeat
+ surfaceTextureName,landingPlateName,kindPlateName,drawFrontierVista,ridgeCameraY,
+ tileBakeSize,tileScreenRepeat
 } from './new-frontier.mjs';
 
 export const SURFACE_PALETTES={
@@ -137,25 +138,11 @@ function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,
 
 function drawPlateVista(ctx,width,height,pal,kind,cameraX,lite,quality){
  if(lite||quality==='performance')return;
+ loadFrontierImage(kindPlateName(kind));
  const name=landingPlateName(kind);
  const img=peekFrontierImage(name)||loadFrontierImage(name);
  if(!img||!img.width)return;
- const crop=plateCrop(name);
- const sx=img.width*crop.sx,sy=img.height*crop.sy,sw=img.width*crop.sw,sh=img.height*crop.sh;
- const destH=height*(quality==='balanced'?.32:.38);
- const shift=((cameraX*.02)%80+80)%80;
- ctx.save();
- ctx.globalAlpha=quality==='balanced'?.5:.68;
- ctx.drawImage(img,sx,sy,sw,sh,-20-shift*.2,0,width+40,destH);
- ctx.globalAlpha=1;
- const fade=ctx.createLinearGradient(0,destH*.42,0,destH);
- fade.addColorStop(0,'#0000');
- fade.addColorStop(1,pal.sky2);
- ctx.fillStyle=fade;ctx.fillRect(0,destH*.42,width,destH*.58);
- const sides=ctx.createLinearGradient(0,0,width,0);
- sides.addColorStop(0,pal.sky0);sides.addColorStop(.12,'#0000');sides.addColorStop(.88,'#0000');sides.addColorStop(1,pal.sky0);
- ctx.globalAlpha=.45;ctx.fillStyle=sides;ctx.fillRect(0,0,width,destH);
- ctx.restore();
+ drawFrontierVista(ctx,width,height,img,name,pal,cameraX,quality);
 }
 
 function drawSky(ctx,width,height,pal,kind,sun,lite,clock,cameraX,quality){
@@ -343,17 +330,23 @@ export function renderSurface(ctx,width,height,s,clock,stats,opts={}){
  const step=surfaceStep(quality,lite);
  const scale=width<650?.62:.86,cameraX=s.x-width*.08/scale,cameraY=s.y-40;
  const sx=x=>(x-cameraX)*scale+width/2,sy=y=>(y-cameraY)*scale+height/2;
+ const ridgeSy=v=>{const cy=ridgeCameraY(cameraY,v);return y=>(y-cy)*scale+height/2;};
  prefetchFrontierArt();
  const sun=surfaceSun(s.seed);
  const sunX=sun.x|| -1;
  const groundTex=peekFrontierImage(surfaceTextureName(s.kindId));
  drawSky(ctx,width,height,pal,s.kindId,sun,lite,clock,cameraX,quality);
  const layers=lite
-  ?[[-150,shadeHex(pal.hills[0],.75),.55,false],[-40,pal.hills[1],.78,true]]
-  :[[-260,shadeHex(pal.hills[0],.62),.32,false],[-180,pal.hills[0],.48,true],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true]];
- for(const [offset,color,parallax,lit] of layers){
-  fillRidge(ctx,width,height,sy,cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX,groundTex,quality,lite);
+  ?[[-150,shadeHex(pal.hills[0],.75),.55,false,.12],[-40,pal.hills[1],.78,true,.5]]
+  :[[-260,shadeHex(pal.hills[0],.62),.32,false,0],[-180,pal.hills[0],.48,true,.08],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true,.28],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true,.68]];
+ for(const [offset,color,parallax,lit,vPar] of layers){
+  fillRidge(ctx,width,height,ridgeSy(vPar),cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX,groundTex,quality,lite);
  }
+ const sponge=ctx.createLinearGradient(0,height*.34,0,height*.7);
+ sponge.addColorStop(0,'#0000');
+ sponge.addColorStop(.4,fadeHex(pal.sky2,.18));
+ sponge.addColorStop(1,fadeHex(mixHex(pal.sky2,pal.terrain,.35),.1));
+ ctx.fillStyle=sponge;ctx.fillRect(0,0,width,height);
  drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,sunX,quality);
  drawKindCues(ctx,width,height,s,sx,sy,pal,cameraX,scale);
  ctx.fillStyle=pal.stroke+'88';

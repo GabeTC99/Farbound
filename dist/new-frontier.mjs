@@ -104,21 +104,99 @@ export const FRONTIER_PLATE_A='landing-a.png';
 export const FRONTIER_PLATE_B='landing-b.png';
 export const FRONTIER_SHIPPED_ASSETS=[FRONTIER_SURFACE_A,FRONTIER_SURFACE_B,FRONTIER_PLATE_A,FRONTIER_PLATE_B];
 
+/** SURFACE_PALETTES kindIds — each may later drop landing-{id}.png + surface-{id}.png. */
+export const FRONTIER_KIND_IDS=[
+ 'earthlike','ocean','arid','ice','metal','mineral','volcanic','barren','toxic','gas','icegiant'
+];
+
+export function kindPlateName(kindId){return 'landing-'+String(kindId||'mineral')+'.png';}
+export function kindSurfaceName(kindId){return 'surface-'+String(kindId||'mineral')+'.png';}
+
+export const FRONTIER_KIND_ASSETS=FRONTIER_KIND_IDS.flatMap(id=>[kindPlateName(id),kindSurfaceName(id)]);
+export const FRONTIER_PREFETCH_ASSETS=[...FRONTIER_SHIPPED_ASSETS,...FRONTIER_KIND_ASSETS];
+
 const WARM_SURFACE=new Set(['volcanic','arid','gas','mineral','metal']);
 const WARM_PLATE=new Set(['volcanic','arid','gas','mineral']);
 
-export function surfaceTextureName(kindId){
+export function fallbackSurfaceName(kindId){
  return WARM_SURFACE.has(kindId)?FRONTIER_SURFACE_A:FRONTIER_SURFACE_B;
 }
 
-export function landingPlateName(kindId){
+export function fallbackPlateName(kindId){
  return WARM_PLATE.has(kindId)?FRONTIER_PLATE_A:FRONTIER_PLATE_B;
 }
 
-/** Source crop that drops title/HUD chrome. Fractions of the plate. */
+export function resolveFrontierName(preferred,fallback){
+ if(preferred&&peekFrontierImage(preferred))return preferred;
+ return fallback;
+}
+
+export function surfaceTextureName(kindId){
+ return resolveFrontierName(kindSurfaceName(kindId),fallbackSurfaceName(kindId));
+}
+
+export function landingPlateName(kindId){
+ return resolveFrontierName(kindPlateName(kindId),fallbackPlateName(kindId));
+}
+
+/**
+ * Source crop that drops title/HUD chrome. Fractions of the plate.
+ * Shipped a/b plates are cinematic stills — take a tall horizon band,
+ * not a thin mid-sky strip. Per-kind files use the same generous default.
+ */
 export function plateCrop(name){
- if(name===FRONTIER_PLATE_A)return {sx:.30,sy:.10,sw:.68,sh:.26};
- return {sx:.34,sy:.07,sw:.64,sh:.24};
+ if(name===FRONTIER_PLATE_A)return {sx:.28,sy:.06,sw:.70,sh:.50};
+ if(name===FRONTIER_PLATE_B)return {sx:.34,sy:.05,sw:.64,sh:.48};
+ return {sx:.10,sy:.08,sw:.82,sh:.52};
+}
+
+/** Screen-space dest height for the cinematic plate (fuller-bleed horizon). */
+export function vistaDestHeight(height,quality){
+ return height*(quality==='balanced'?.56:.68);
+}
+
+/** World-Y the farthest ridges lock to so climb/descent does not drag them. */
+export const VISTA_LOCK_Y=400;
+
+export function ridgeCameraY(cameraY,vParallax=1,refY=VISTA_LOCK_Y){
+ const v=vParallax<0?0:vParallax>1?1:vParallax;
+ return refY+(cameraY-refY)*v;
+}
+
+/**
+ * Screen-locked cinematic plate. Horizontal parallax stays subtle;
+ * there is no cameraY — the vista does not climb or sink with the skiff.
+ */
+export function drawFrontierVista(ctx,width,height,img,name,pal,cameraX,quality){
+ if(!ctx||!img||!img.width)return;
+ const crop=plateCrop(name);
+ const sx=img.width*crop.sx,sy=img.height*crop.sy,sw=img.width*crop.sw,sh=img.height*crop.sh;
+ const destH=vistaDestHeight(height,quality);
+ const shift=((cameraX*.012)%56+56)%56;
+ ctx.save();
+ ctx.globalAlpha=quality==='balanced'?.52:.7;
+ ctx.drawImage(img,sx,sy,sw,sh,-18-shift*.18,0,width+36,destH);
+ ctx.globalCompositeOperation='multiply';
+ ctx.globalAlpha=quality==='balanced'?.2:.3;
+ ctx.fillStyle=mixHex(pal.sky1||'#183141',pal.terrain||'#2e5858',.42);
+ ctx.fillRect(0,0,width,destH);
+ ctx.globalCompositeOperation='source-over';
+ ctx.globalAlpha=1;
+ const top=ctx.createLinearGradient(0,0,0,destH*.24);
+ top.addColorStop(0,pal.sky0);
+ top.addColorStop(.45,fadeHex(pal.sky0,.42));
+ top.addColorStop(1,'#0000');
+ ctx.fillStyle=top;ctx.fillRect(0,0,width,destH*.24);
+ const fade=ctx.createLinearGradient(0,destH*.28,0,destH);
+ fade.addColorStop(0,'#0000');
+ fade.addColorStop(.38,fadeHex(pal.sky2,.22));
+ fade.addColorStop(.7,fadeHex(mixHex(pal.sky2,pal.terrain,.18),.68));
+ fade.addColorStop(1,mixHex(pal.sky2,pal.terrain,.3));
+ ctx.fillStyle=fade;ctx.fillRect(0,destH*.28,width,destH*.72);
+ const sides=ctx.createLinearGradient(0,0,width,0);
+ sides.addColorStop(0,pal.sky0);sides.addColorStop(.1,'#0000');sides.addColorStop(.9,'#0000');sides.addColorStop(1,pal.sky0);
+ ctx.globalAlpha=.38;ctx.fillStyle=sides;ctx.fillRect(0,0,width,destH);
+ ctx.restore();
 }
 
 /** Bake resolution for the tile atlas. Not the on-screen repeat. */
@@ -161,7 +239,13 @@ export function peekFrontierImage(name){
 }
 
 export function prefetchFrontierArt(){
- for(const n of FRONTIER_SHIPPED_ASSETS)loadFrontierImage(n);
+ for(const n of FRONTIER_PREFETCH_ASSETS)loadFrontierImage(n);
+}
+
+/** Test hook — remember a loaded (or fake) image so kind mapping can resolve. */
+export function rememberFrontierImage(name,img){
+ if(!name)return;
+ assetCache.set(name,img||null);
 }
 
 const tileCache=new Map();
