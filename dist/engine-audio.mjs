@@ -52,36 +52,71 @@ export function rampGain(param, value, t, seconds=0.04){
  }
 }
 
-/** Named hooks for Audio Designer. No assets here — playCue records bind state. */
+/** Drop MP3s here later — stems match Audio Designer filenames. No files in this PR. */
+export const PLANETARY_AUDIO_DIR='assets/audio/planetary/';
+export const PLANETARY_AMBIENT_KINDS=['metal','mineral','icegiant'];
+/** grit_mineral is held for a re-roll (classifier flagged bark). */
+export const PLANETARY_GRIT_KINDS=['metal','icegiant'];
+export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';}
+export function surfaceAmbientCue(kindId){
+ return PLANETARY_AMBIENT_KINDS.includes(kindId)?'ambient_'+kindId:null;
+}
+export function surfaceGritCue(kindId){
+ return PLANETARY_GRIT_KINDS.includes(kindId)?'grit_'+kindId:null;
+}
+
+/** Fired in-game ids stay surface.*; preferred stems are aliases + file: fields. */
 export const SURFACE_AUDIO_CUES={
  embark:'surface.embark',
  takeoff:'surface.takeoff',
+ embarkWhoosh:'embark_whoosh',
  inspectStart:'surface.inspect.start',
  inspectLoop:'surface.inspect.loop',
- inspectStop:'surface.inspect.stop'
+ inspectStop:'surface.inspect.stop',
+ padInspectStart:'pad_inspect_start',
+ padInspectLoop:'pad_inspect_loop',
+ padInspectStop:'pad_inspect_stop'
 };
+const CUE_CANON={
+ embark_whoosh:'surface.embark',
+ pad_inspect_start:'surface.inspect.start',
+ pad_inspect_loop:'surface.inspect.loop',
+ pad_inspect_stop:'surface.inspect.stop'
+};
+function cueDef(type,stem,extra={}){return {type,file:planetaryAudioFile(stem),...extra};}
 export const AUDIO_CUES={
- [SURFACE_AUDIO_CUES.embark]:{type:'oneshot'},
- [SURFACE_AUDIO_CUES.takeoff]:{type:'oneshot'},
- [SURFACE_AUDIO_CUES.inspectStart]:{type:'oneshot'},
- [SURFACE_AUDIO_CUES.inspectLoop]:{type:'loop'},
- [SURFACE_AUDIO_CUES.inspectStop]:{type:'oneshot',stops:SURFACE_AUDIO_CUES.inspectLoop}
+ [SURFACE_AUDIO_CUES.embark]:cueDef('oneshot','embark_whoosh'),
+ [SURFACE_AUDIO_CUES.takeoff]:cueDef('oneshot','embark_whoosh'),
+ [SURFACE_AUDIO_CUES.embarkWhoosh]:cueDef('oneshot','embark_whoosh'),
+ [SURFACE_AUDIO_CUES.inspectStart]:cueDef('oneshot','pad_inspect_start'),
+ [SURFACE_AUDIO_CUES.inspectLoop]:cueDef('loop','pad_inspect_loop'),
+ [SURFACE_AUDIO_CUES.inspectStop]:cueDef('oneshot','pad_inspect_stop',{stops:SURFACE_AUDIO_CUES.inspectLoop}),
+ [SURFACE_AUDIO_CUES.padInspectStart]:cueDef('oneshot','pad_inspect_start'),
+ [SURFACE_AUDIO_CUES.padInspectLoop]:cueDef('loop','pad_inspect_loop'),
+ [SURFACE_AUDIO_CUES.padInspectStop]:cueDef('oneshot','pad_inspect_stop',{stops:SURFACE_AUDIO_CUES.inspectLoop}),
+ ambient_metal:cueDef('loop','ambient_metal'),
+ ambient_mineral:cueDef('loop','ambient_mineral'),
+ ambient_icegiant:cueDef('loop','ambient_icegiant'),
+ grit_metal:cueDef('oneshot','grit_metal'),
+ grit_icegiant:cueDef('oneshot','grit_icegiant')
 };
+export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
 export class EngineAudio{
  constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();}
  playCue(name){
-  const def=AUDIO_CUES[name];
+  const canon=resolveAudioCue(name);
+  const def=AUDIO_CUES[canon]||AUDIO_CUES[name];
   if(!def)return false;
   this.lastCue=name;
   this.cueLog.push(name);
   if(this.cueLog.length>24)this.cueLog.shift();
-  if(def.type==='loop')this.loops.add(name);
-  if(def.stops)this.loops.delete(def.stops);
+  if(def.type==='loop')this.loops.add(canon);
+  if(def.stops)this.loops.delete(resolveAudioCue(def.stops));
   return true;
  }
- isCueLooping(name){return this.loops.has(name);}
- stopCue(name){this.loops.delete(name);return true;}
+ isCueLooping(name){return this.loops.has(resolveAudioCue(name));}
+ stopCue(name){this.loops.delete(resolveAudioCue(name));return true;}
  unlock(){
   if(!this.context){
    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;

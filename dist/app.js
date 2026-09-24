@@ -311,11 +311,10 @@ function sysStationName(){return game.station?.name||game.sys.station;}
 function toast(message,tone){const e=document.createElement('div');e.className='toast '+tone;e.textContent=message;$('toasts').appendChild(e);while($('toasts').children.length>3)$('toasts').firstChild.remove();setTimeout(()=>e.remove(),4300);if(tone==='good')sound('good');}
 function drainEvents(){while(game.events.length){const e=game.events.shift();toast(e.text,e.tone);}}
 function drainAudioCues(){
- const q=game.audioCues;if(!q?.length)return;
- while(q.length){
-  const name=q.shift();
-  try{engine.playCue(name);}catch{}
- }
+ const q=game.audioCues;
+ if(q?.length)while(q.length){const name=q.shift();try{engine.playCue(name);}catch{}}
+ const stops=game.audioStops;
+ if(stops?.length)while(stops.length){const name=stops.shift();try{engine.stopCue(name);}catch{}}
 }
 function paintSiteFx(){
  if(game.siteFx)drawSiteTransition(ctx,width,height,game.siteFx);

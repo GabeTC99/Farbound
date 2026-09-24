@@ -34,9 +34,10 @@ This delivery contains a playable browser/PWA prototype, a Fold-ready **Nullharb
 - **Ship:** Player-facing version stays **3.0.0**. Service worker cache is `farbound-v3.0.0-onfoot2` so Pages testers pick up the JS. Android `versionCode` stays **13**. Do **not** tag Android or Windows Releases.
 - **On-foot site:** `kindId` now reaches the pad view so plates/ground match LAND. Full-bleed site ground (no clipped floor slab). Skiff uses the New Frontier lander; the walker is the standing crew sprite. Inspect pads sit on the same ground line as the skiff. Rocks stay rocks, not station blocks. LAND climb lock and solid ridge tops are unchanged.
 - **Surface sun:** On-foot skiff and walker take `surfaceSun(seed)` the same way LAND lights the skiff (`sunX`).
-- **Embark / takeoff:** Boarding the skiff or returning to orbit starts a short fade-in veil (`createSiteTransition`) plus `surface.embark` / `surface.takeoff` audio cue IDs. No new SFX files.
+- **Embark / takeoff:** Boarding the skiff or returning to orbit starts a short fade-in veil (`createSiteTransition`) plus `surface.embark` / `surface.takeoff` (same `embark_whoosh.mp3` stem). No SFX files in this PR.
 - **Kind holes:** Prefetch already lists every `landing-{kind}.png` / `surface-{kind}.png`. When metal / mineral / icegiant files appear they win over the barren/fallback alias with no code change. Do **not** add those names to `sw.js` FILES until the PNGs ship.
-- **Inspect cues:** Pad survey fires `surface.inspect.start` (oneshot) + `surface.inspect.loop`, then `surface.inspect.stop` on finish or interrupt. Hooks only — Audio Designer binds assets later.
+- **Inspect cues:** Pad survey fires `surface.inspect.start` / `.loop` / `.stop`. Preferred stems `pad_inspect_start|loop|stop` are aliases. Drop MP3s under `dist/assets/audio/planetary/` later — cue `file:` fields already point there.
+- **Kind SFX stubs:** On-foot starts `ambient_<kindId>` for metal / mineral / icegiant and throttled `grit_<kindId>` footfalls for metal / icegiant. **Hold `grit_mineral`** (Audio re-roll). Other kinds stay silent on those hooks.
 - **How to verify:** Land volcanic / ice / arid / metal. Climb and descend — hills stay screen-locked. Ridge tops should look like solid silhouettes, not a light stepped cap. Disembark — lander, walker, and pads should share one ground line. Graphics → Performance still skips the plate.
 
 ### Candidate 3.0.0 · Phase 1
