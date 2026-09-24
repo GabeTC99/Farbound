@@ -92,8 +92,12 @@ function drawPlanetBackdrop(ctx,width,height,s){
   }
   ctx.lineTo(width,height);ctx.closePath();ctx.fill();
   if(pat&&par>0.9){
-   ctx.save();ctx.clip();ctx.globalAlpha=.5;ctx.globalCompositeOperation='overlay';
-   ctx.fillStyle=pat;ctx.fillRect(0,base-40,width,height-base+40);ctx.restore();
+   ctx.save();ctx.clip();
+   ctx.globalAlpha=.9;ctx.globalCompositeOperation='source-over';
+   ctx.fillStyle=pat;ctx.fillRect(0,base-40,width,height-base+40);
+   ctx.globalAlpha=.48;ctx.globalCompositeOperation='multiply';
+   ctx.fillStyle=color;ctx.fillRect(0,base-40,width,height-base+40);
+   ctx.restore();
   }
  }
  if(kind==='ice'){ctx.fillStyle='#e8f4ff33';ctx.beginPath();ctx.moveTo(0,height*.74);for(let x=0;x<=width;x+=20)ctx.lineTo(x,height*.7+Math.sin(x*.05)*8);ctx.lineTo(width,height);ctx.lineTo(0,height);ctx.fill();}

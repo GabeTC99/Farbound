@@ -57,7 +57,7 @@ function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,
   ctx.fillStyle=fill;
  }else ctx.fillStyle=color;
  ctx.fill();
- if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale*parallax,quality,lite,.22);
+ if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale*parallax,quality,lite,lit?.55:.28,color);
  if(!lit)return;
  shadeRidge(ctx,width,height,pts,sunX,seed,offset);
 }
@@ -105,7 +105,7 @@ function shadeRidge(ctx,width,height,pts,sunX,seed,offset){
  ctx.restore();
 }
 
-function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,lite,alpha){
+function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,lite,alpha,tint){
  if(!img||!ctx.createPattern)return;
  const size=tileSizeForQuality(quality,lite);
  const tile=frontierTile(img,size);
@@ -116,12 +116,18 @@ function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
- ctx.globalAlpha=alpha;
- ctx.globalCompositeOperation='overlay';
  const scroll=((cameraX*scrollScale)%size+size)%size;
  ctx.translate(-scroll,height*.12);
+ ctx.globalAlpha=alpha;
+ ctx.globalCompositeOperation='source-over';
  ctx.fillStyle=pat;
  ctx.fillRect(scroll-8,-height,width+size+16,height*2.4);
+ if(tint){
+  ctx.globalAlpha=lite?.4:.5;
+  ctx.globalCompositeOperation='multiply';
+  ctx.fillStyle=tint;
+  ctx.fillRect(scroll-8,-height,width+size+16,height*2.4);
+ }
  ctx.restore();
 }
 
@@ -132,7 +138,7 @@ function drawPlateVista(ctx,width,height,pal,kind,cameraX,lite,quality){
  if(!img||!img.width)return;
  const crop=plateCrop(name);
  const sx=img.width*crop.sx,sy=img.height*crop.sy,sw=img.width*crop.sw,sh=img.height*crop.sh;
- const destH=height*(quality==='balanced'?.38:.46);
+ const destH=height*(quality==='balanced'?.32:.38);
  const shift=((cameraX*.02)%80+80)%80;
  ctx.save();
  ctx.globalAlpha=quality==='balanced'?.5:.68;
@@ -232,7 +238,7 @@ function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,su
  }
  ctx.fill();
  const tex=peekFrontierImage(surfaceTextureName(s.kindId));
- if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale,quality,lite,lite?.32:.55);
+ if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale,quality,lite,lite?.7:.95,ground);
  if(!lite)shadeRidge(ctx,width,height,pts,sunX,s.seed,0);
  ctx.strokeStyle=pal.stroke;ctx.lineWidth=lite?2:2.8;ctx.lineJoin='round';
  ctx.beginPath();

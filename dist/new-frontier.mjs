@@ -117,8 +117,8 @@ export function landingPlateName(kindId){
 
 /** Source crop that drops title/HUD chrome. Fractions of the plate. */
 export function plateCrop(name){
- if(name===FRONTIER_PLATE_A)return {sx:.10,sy:.13,sw:.88,sh:.38};
- return {sx:.14,sy:.09,sw:.84,sh:.36};
+ if(name===FRONTIER_PLATE_A)return {sx:.30,sy:.10,sw:.68,sh:.26};
+ return {sx:.34,sy:.07,sw:.64,sh:.24};
 }
 
 export function tileSizeForQuality(quality,lite){
