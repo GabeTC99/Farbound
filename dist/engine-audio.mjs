@@ -52,11 +52,11 @@ export function rampGain(param, value, t, seconds=0.04){
  }
 }
 
-/** Drop MP3s here later — stems match Audio Designer filenames. No files in this PR. */
+/** Audio Designer MP3s. Stems match filenames under dist/assets/audio/planetary/. */
 export const PLANETARY_AUDIO_DIR='assets/audio/planetary/';
+export const PLANETARY_AUDIO_STEMS=['ambient_metal','ambient_mineral','ambient_icegiant','grit_metal','grit_mineral','grit_icegiant','pad_inspect_start','pad_inspect_loop','pad_inspect_stop','embark_whoosh'];
 export const PLANETARY_AMBIENT_KINDS=['metal','mineral','icegiant'];
-/** grit_mineral is held for a re-roll (classifier flagged bark). */
-export const PLANETARY_GRIT_KINDS=['metal','icegiant'];
+export const PLANETARY_GRIT_KINDS=['metal','mineral','icegiant'];
 export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';}
 export function surfaceAmbientCue(kindId){
  return PLANETARY_AMBIENT_KINDS.includes(kindId)?'ambient_'+kindId:null;
@@ -98,12 +98,13 @@ export const AUDIO_CUES={
  ambient_mineral:cueDef('loop','ambient_mineral'),
  ambient_icegiant:cueDef('loop','ambient_icegiant'),
  grit_metal:cueDef('oneshot','grit_metal'),
+ grit_mineral:cueDef('oneshot','grit_mineral'),
  grit_icegiant:cueDef('oneshot','grit_icegiant')
 };
 export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
 export class EngineAudio{
- constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();}
+ constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();this.cueEls=new Map();this.cueVolume=.35;}
  playCue(name){
   const canon=resolveAudioCue(name);
   const def=AUDIO_CUES[canon]||AUDIO_CUES[name];
@@ -112,11 +113,45 @@ export class EngineAudio{
   this.cueLog.push(name);
   if(this.cueLog.length>24)this.cueLog.shift();
   if(def.type==='loop')this.loops.add(canon);
-  if(def.stops)this.loops.delete(resolveAudioCue(def.stops));
+  if(def.stops)this.stopCue(def.stops);
+  this.playCueFile(canon,def);
   return true;
  }
  isCueLooping(name){return this.loops.has(resolveAudioCue(name));}
- stopCue(name){this.loops.delete(resolveAudioCue(name));return true;}
+ stopCue(name){
+  const canon=resolveAudioCue(name);
+  this.loops.delete(canon);
+  this.stopCueFile(canon);
+  return true;
+ }
+ playCueFile(canon,def){
+  const Ctor=globalThis.Audio;
+  if(typeof Ctor!=='function'||!def?.file)return;
+  try{
+   if(def.type==='loop'){
+    let el=this.cueEls.get(canon);
+    if(!el){el=new Ctor(def.file);el.loop=true;this.cueEls.set(canon,el);}
+    el.volume=this.cueVolume;
+    try{el.currentTime=0;}catch{}
+    const p=el.play();if(p&&p.catch)p.catch(()=>{});
+    return;
+   }
+   const el=new Ctor(def.file);
+   el.volume=this.cueVolume;
+   const p=el.play();if(p&&p.catch)p.catch(()=>{});
+  }catch{}
+ }
+ stopCueFile(canon){
+  const el=this.cueEls.get(canon);
+  if(!el)return;
+  try{el.pause();el.currentTime=0;}catch{}
+ }
+ setCueVolume(vol){
+  this.cueVolume=Math.max(0,Math.min(1,Number(vol)||0));
+  for(const el of this.cueEls.values()){
+   try{el.volume=this.cueVolume;}catch{}
+  }
+ }
  unlock(){
   if(!this.context){
    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;
@@ -193,11 +228,13 @@ export class EngineAudio{
   this.ambReady=true;
  }
  update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false}={}){
+  const vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
+  const live=enabled&&!paused;
+  this.setCueVolume(live?vol:0);
   if(!this.context)return;
   this.ensureHum();
   this.ensureAmb();
-  const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving)),vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
-  const live=enabled&&!paused;
+  const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
   this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*.32:0,t,.12);
   this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
   this.mid.frequency.setTargetAtTime(77+n*45+(boost?19:0),t,.18);
@@ -228,6 +265,8 @@ export class EngineAudio{
   rampGain(this.gain.gain,0,this.context.currentTime,.05);
  }
  muteAll(){
+  this.setCueVolume(0);
+  for(const canon of this.cueEls.keys())this.stopCueFile(canon);
   if(!this.context)return;
   const t=this.context.currentTime;
   for(const g of this.gains()){

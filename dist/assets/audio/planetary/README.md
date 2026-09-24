@@ -1,12 +1,18 @@
-# Planetary cue drop (Audio Designer)
+# Planetary cues (Audio Designer)
 
-MP3s are **not** in this PR. Drop Sonilo (or ElevenLabs alt) files here using these stems so `EngineAudio` `file:` fields resolve without a rename:
+Sonilo MP3s (ElevenLabs alts described in the pack manifest). No WAV masters.
 
-- `ambient_metal.mp3` / `ambient_mineral.mp3` / `ambient_icegiant.mp3` — ~8s loops
-- `grit_metal.mp3` / `grit_icegiant.mp3` — ~1s footfall
-- `pad_inspect_start.mp3` / `pad_inspect_loop.mp3` / `pad_inspect_stop.mp3`
-- `embark_whoosh.mp3` — embark and takeoff
+| Stem | In-game cue | Type |
+|---|---|---|
+| `ambient_metal.mp3` | `ambient_metal` | loop on metal sites |
+| `ambient_mineral.mp3` | `ambient_mineral` | loop on mineral sites |
+| `ambient_icegiant.mp3` | `ambient_icegiant` | loop on icegiant sites |
+| `grit_metal.mp3` | `grit_metal` | throttled footfall |
+| `grit_mineral.mp3` | `grit_mineral` | throttled footfall (Gabe approved) |
+| `grit_icegiant.mp3` | `grit_icegiant` | throttled footfall |
+| `pad_inspect_start.mp3` | `surface.inspect.start` | oneshot |
+| `pad_inspect_loop.mp3` | `surface.inspect.loop` | loop while surveying |
+| `pad_inspect_stop.mp3` | `surface.inspect.stop` | oneshot; also stops the loop |
+| `embark_whoosh.mp3` | `surface.embark` / `surface.takeoff` | oneshot |
 
-**Hold `grit_mineral.mp3`** until Audio re-rolls (classifier flagged bark). Do not add it to `sw.js` FILES until it ships.
-
-In-game still fires `surface.inspect.*` / `surface.embark` / `surface.takeoff`; those names alias the stems above.
+Preferred stems (`pad_inspect_*`, `embark_whoosh`) are aliases for the `surface.*` ids the game already fires.

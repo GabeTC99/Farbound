@@ -11,7 +11,7 @@ import {
  tileBakeSize,tileScreenRepeat,tileSizeForQuality,prefetchFrontierArt,
  createSiteTransition,siteTransitionAlpha,siteTransitionDone,drawSiteTransition
 } from '../dist/new-frontier.mjs';
-import {SURFACE_AUDIO_CUES,AUDIO_CUES,EngineAudio,surfaceAmbientCue,surfaceGritCue,planetaryAudioFile,PLANETARY_AUDIO_DIR} from '../dist/engine-audio.mjs';
+import {SURFACE_AUDIO_CUES,AUDIO_CUES,EngineAudio,surfaceAmbientCue,surfaceGritCue,planetaryAudioFile,PLANETARY_AUDIO_DIR,PLANETARY_AUDIO_STEMS} from '../dist/engine-audio.mjs';
 import {drawPlanetBody,warmPlanetTexture,PLANET_ART,samplePlanetColor} from '../dist/planet-render.mjs';
 import {SURFACE_PALETTES,renderSurface,drawFrontierSkiff} from '../dist/surface-render.mjs';
 import {terrainAt,terrainSlope,createSurface} from '../dist/surface.mjs';
@@ -237,7 +237,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-onfoot2/);
+assert.match(sw,/farbound-v3\.0\.0-onfoot3/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
@@ -331,12 +331,19 @@ assert.equal(AUDIO_CUES.ambient_metal.type,'loop');
 assert.equal(AUDIO_CUES.ambient_mineral.type,'loop');
 assert.equal(AUDIO_CUES.ambient_icegiant.type,'loop');
 assert.equal(AUDIO_CUES.grit_metal.type,'oneshot');
+assert.equal(AUDIO_CUES.grit_mineral.type,'oneshot');
 assert.equal(AUDIO_CUES.grit_icegiant.type,'oneshot');
-assert.ok(!AUDIO_CUES.grit_mineral,'grit_mineral held for Audio re-roll');
+assert.equal(PLANETARY_AUDIO_STEMS.length,10);
 assert.equal(surfaceAmbientCue('metal'),'ambient_metal');
 assert.equal(surfaceAmbientCue('earthlike'),null);
 assert.equal(surfaceGritCue('icegiant'),'grit_icegiant');
-assert.equal(surfaceGritCue('mineral'),null);
+assert.equal(surfaceGritCue('mineral'),'grit_mineral');
+for(const stem of PLANETARY_AUDIO_STEMS){
+ const file=new URL('../dist/assets/audio/planetary/'+stem+'.mp3',import.meta.url);
+ assert.ok(readFileSync(file).length>1000,stem+' mp3 must ship');
+ assert.match(sw,new RegExp(stem.replace(/[.]/g,'\\.')+'\\.mp3'));
+}
+assert.doesNotMatch(sw,/\.wav/);
 assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectStart));
 assert.ok(audio.playCue('pad_inspect_start'));
 assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectLoop));
@@ -344,6 +351,7 @@ assert.ok(audio.isCueLooping('pad_inspect_loop'));
 assert.ok(audio.playCue('pad_inspect_stop'));
 assert.ok(!audio.isCueLooping(SURFACE_AUDIO_CUES.inspectLoop));
 assert.ok(audio.playCue('embark_whoosh'));
+assert.ok(audio.playCue('grit_mineral'));
 assert.ok(audio.playCue('ambient_metal'));
 assert.ok(audio.isCueLooping('ambient_metal'));
 assert.ok(audio.stopCue('ambient_metal'));
