@@ -3,7 +3,8 @@ import {SURFACE_PALETTES} from './surface-render.mjs';
 import {
  surfaceSun,mixHex,fadeHex,shadeHex,
  prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
- surfaceTextureName,landingPlateName,plateCrop,tileBakeSize,tileScreenRepeat
+ surfaceTextureName,landingPlateName,kindPlateName,drawFrontierVista,
+ tileBakeSize,tileScreenRepeat
 } from './new-frontier.mjs';
 
 function rr(ctx,x,y,w,h,r){
@@ -55,18 +56,10 @@ function drawPlanetBackdrop(ctx,width,height,s){
  const sky=ctx.createLinearGradient(0,0,0,height);
  sky.addColorStop(0,pal.sky0);sky.addColorStop(.4,pal.sky1);sky.addColorStop(.78,pal.sky2);sky.addColorStop(1,mixHex(pal.sky2,pal.terrain,.3));
  ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
- const plate=peekFrontierImage(landingPlateName(kind))||loadFrontierImage(landingPlateName(kind));
- if(plate&&plate.width){
-  const crop=plateCrop(landingPlateName(kind));
-  const destH=height*.44;
-  ctx.save();ctx.globalAlpha=.62;
-  ctx.drawImage(plate,plate.width*crop.sx,plate.height*crop.sy,plate.width*crop.sw,plate.height*crop.sh,0,0,width,destH);
-  ctx.globalAlpha=1;
-  const fade=ctx.createLinearGradient(0,destH*.4,0,destH);
-  fade.addColorStop(0,'#0000');fade.addColorStop(1,pal.sky2);
-  ctx.fillStyle=fade;ctx.fillRect(0,destH*.4,width,destH*.6);
-  ctx.restore();
- }
+ loadFrontierImage(kindPlateName(kind));
+ const plateName=landingPlateName(kind);
+ const plate=peekFrontierImage(plateName)||loadFrontierImage(plateName);
+ if(plate&&plate.width)drawFrontierVista(ctx,width,height,plate,plateName,pal,0,'high');
  const sx=width*(.2+sun.x*.1),sy=height*.18;
  const glow=ctx.createRadialGradient(sx,sy,6,sx,sy,width*.4);
  glow.addColorStop(0,fadeHex(pal.sun||pal.accent,.5));glow.addColorStop(.4,fadeHex(pal.sun||pal.accent,.14));glow.addColorStop(1,'#0000');
