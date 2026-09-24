@@ -5,7 +5,7 @@ import {mapView,hortStrip} from '../dist/frontier-views.mjs';
 import {createStationLayout,pickStationChat,STATION_CHAT} from '../dist/station-layout.mjs';
 import {HORT_SYSTEM_ID as catalogId} from '../dist/catalog.mjs';
 
-const srcFiles=['../dist/station-hort.mjs','../dist/station-layout.mjs','../dist/frontier.mjs','../dist/frontier-views.mjs','../dist/app.js','../dist/catalog.mjs','../README.md','../releases/v2.16.10.json','../releases/v2.16.11.json'];
+const srcFiles=['../dist/station-hort.mjs','../dist/station-layout.mjs','../dist/frontier.mjs','../dist/frontier-views.mjs','../dist/app.js','../dist/catalog.mjs','../README.md','../releases/v2.16.10.json','../releases/v2.16.11.json','../releases/v3.0.0.json'];
 const banned=/legal name|real person|named after a real/i;
 for(const file of srcFiles){
  const src=readFileSync(new URL(file,import.meta.url),'utf8');

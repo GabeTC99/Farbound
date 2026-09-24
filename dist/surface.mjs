@@ -2,6 +2,8 @@ import {PLANET_KINDS} from './system-layout.mjs';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const rng=seed=>()=>{let t=seed+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};
 export function terrainAt(x,seed){return 650+Math.sin(x*.003+seed)*70+Math.sin(x*.011+seed*.4)*27+Math.cos(x*.021+seed)*9;}
+/** Positive = left face (sunward when the star is on -X). */
+export function terrainSlope(x,seed,span=18){return (terrainAt(x-span,seed)-terrainAt(x+span,seed))/(span*2);}
 export function surfaceAltitude(s){return Math.max(0,terrainAt(s.x,s.seed)-19-s.y);}
 
 const KIND_ANOMALIES={
