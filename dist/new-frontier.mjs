@@ -178,12 +178,17 @@ export function vistaDestHeight(height,quality){
 
 /** World-Y the hill/ridge bands lock to so climb/descent does not drag them. */
 export const VISTA_LOCK_Y=400;
-/** Mid/far ridge layers stay screen-locked vertically. Near play-surface still follows the camera. */
+/** Hill layers — including the nearest play-surface silhouette — stay screen-locked vertically. */
 export const RIDGE_VERTICAL_PARALLAX=0;
 
 export function ridgeCameraY(cameraY,vParallax=RIDGE_VERTICAL_PARALLAX,refY=VISTA_LOCK_Y){
  const v=vParallax<0?0:vParallax>1?1:vParallax;
  return refY+(cameraY-refY)*v;
+}
+
+/** Vertical camera for planetary land. Locked so climb does not drag the first hill. */
+export function surfaceCameraY(playerY,refY=VISTA_LOCK_Y){
+ return ridgeCameraY((Number(playerY)||0)-40,RIDGE_VERTICAL_PARALLAX,refY);
 }
 
 /**

@@ -26,12 +26,12 @@ This delivery contains a playable browser/PWA prototype, a Fold-ready **Nullharb
 
 ### Candidate 3.0.0 · landing vista
 
-- **Vertical motion:** Far cinematic plate is locked to screen space. All mid/far `fillRidge` hill bands use `RIDGE_VERTICAL_PARALLAX=0` (locked to `VISTA_LOCK_Y`) so climb/descent does not drag hill art. Near play-surface still follows the camera. Horizontal parallax on `cameraX` stays.
+- **Vertical motion:** Far cinematic plate is locked to screen space. Landing camera Y is `surfaceCameraY` (locked to `VISTA_LOCK_Y`) so mid/far `fillRidge` bands **and** the nearest play-surface hill stay put on climb. The skiff moves in screen space. Horizontal parallax on `cameraX` stays.
 - **Crop / blend:** Taller plate crop and fuller-bleed dest height, with multiply tint plus soft sponges into sky and ridge tops (no hard clipped strip).
 - **Per-kind hooks:** Each `SURFACE_PALETTES` kindId maps to optional `landing-{kind}.png` / `surface-{kind}.png` under `dist/assets/new-frontier/`, falling back to shipped `landing-a/b` and `planet-surface-a/b`. Prefetch lists every known name; drop PNGs in a follow-up. Kind files are **not** in the service-worker `FILES` list until they ship.
 - **Phase 1b art:** Distinct Scenario plates for volcanic, earthlike, arid, ice, ocean, toxic, barren, gas; surfaces for volcanic, earthlike, arid, ice, toxic, barren. Metal/mineral reuse barren until their own files arrive.
-- **Ship:** Player-facing version stays **3.0.0**. Service worker cache is `farbound-v3.0.0-vista3` so Pages testers pick up the JS. Android `versionCode` stays **13**. Do **not** tag Android or Windows Releases.
-- **How to verify:** Land volcanic / ice / arid. Climb and descend — hill bands and the far vista should stay put. Graphics → Performance still skips the plate.
+- **Ship:** Player-facing version stays **3.0.0**. Service worker cache is `farbound-v3.0.0-vista4` so Pages testers pick up the JS. Android `versionCode` stays **13**. Do **not** tag Android or Windows Releases.
+- **How to verify:** Land volcanic / ice / arid. Climb and descend — the first hill (white path) should stay on the same screen line. Graphics → Performance still skips the plate.
 
 ### Candidate 3.0.0 · Phase 1
 
