@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {SHIPS,SYSTEMS,Game} from '../dist/frontier.mjs';
 import {HULL_DEFS,getHullDef,hullPreviewSvg as hullSvg} from '../dist/hull-defs.mjs';
-import {CLASS_ART,HULL_CLASS,NPC_HULLS,NPC_KINDS,PLAYER_HULL_IDS,resolveHull,hullPreviewSvg,sampleShipColor,meanShipColor,colorDistance,shipLimb,drawCraft} from '../dist/ship-render.mjs';
+import {CLASS_ART,HULL_CLASS,NPC_HULLS,NPC_KINDS,PLAYER_HULL_IDS,resolveHull,hullPreviewSvg,sampleShipColor,meanShipColor,colorDistance,shipLimb,drawCraft,rememberShipPlate,peekShipPlate} from '../dist/ship-render.mjs';
 
 assert.equal(SHIPS.length,20);
 assert.equal(Object.keys(HULL_DEFS).length,20);
@@ -114,3 +114,24 @@ assert(!g.s.docked);
 
 console.log('PASS Fleet atlas: 20 hulls, '+NPC_KINDS.length+' NPC kinds, grounded metal stays distinct');
 console.log('PASS Hangar previews use class kits, framed canopies, and recessed bells');
+
+import {shipPlateUrl} from '../dist/hull-defs.mjs';
+for(const id of ['wren','sparrow','kestrel','mule','rook','tern','jackal']){
+ const svg=hullPreviewSvg({id,class:'explorer',accent:'#7ad9c8'});
+ assert.match(svg,new RegExp('assets/ships/'+id+'\\.png'));
+ assert.match(svg,/<polygon /);
+ assert.equal(shipPlateUrl(id),'assets/ships/'+id+'.png');
+}
+assert.equal(shipPlateUrl('eagle'),null);
+rememberShipPlate('wren',{width:1024,naturalWidth:1024,height:512});
+assert.ok(peekShipPlate('wren'));
+let drawn=0,grads2=0;
+const plated=new Proxy({imageSmoothingEnabled:true},{get:(_,key)=>key==='drawImage'?(()=>{drawn++;}):key==='createLinearGradient'||key==='createRadialGradient'?(()=>{grads2++;return{addColorStop(){}};}):()=>{},set:()=>true});
+drawCraft(plated,{kind:'wren',size:19,thrust:0,lite:true,clock:0});
+assert.equal(drawn,1,'loaded plate replaces procedural paint');
+assert.equal(grads2,0);
+rememberShipPlate('wren',null);
+assert.equal(peekShipPlate('wren'),null);
+drawCraft(plated,{kind:'wren',size:19,thrust:1,lite:true,clock:0});
+assert.equal(drawn,1,'missing plate falls back to procedural paint');
+console.log('PASS Wren, Sparrow, and Kestrel plates draw when present');
