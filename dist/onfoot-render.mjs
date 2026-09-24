@@ -52,7 +52,7 @@ function drawPlanetBackdrop(ctx,width,height,s,opts={}){
  prefetchFrontierArt();
  const pal=SURFACE_PALETTES[s.kindId]||SURFACE_PALETTES.mineral;
  const kind=s.kindId||'mineral';
- const sun=surfaceSun((s.title||kind).length*97);
+ const sun=surfaceSun(s.seed??(s.title||kind).length*97);
  const sky=ctx.createLinearGradient(0,0,0,height);
  sky.addColorStop(0,pal.sky0);sky.addColorStop(.4,pal.sky1);sky.addColorStop(.78,pal.sky2);sky.addColorStop(1,mixHex(pal.sky2,pal.terrain,.3));
  ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
@@ -274,11 +274,14 @@ function drawStandingCrew(ctx,x,y,scale,facing,walk,color,suit,opts={}){
  const toward=oct<=2||oct===7;
  const flip=oct>=2&&oct<=4;
  const accent=color||'#7ec8c0',cloth=suit||'#1d3844';
+ const sunX=Number.isFinite(opts.sunX)?opts.sunX:null;
+ const fromLeft=sunX==null?true:sunX<0;
+ const shx=sunX==null?3.6*scale:(-sunX*4.4*scale);
  ctx.save();ctx.translate(x,y);
  ctx.fillStyle='rgba(0,0,0,.18)';
- ctx.beginPath();ctx.ellipse(3.6*scale,3.6*scale,9.2*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(shx,3.6*scale,9.2*scale,3.4*scale,0,0,Math.PI*2);ctx.fill();
  ctx.fillStyle='rgba(0,0,0,.4)';
- ctx.beginPath();ctx.ellipse(2*scale,2.6*scale,6.6*scale,2.3*scale,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(shx*.55,2.6*scale,6.6*scale,2.3*scale,0,0,Math.PI*2);ctx.fill();
  if(flip)ctx.scale(-1,1);
  const bodyY=sit?-3.2*scale:-8.6*scale,headY=sit?-6.6*scale:-12.2*scale;
  const leg=stride*1.5*scale;
@@ -290,8 +293,8 @@ function drawStandingCrew(ctx,x,y,scale,facing,walk,color,suit,opts={}){
   ctx.beginPath();rr(ctx,-3.2*scale,.2*scale+leg,2.4*scale,5.2*scale,1);ctx.fill();
   ctx.beginPath();rr(ctx,.7*scale,.2*scale-leg,2.4*scale,5.2*scale,1);ctx.fill();
  }
- const body=ctx.createLinearGradient(-5*scale,bodyY,6*scale,bodyY+11*scale);
- body.addColorStop(0,mix(cloth,'#9ad4cc',.2));
+ const body=ctx.createLinearGradient(fromLeft?-5*scale:5*scale,bodyY,fromLeft?6*scale:-6*scale,bodyY+11*scale);
+ body.addColorStop(0,mix(cloth,sunX==null?'#9ad4cc':'#fff6e8',sunX==null?.2:.26));
  body.addColorStop(.45,cloth);
  body.addColorStop(1,mix(cloth,'#05090c',.38));
  ctx.fillStyle=body;
@@ -1129,6 +1132,8 @@ function renderStationConcourse(ctx,width,height,s,clock){
 function renderPlanetSite(ctx,width,height,s,clock){
  const pal=SURFACE_PALETTES[s.kindId]||SURFACE_PALETTES.mineral;
  const accent=s.accent||pal.accent;
+ const sun=surfaceSun(s.seed??1);
+ const sunX=sun.x||-1;
  const scale=width<650?1.08:1.2;
  const cameraX=s.x-width*.4/scale,cameraY=s.y-height*.68/scale;
  const sx=x=>(x-cameraX)*scale,sy=y=>(y-cameraY)*scale;
@@ -1158,7 +1163,7 @@ function renderPlanetSite(ctx,width,height,s,clock){
   if(z.board||z.launch){
    sprites.push({y:z.y,draw:()=>{
     ctx.save();ctx.translate(sx(z.x),sy(z.y)-6);ctx.scale(1.85,1.85);
-    drawFrontierSkiff(ctx,0,0,pal,clock,{nearGround:true,sunX:-1});
+    drawFrontierSkiff(ctx,0,0,pal,clock,{nearGround:true,sunX});
     ctx.restore();
    }});
   }else{
@@ -1173,7 +1178,7 @@ function renderPlanetSite(ctx,width,height,s,clock){
   }
  }
  sprites.push({y:s.y,draw:()=>{
-  drawStandingCrew(ctx,sx(s.x),sy(s.y),scale*3.15,s.facing,s.walk||0,accent,pal.skiff||'#1d3844',{player:true});
+  drawStandingCrew(ctx,sx(s.x),sy(s.y),scale*3.15,s.facing,s.walk||0,accent,pal.skiff||'#1d3844',{player:true,sunX});
  }});
  sprites.sort((a,b)=>a.y-b.y);
  for(const spr of sprites)spr.draw();

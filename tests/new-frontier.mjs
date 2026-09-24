@@ -8,8 +8,10 @@ import {
  surfaceTextureName,landingPlateName,kindPlateName,kindSurfaceName,
  fallbackPlateName,fallbackSurfaceName,resolveFrontierName,rememberFrontierImage,
  clearFrontierAssets,plateCrop,vistaDestHeight,ridgeCameraY,VISTA_LOCK_Y,RIDGE_VERTICAL_PARALLAX,surfaceCameraY,
- tileBakeSize,tileScreenRepeat,tileSizeForQuality,prefetchFrontierArt
+ tileBakeSize,tileScreenRepeat,tileSizeForQuality,prefetchFrontierArt,
+ createSiteTransition,siteTransitionAlpha,siteTransitionDone,drawSiteTransition
 } from '../dist/new-frontier.mjs';
+import {SURFACE_AUDIO_CUES,AUDIO_CUES,EngineAudio} from '../dist/engine-audio.mjs';
 import {drawPlanetBody,warmPlanetTexture,PLANET_ART,samplePlanetColor} from '../dist/planet-render.mjs';
 import {SURFACE_PALETTES,renderSurface,drawFrontierSkiff} from '../dist/surface-render.mjs';
 import {terrainAt,terrainSlope,createSurface} from '../dist/surface.mjs';
@@ -71,6 +73,10 @@ assert.ok(FRONTIER_PREFETCH_ASSETS.includes('surface-toxic.png'));
 assert.ok(FRONTIER_KIND_SHIPPED.includes('landing-gas.png'));
 assert.ok(FRONTIER_KIND_SHIPPED.includes('surface-barren.png'));
 assert.ok(!FRONTIER_KIND_SHIPPED.includes('landing-metal.png'));
+assert.ok(!FRONTIER_KIND_SHIPPED.includes('landing-icegiant.png'));
+assert.ok(FRONTIER_PREFETCH_ASSETS.includes('landing-metal.png'));
+assert.ok(FRONTIER_PREFETCH_ASSETS.includes('surface-mineral.png'));
+assert.ok(FRONTIER_PREFETCH_ASSETS.includes('landing-icegiant.png'));
 for(const name of FRONTIER_KIND_SHIPPED)assert.ok(FRONTIER_PREFETCH_ASSETS.includes(name),name+' must be prefetched');
 assert.equal(kindPlateName('volcanic'),'landing-volcanic.png');
 assert.equal(kindSurfaceName('ice'),'surface-ice.png');
@@ -95,6 +101,14 @@ rememberFrontierImage('landing-barren.png',{width:8,height:8});
 rememberFrontierImage('surface-barren.png',{width:8,height:8});
 assert.equal(landingPlateName('metal'),'landing-barren.png');
 assert.equal(surfaceTextureName('mineral'),'surface-barren.png');
+rememberFrontierImage('landing-metal.png',{width:8,height:8});
+rememberFrontierImage('surface-mineral.png',{width:8,height:8});
+rememberFrontierImage('landing-icegiant.png',{width:8,height:8});
+rememberFrontierImage('surface-icegiant.png',{width:8,height:8});
+assert.equal(landingPlateName('metal'),'landing-metal.png');
+assert.equal(surfaceTextureName('mineral'),'surface-mineral.png');
+assert.equal(landingPlateName('icegiant'),'landing-icegiant.png');
+assert.equal(surfaceTextureName('icegiant'),'surface-icegiant.png');
 clearFrontierAssets();
 assert.equal(landingPlateName('volcanic'),'landing-a.png');
 assert.equal(surfaceTextureName('ice'),'planet-surface-b.png');
@@ -198,6 +212,9 @@ assert.match(onfootSrc,/paintSiteGround/);
 assert.match(onfootSrc,/drawSitePad/);
 assert.match(onfootSrc,/drawFrontierSkiff/);
 assert.match(onfootSrc,/drawStandingCrew/);
+assert.match(onfootSrc,/const sunX=sun\.x/);
+assert.match(onfootSrc,/surfaceSun\(s\.seed/);
+assert.doesNotMatch(onfootSrc,/sunX:-1/);
 assert.doesNotMatch(onfootSrc,/plateCrop/);
 const onfootLogic=readFileSync(new URL('../dist/onfoot.mjs',import.meta.url),'utf8');
 assert.match(onfootLogic,/kindId:layout\.kindId/);
@@ -220,7 +237,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-onfoot1/);
+assert.match(sw,/farbound-v3\.0\.0-onfoot2/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
@@ -280,6 +297,8 @@ const siteLayout=createPlanetLayout(siteSurface);
 assert.equal(siteLayout.kindId,'metal');
 const foot=createOnFoot(siteLayout);
 assert.equal(foot.kindId,'metal');
+assert.equal(foot.seed,siteLayout.seed);
+assert.equal(siteLayout.seed,siteSurface.seed);
 const skiff=siteLayout.zones.find(z=>z.board);
 const pads=siteLayout.zones.filter(z=>z.service==='inspect');
 assert(skiff);assert(pads.length);
@@ -293,5 +312,20 @@ const fctx=fakeCtx();
 renderOnFoot(fctx,1280,720,foot,1);
 assert.ok(fctx.calls.includes('fillRect'));
 assert.ok(typeof drawFrontierSkiff==='function');
+
+const fx=createSiteTransition('embark');
+assert.ok(siteTransitionAlpha(fx)>0.99);
+fx.t=fx.dur;
+assert.ok(siteTransitionAlpha(fx)<0.02);
+assert.ok(siteTransitionDone(fx));
+drawSiteTransition(fakeCtx(),120,80,createSiteTransition('takeoff'));
+const audio=new EngineAudio();
+assert.equal(AUDIO_CUES[SURFACE_AUDIO_CUES.inspectStart].type,'oneshot');
+assert.equal(AUDIO_CUES[SURFACE_AUDIO_CUES.inspectLoop].type,'loop');
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectStart));
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectLoop));
+assert.ok(audio.isCueLooping(SURFACE_AUDIO_CUES.inspectLoop));
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectStop));
+assert.ok(!audio.isCueLooping(SURFACE_AUDIO_CUES.inspectLoop));
 
 console.log('PASS New Frontier mapping, vista lock, kind-plate hooks, and 3.0.0 branding');

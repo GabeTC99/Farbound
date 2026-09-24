@@ -24,6 +24,7 @@ export function createOnFoot(layout,saved=null){
   title:layout.title,
   role:layout.role,
   kindId:layout.kindId||null,
+  seed:layout.seed??null,
   accent:layout.accent,
   floor:layout.floor,
   width:layout.width,

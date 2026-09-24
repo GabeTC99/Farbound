@@ -52,8 +52,36 @@ export function rampGain(param, value, t, seconds=0.04){
  }
 }
 
+/** Named hooks for Audio Designer. No assets here — playCue records bind state. */
+export const SURFACE_AUDIO_CUES={
+ embark:'surface.embark',
+ takeoff:'surface.takeoff',
+ inspectStart:'surface.inspect.start',
+ inspectLoop:'surface.inspect.loop',
+ inspectStop:'surface.inspect.stop'
+};
+export const AUDIO_CUES={
+ [SURFACE_AUDIO_CUES.embark]:{type:'oneshot'},
+ [SURFACE_AUDIO_CUES.takeoff]:{type:'oneshot'},
+ [SURFACE_AUDIO_CUES.inspectStart]:{type:'oneshot'},
+ [SURFACE_AUDIO_CUES.inspectLoop]:{type:'loop'},
+ [SURFACE_AUDIO_CUES.inspectStop]:{type:'oneshot',stops:SURFACE_AUDIO_CUES.inspectLoop}
+};
+
 export class EngineAudio{
- constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;}
+ constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();}
+ playCue(name){
+  const def=AUDIO_CUES[name];
+  if(!def)return false;
+  this.lastCue=name;
+  this.cueLog.push(name);
+  if(this.cueLog.length>24)this.cueLog.shift();
+  if(def.type==='loop')this.loops.add(name);
+  if(def.stops)this.loops.delete(def.stops);
+  return true;
+ }
+ isCueLooping(name){return this.loops.has(name);}
+ stopCue(name){this.loops.delete(name);return true;}
  unlock(){
   if(!this.context){
    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;
