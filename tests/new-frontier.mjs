@@ -251,7 +251,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-ships4/);
+assert.match(sw,/farbound-v3\.0\.0-grit1/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
@@ -382,5 +382,23 @@ assert(siteGame.disembark());
 assert(siteGame.audioCues.includes('ambient_metal'));
 assert(siteGame.boardSkiff());
 assert(siteGame.audioStops.includes('ambient_metal'));
+function gritHits(kind,speed,seconds=3){
+ const g=new Game();
+ g.onfoot={kindId:kind,vx:speed,vy:0};
+ g.surface={kindId:kind};
+ g.audioCues=[];
+ let n=0;
+ for(let t=0;t<seconds;t+=1/30){
+  g.updatePlanetFootGrit(1/30);
+  n+=g.audioCues.length;
+  g.audioCues.length=0;
+ }
+ return n;
+}
+const iceWalk=gritHits('ice',40),iceSprint=gritHits('ice',80),earthWalk=gritHits('earthlike',40);
+assert.ok(iceWalk>=1&&iceWalk<=2,'ice walk stays sparse ('+iceWalk+')');
+assert.ok(iceSprint>iceWalk&&iceSprint<=4,'ice sprint is a bit more frequent ('+iceSprint+')');
+assert.ok(earthWalk>iceWalk&&earthWalk<=4,'milder ground steps more often than ice ('+earthWalk+')');
+console.log('PASS On-foot grit is sparse, faster on sprint, and ice waits longest');
 
 console.log('PASS New Frontier mapping, vista lock, kind-plate hooks, and 3.0.0 branding');

@@ -5,7 +5,7 @@ import {createOnFoot,nearestZone,interactZone,updateOnFoot,onFootSave} from './o
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {createSiteTransition,siteTransitionDone} from './new-frontier.mjs';
-import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue,resolveShipCue} from './engine-audio.mjs';
+import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue,resolveShipCue,gritInterval} from './engine-audio.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan,eventObjective,salvageDerelict,createWreckLayout} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState,STATION_ROBOT} from './station-robot.mjs';
@@ -615,13 +615,14 @@ export class Game extends FlightGame{
   this.siteAmbient=null;
  }
  updatePlanetFootGrit(dt){
-  const cue=surfaceGritCue(this.onfoot?.kindId||this.surface?.kindId);
+  const kind=this.onfoot?.kindId||this.surface?.kindId;
+  const cue=surfaceGritCue(kind);
   if(!cue||!this.onfoot){this.gritCool=0;return;}
   const spd=Math.hypot(this.onfoot.vx||0,this.onfoot.vy||0);
-  if(spd<=14){this.gritCool=Math.min(this.gritCool||0,.12);return;}
+  if(spd<=14){this.gritCool=Math.min(this.gritCool||0,.2);return;}
   this.gritCool=(this.gritCool||0)-dt;
   if(this.gritCool>0)return;
-  this.gritCool=.38;
+  this.gritCool=gritInterval(kind,spd>64);
   this.fireAudioCue(cue);
  }
  advanceSiteTransition(dt){

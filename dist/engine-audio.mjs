@@ -93,6 +93,17 @@ export function surfaceAmbientCue(kindId){
 export function surfaceGritCue(kindId){
  return PLANETARY_GRIT_KINDS.includes(kindId)?'grit_'+kindId:null;
 }
+/** Crack-like beds. Longer gap and lower gain so ice does not read as gunfire. */
+export const GRIT_HARSH_KINDS=['ice','icegiant','volcanic','metal'];
+export function gritInterval(kindId,sprint=false){
+ const harsh=GRIT_HARSH_KINDS.includes(kindId);
+ if(sprint)return harsh?1.2:.75;
+ return harsh?1.9:1.15;
+}
+/** Gain into the shared cue bus. Harsh kinds sit further under ambient. */
+export function gritLevel(kindId){
+ return GRIT_HARSH_KINDS.includes(kindId)?.22:.42;
+}
 
 /** Fired in-game ids stay surface.*; preferred stems are aliases + file: fields. */
 export const SURFACE_AUDIO_CUES={
@@ -125,7 +136,7 @@ export const AUDIO_CUES={
  [SURFACE_AUDIO_CUES.padInspectStop]:cueDef('oneshot','pad_inspect_stop',{stops:SURFACE_AUDIO_CUES.inspectLoop}),
  ...Object.fromEntries(PLANETARY_AMBIENT_KINDS.flatMap(id=>[
   ['ambient_'+id,cueDef('loop','ambient_'+id)],
-  ['grit_'+id,cueDef('oneshot','grit_'+id)]
+  ['grit_'+id,cueDef('oneshot','grit_'+id,{solo:true})]
  ])),
  ...Object.fromEntries(SHIP_AUDIO_STEMS.map(stem=>[stem,{type:stem.startsWith('thruster_')?'loop':'oneshot',file:shipAudioFile(stem)}]))
 };
@@ -164,6 +175,15 @@ export class EngineAudio{
    this.startCueSource(canon,def,buffer);
   }).catch(()=>{});
  }
+ ensureGritGain(){
+  this.ensureCueGain();
+  if(this.gritGain||!this.context||!this.cueGain)return;
+  const g=this.context.createGain();
+  g.gain.value=.42;
+  g.connect(this.cueGain);
+  this.gritGain=g;
+ }
+ gritKind(canon){return String(canon||'').startsWith('grit_')?canon.slice(5):null;}
  ensureCueGain(){
   if(this.cueGain||!this.context)return;
   const g=this.context.createGain();
@@ -200,13 +220,22 @@ export class EngineAudio{
  startCueSource(canon,def,buffer){
   this.ensureCueGain();
   if(!this.cueGain)return;
-  if(def.type==='loop')this.stopCueFile(canon);
+  if(def.type==='loop'||def.solo)this.stopCueFile(canon);
+  const grit=def.solo?this.gritKind(canon):null;
+  let bus=this.cueGain;
+  if(grit){
+   this.ensureGritGain();
+   if(!this.gritGain)return;
+   const level=gritLevel(grit);
+   try{this.gritGain.gain.value=level;}catch{}
+   bus=this.gritGain;
+  }
   const src=this.context.createBufferSource();
   src.buffer=this.copyCueBuffer(buffer);
   src.loop=def.type==='loop';
-  src.connect(this.cueGain);
+  src.connect(bus);
   try{src.start(this.context.currentTime||0);}catch{return;}
-  if(def.type==='loop')this.cueSources.set(canon,src);
+  if(def.type==='loop'||def.solo)this.cueSources.set(canon,src);
  }
  stopCueFile(canon){
   const src=this.cueSources.get(canon);

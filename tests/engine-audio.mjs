@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue} from '../dist/engine-audio.mjs';
+import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel} from '../dist/engine-audio.mjs';
 
 const wrap=new Float32Array([0.9,0.4,-0.2,-0.8]);
 fadeLoopBuffer(wrap,2);
@@ -118,3 +118,20 @@ await new Promise(r=>setTimeout(r,20));
 assert.equal(audio.hullThrusterOn,true);
 assert.ok(fetched.some(u=>u.includes('thruster_jackal.mp3')));
 console.log('PASS Ship thruster loops and flyby/land oneshots resolve by hull');
+assert.ok(gritInterval('ice',false)>gritInterval('earthlike',false));
+assert.ok(gritInterval('ice',true)<gritInterval('ice',false));
+assert.ok(gritInterval('earthlike',true)<gritInterval('earthlike',false));
+assert.ok(gritInterval('ice',false)>=1.07,'ice gap covers the crack length');
+assert.ok(gritLevel('ice')<gritLevel('earthlike'));
+assert.ok(gritLevel('earthlike')<1);
+const gritStops=stops.length;
+audio.playCue('grit_ice');
+await new Promise(r=>setTimeout(r,20));
+audio.playCue('grit_ice');
+await new Promise(r=>setTimeout(r,20));
+assert.ok(stops.length>gritStops,'a new grit oneshot stops the one already playing');
+assert.ok(Math.abs(audio.gritGain.gain.value-gritLevel('ice'))<1e-6);
+audio.playCue('grit_mineral');
+await new Promise(r=>setTimeout(r,20));
+assert.ok(Math.abs(audio.gritGain.gain.value-gritLevel('mineral'))<1e-6);
+console.log('PASS Grit oneshots replace the previous crack and sit under the cue bus');
