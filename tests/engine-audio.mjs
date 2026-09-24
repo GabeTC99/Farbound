@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel} from '../dist/engine-audio.mjs';
+import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId} from '../dist/engine-audio.mjs';
 
 const wrap=new Float32Array([0.9,0.4,-0.2,-0.8]);
 fadeLoopBuffer(wrap,2);
@@ -119,6 +119,10 @@ audio.syncHullThruster({hull:'eagle',thrust:1,live:true});
 await new Promise(r=>setTimeout(r,20));
 assert.equal(audio.hullThrusterOn,true);
 assert.ok(fetched.some(u=>u.includes('thruster_eagle.mp3')));
+assert.ok(Math.abs(audio.shipThrustGain.gain.value-SHIP_THRUST_LEVEL)<1e-6,'thruster bus is a fraction of the cue bus');
+assert.ok(Math.abs(audio.shipShotGain.gain.value-SHIP_SHOT_LEVEL)<1e-6,'flyby and land sit hotter than thrust');
+assert.ok(SHIP_THRUST_LEVEL>=.25&&SHIP_THRUST_LEVEL<=.4);
+assert.ok(SHIP_SHOT_LEVEL>SHIP_THRUST_LEVEL&&SHIP_SHOT_LEVEL<1);
 console.log('PASS Ship thruster loops and flyby/land oneshots resolve by hull');
 assert.ok(gritInterval('ice',false)>gritInterval('earthlike',false));
 assert.ok(gritInterval('ice',true)<gritInterval('ice',false));
@@ -137,3 +141,49 @@ audio.playCue('grit_mineral');
 await new Promise(r=>setTimeout(r,20));
 assert.ok(Math.abs(audio.gritGain.gain.value-gritLevel('mineral'))<1e-6);
 console.log('PASS Grit oneshots replace the previous crack and sit under the cue bus');
+
+assert.equal(cueHullId('courier'),'tern');
+assert.equal(cueHullId('wren'),'wren');
+assert.equal(cueHullId('freighter'),'ox');
+const fleet=[
+ {id:'a',hull:'courier',thrust:1,x:10,y:0},
+ {id:'b',hull:'freighter',thrust:1,x:40,y:0},
+ {id:'c',hull:'tender',thrust:1,x:80,y:0},
+ {id:'d',hull:'prospector',thrust:1,x:120,y:0},
+ {id:'far',hull:'surveyor',thrust:1,x:2000,y:0},
+ {id:'idle',hull:'courier',thrust:0,x:5,y:0}
+];
+const picked=pickNpcThrusters(fleet,{x:0,y:0});
+assert.equal(picked.length,3);
+assert.deepEqual(picked.map(p=>p.id),['a','b','c']);
+assert.equal(picked[0].hull,'tern');
+assert.equal(audio.hullThrusterCue,'thruster_eagle');
+const playerSrc=audio.cueSources.get('thruster_eagle');
+audio.syncNpcShips({ships:fleet,x:0,y:0,live:true});
+await new Promise(r=>setTimeout(r,30));
+assert.equal(audio.npcLoops.size,3);
+assert.equal(audio.cueSources.get('thruster_eagle'),playerSrc,'npc loops do not stop the player thruster');
+assert.ok([...audio.npcLoops.values()].every(s=>s.src&&s.src.loop));
+const npcStops=stops.length;
+audio.syncNpcShips({ships:[{id:'a',hull:'courier',thrust:1,x:900,y:0}],x:0,y:0,live:true});
+await new Promise(r=>setTimeout(r,10));
+assert.equal(audio.npcLoops.size,0);
+assert.ok(stops.length>npcStops,'npc thrusters stop when they leave range');
+const shotsBefore=plays.filter(s=>!s.loop).length;
+const passer={id:'pass',hull:'courier',thrust:1,x:400,y:0,status:'IN TRANSIT'};
+audio.syncNpcShips({ships:[passer],x:0,y:0,live:true});
+passer.x=100;
+audio.syncNpcShips({ships:[passer],x:0,y:0,live:true});
+await new Promise(r=>setTimeout(r,30));
+assert.ok(plays.filter(s=>!s.loop).length>shotsBefore,'a near pass plays a flyby');
+assert.ok(fetched.some(u=>u.includes('flyby_tern.mp3')));
+const docked={id:'dock',hull:'freighter',thrust:0,x:40,y:0,status:'IN TRANSIT'};
+audio.syncNpcShips({ships:[docked],x:0,y:0,live:true});
+const landBefore=plays.filter(s=>!s.loop).length;
+docked.status='DOCKED';
+audio.syncNpcShips({ships:[docked],x:0,y:0,live:true});
+await new Promise(r=>setTimeout(r,30));
+assert.ok(plays.filter(s=>!s.loop).length>landBefore,'docking plays a land cue');
+assert.ok(fetched.some(u=>u.includes('land_ox.mp3')));
+assert.ok(Math.abs(audio.gritGain.gain.value-gritLevel('mineral'))<1e-6,'ship buses leave grit alone');
+console.log('PASS Nearby NPC hulls play capped thruster, flyby, and land cues');

@@ -1186,7 +1186,7 @@ function loop(now){
  if(panel==='system-map')drawSystemMap();
  const onDeck=!!(game.onfoot&&game.s.docked),planetFeet=!!(game.onfoot&&game.surface);
  const p=poseBody(),ambience=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35,sky=systemSky(game.sys).kind;
- engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral',hull:game.s.ship,thrust:(!game.s.docked&&!game.surface&&!game.onfoot)?(game.player.thrust||0):0});
+ engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral',hull:game.s.ship,thrust:(!game.s.docked&&!game.surface&&!game.onfoot)?(game.player.thrust||0):0,ships:(!game.surface&&!game.onfoot)?[...(game.traffic||[]),...(game.patrols||[]),...(game.enemies||[])]:[],listenerX:p.x||0,listenerY:p.y||0});
  try{engine.setFoldCharge(started&&game.jump&&!simPaused()?game.jump.progress/3:0,ambience,!!game.s.sound&&started&&!document.hidden);}catch{}
  drainAudioCues();
  if(now-lastHUD>120){updateHUD();drainEvents();lastHUD=now;}

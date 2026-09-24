@@ -104,6 +104,43 @@ export function gritInterval(kindId,sprint=false){
 export function gritLevel(kindId){
  return GRIT_HARSH_KINDS.includes(kindId)?.22:.42;
 }
+/** Ship MP3s into the cue bus. Thruster loops sit under the sky bed; flyby/land are a step hotter. */
+export const SHIP_THRUST_LEVEL=.30;
+export const SHIP_SHOT_LEVEL=.42;
+export const NPC_THRUSTER_CAP=3;
+export const NPC_HEAR=780;
+export const NPC_FLYBY=280;
+/** Traffic roles are not plated hull ids. Map them onto READY stems for cues only. */
+export const NPC_CUE_HULL={
+ courier:'tern',freighter:'ox',tender:'rook',prospector:'mole',surveyor:'heron',security:'kestrel',pirate:'jackal'
+};
+export function cueHullId(hullId){
+ if(SHIP_AUDIO_READY.includes(hullId))return hullId;
+ return NPC_CUE_HULL[hullId]||null;
+}
+/** Patrols and pirates often have no hull string. Security voices kestrel; other hostiles voice jackal. */
+export function npcCueHull(ship){
+ if(!ship)return null;
+ if(ship.hull)return cueHullId(ship.hull);
+ const id=String(ship.id||'');
+ const security=!!ship.response||id.startsWith('patrol-')||ship.type==='patrol';
+ if(security)return cueHullId('security');
+ if(ship.type==='enemy')return cueHullId('pirate');
+ return null;
+}
+export function pickNpcThrusters(ships,listener,{cap=NPC_THRUSTER_CAP,hear=NPC_HEAR}={}){
+ const ox=listener?.x||0,oy=listener?.y||0,ranked=[];
+ for(const ship of ships||[]){
+  if(!ship||!(ship.thrust>0.08))continue;
+  const hull=npcCueHull(ship);
+  if(!hull)continue;
+  const d=Math.hypot((ship.x||0)-ox,(ship.y||0)-oy);
+  if(d>hear)continue;
+  ranked.push({id:ship.id,ship,hull,d,gain:Math.max(.18,1-d/hear)});
+ }
+ ranked.sort((a,b)=>a.d-b.d);
+ return ranked.slice(0,cap);
+}
 
 /** Fired in-game ids stay surface.*; preferred stems are aliases + file: fields. */
 export const SURFACE_AUDIO_CUES={
@@ -183,6 +220,22 @@ export class EngineAudio{
   g.connect(this.cueGain);
   this.gritGain=g;
  }
+ ensureShipGains(){
+  this.ensureCueGain();
+  if(!this.context||!this.cueGain)return;
+  if(!this.shipThrustGain){
+   const g=this.context.createGain();
+   g.gain.value=SHIP_THRUST_LEVEL;
+   g.connect(this.cueGain);
+   this.shipThrustGain=g;
+  }
+  if(!this.shipShotGain){
+   const g=this.context.createGain();
+   g.gain.value=SHIP_SHOT_LEVEL;
+   g.connect(this.cueGain);
+   this.shipShotGain=g;
+  }
+ }
  gritKind(canon){return String(canon||'').startsWith('grit_')?canon.slice(5):null;}
  ensureCueGain(){
   if(this.cueGain||!this.context)return;
@@ -222,6 +275,8 @@ export class EngineAudio{
   if(!this.cueGain)return;
   if(def.type==='loop'||def.solo)this.stopCueFile(canon);
   const grit=def.solo?this.gritKind(canon):null;
+  const name=String(canon||'');
+  const shipKind=name.startsWith('thruster_')?'thrust':((name.startsWith('flyby_')||name.startsWith('land_'))?'shot':null);
   let bus=this.cueGain;
   if(grit){
    this.ensureGritGain();
@@ -229,6 +284,10 @@ export class EngineAudio{
    const level=gritLevel(grit);
    try{this.gritGain.gain.value=level;}catch{}
    bus=this.gritGain;
+  }else if(shipKind){
+   this.ensureShipGains();
+   bus=shipKind==='thrust'?this.shipThrustGain:this.shipShotGain;
+   if(!bus)return;
   }
   const src=this.context.createBufferSource();
   src.buffer=this.copyCueBuffer(buffer);
@@ -259,6 +318,101 @@ export class EngineAudio{
   if(this.hullThrusterCue)this.stopCue(this.hullThrusterCue);
   this.hullThrusterCue=want;
   if(want)this.playCue(want);
+ }
+ stopNpcLoop(id){
+  const slot=this.npcLoops?.get(id);
+  if(!slot)return;
+  this.npcLoops.delete(id);
+  try{slot.src?.stop();}catch{}
+ }
+ stopAllNpc(){
+  if(!this.npcLoops)return;
+  for(const id of [...this.npcLoops.keys()])this.stopNpcLoop(id);
+ }
+ startNpcLoop(id,stem,level){
+  this.ensureShipGains();
+  if(!this.shipThrustGain||!this.context)return;
+  const def=AUDIO_CUES[stem];
+  if(!def?.file)return;
+  this.npcLoops||(this.npcLoops=new Map());
+  const gen=(this.npcGen=(this.npcGen||0)+1);
+  const g=this.context.createGain();
+  try{g.gain.value=level;}catch{}
+  g.connect(this.shipThrustGain);
+  const slot={stem,src:null,gain:g,gen};
+  this.npcLoops.set(id,slot);
+  this.ensureCueBuffer(def.file).then(buffer=>{
+   const cur=this.npcLoops.get(id);
+   if(!buffer||!cur||cur.gen!==gen||!this.context)return;
+   const src=this.context.createBufferSource();
+   src.buffer=this.copyCueBuffer(buffer);
+   src.loop=true;
+   src.connect(g);
+   try{src.start(this.context.currentTime||0);}catch{return;}
+   cur.src=src;
+  }).catch(()=>{});
+ }
+ playNpcShot(stem,level){
+  this.ensureShipGains();
+  if(!this.shipShotGain||!this.context)return;
+  const def=AUDIO_CUES[stem];
+  if(!def?.file)return;
+  this.ensureCueBuffer(def.file).then(buffer=>{
+   if(!buffer||!this.context||!this.shipShotGain)return;
+   const g=this.context.createGain();
+   try{g.gain.value=Math.max(0,Math.min(1,level));}catch{}
+   g.connect(this.shipShotGain);
+   const src=this.context.createBufferSource();
+   src.buffer=this.copyCueBuffer(buffer);
+   src.loop=false;
+   src.connect(g);
+   try{src.start(this.context.currentTime||0);}catch{}
+  }).catch(()=>{});
+ }
+ syncNpcShots(ships,listener){
+  this.npcNear||(this.npcNear=new Set());
+  this.npcStatus||(this.npcStatus=new Map());
+  const ox=listener?.x||0,oy=listener?.y||0,seen=new Set();
+  for(const ship of ships||[]){
+   if(!ship?.id)continue;
+   seen.add(ship.id);
+   const hull=npcCueHull(ship);
+   const d=Math.hypot((ship.x||0)-ox,(ship.y||0)-oy);
+   const near=d<=NPC_FLYBY;
+   const was=this.npcNear.has(ship.id);
+   if(hull&&ship.thrust>0.08&&near&&!was&&d<=NPC_HEAR){
+    const stem=shipAudioCue('flyby',hull);
+    if(stem)this.playNpcShot(stem,Math.max(.35,1-d/NPC_HEAR));
+   }
+   if(near)this.npcNear.add(ship.id);else this.npcNear.delete(ship.id);
+   const status=ship.status||'';
+   if(!this.npcStatus.has(ship.id))this.npcStatus.set(ship.id,status);
+   else if(this.npcStatus.get(ship.id)!==status){
+    this.npcStatus.set(ship.id,status);
+    if(status==='DOCKED'&&hull&&d<=NPC_HEAR){
+     const stem=shipAudioCue('land',hull);
+     if(stem)this.playNpcShot(stem,Math.max(.35,1-d/NPC_HEAR));
+    }
+   }
+  }
+  for(const id of [...this.npcNear])if(!seen.has(id))this.npcNear.delete(id);
+  for(const id of [...this.npcStatus.keys()])if(!seen.has(id))this.npcStatus.delete(id);
+ }
+ syncNpcShips({ships=[],x=0,y=0,live=false}={}){
+  this.npcLoops||(this.npcLoops=new Map());
+  if(!live){this.stopAllNpc();return;}
+  const picked=pickNpcThrusters(ships,{x,y});
+  const keep=new Set(picked.map(p=>p.id));
+  for(const id of [...this.npcLoops.keys()])if(!keep.has(id))this.stopNpcLoop(id);
+  for(const p of picked){
+   const stem=shipAudioCue('thruster',p.hull);
+   if(!stem)continue;
+   const prev=this.npcLoops.get(p.id);
+   if(prev&&prev.stem===stem){try{prev.gain.gain.value=p.gain;}catch{}continue;}
+   if(prev)this.stopNpcLoop(p.id);
+   this.startNpcLoop(p.id,stem,p.gain);
+  }
+  this.syncNpcShots(ships,{x,y});
  }
  setCueVolume(vol){
   this.cueVolume=Math.max(0,Math.min(1,Number(vol)||0));
@@ -345,7 +499,7 @@ export class EngineAudio{
   this.amb.start();
   this.ambReady=true;
  }
- update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0}={}){
+ update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0,ships=null,listenerX=0,listenerY=0}={}){
   const vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
   const live=enabled&&!paused;
   this.setCueVolume(live?vol:0);
@@ -354,6 +508,7 @@ export class EngineAudio{
   this.ensureAmb();
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
   this.syncHullThruster({hull,thrust,live:live&&!station&&!surface&&!planetFeet});
+  this.syncNpcShips({ships,x:listenerX,y:listenerY,live:live&&!surface&&!planetFeet});
   const hullTone=this.hullThrusterOn?0:1;
   this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*hullTone*.32:0,t,.12);
   this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
