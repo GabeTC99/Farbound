@@ -16,7 +16,7 @@ import {SystemChart} from './system-chart.mjs';
 import {renderSurface} from './surface-render.mjs';
 import {renderOnFoot} from './onfoot-render.mjs';
 import {drawPlanetBody,warmPlanetTexture} from './planet-render.mjs';
-import {lightDir,prefetchFrontierArt} from './new-frontier.mjs';
+import {lightDir,prefetchFrontierArt,drawSiteTransition} from './new-frontier.mjs';
 prefetchFrontierArt();
 import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft} from './ship-render.mjs';
@@ -310,6 +310,15 @@ function updateFrontierHUD(){
 function sysStationName(){return game.station?.name||game.sys.station;}
 function toast(message,tone){const e=document.createElement('div');e.className='toast '+tone;e.textContent=message;$('toasts').appendChild(e);while($('toasts').children.length>3)$('toasts').firstChild.remove();setTimeout(()=>e.remove(),4300);if(tone==='good')sound('good');}
 function drainEvents(){while(game.events.length){const e=game.events.shift();toast(e.text,e.tone);}}
+function drainAudioCues(){
+ const q=game.audioCues;
+ if(q?.length)while(q.length){const name=q.shift();try{engine.playCue(name);}catch{}}
+ const stops=game.audioStops;
+ if(stops?.length)while(stops.length){const name=stops.shift();try{engine.stopCue(name);}catch{}}
+}
+function paintSiteFx(){
+ if(game.siteFx)drawSiteTransition(ctx,width,height,game.siteFx);
+}
 function openPanel(name){lastFocus=document.activeElement;panel=name;if(name!=='station')deskVisit=false;resetControls();if(name==='map'){selectedSystem=game.s.route?.destination??game.s.system;const here=galaxyDisplay(SYSTEMS[game.s.system]);mapCamera.x=here.x;mapCamera.y=here.y;mapChart=null;}if(name==='system-map'){systemChart=null;const ship=game.s.docked&&game.station?game.station:game.player;systemCamera.x=ship.x;systemCamera.y=ship.y;}if(name==='menu')checkForAppUpdate();renderPanel();updateHUD();setTimeout(()=>{$('panel-layer').querySelector('button')?.focus();},0);}
 async function checkForAppUpdate(){
  try{
@@ -965,8 +974,8 @@ function worldInView(x,y,pad=90){
  return sx>-pad&&sx<width+pad&&sy>-pad&&sy<height+pad;
 }
 function render(dt=1/60,snapCam=false){
- if(game.onfoot&&(game.s.docked||game.surface)){fillSpaceClear(ctx,dpr,width,height);renderOnFoot(ctx,width,height,game.onfoot,clock);return;}
- if(game.surface){fillSpaceClear(ctx,dpr,width,height);renderSurface(ctx,width,height,game.surface,clock,getStats(game.s),{lite:liteFX(),quality:graphicsMode()});return;}
+ if(game.onfoot&&(game.s.docked||game.surface)){fillSpaceClear(ctx,dpr,width,height);renderOnFoot(ctx,width,height,game.onfoot,clock);paintSiteFx();return;}
+ if(game.surface){fillSpaceClear(ctx,dpr,width,height);renderSurface(ctx,width,height,game.surface,clock,getStats(game.s),{lite:liteFX(),quality:graphicsMode()});paintSiteFx();return;}
  cam.zoom=started?(width<650?.54:height<520?.55:.75):.26;const desiredX=started?game.player.x:400,desiredY=started?game.player.y:50;
  if(snapCam){cam.x=desiredX;cam.y=desiredY;}else followCam(cam,desiredX,desiredY,dt);
  drawSkyBackdrop();
@@ -1033,6 +1042,7 @@ function render(dt=1/60,snapCam=false){
  }
  if(game.jump){const progress=game.jump.progress/3,n=softFX()?24:75;ctx.globalAlpha=progress*.8;ctx.strokeStyle='#91eadd';ctx.lineWidth=1;for(let i=0;i<n;i++){const a=i*2.39996,r=30+(i*71+clock*800)%Math.max(width,height);ctx.beginPath();ctx.moveTo(width/2+Math.cos(a)*r,height/2+Math.sin(a)*r);ctx.lineTo(width/2+Math.cos(a)*r*(1.1+progress*.7),height/2+Math.sin(a)*r*(1.1+progress*.7));ctx.stroke();}ctx.globalAlpha=1;}
  drawRadar();
+ paintSiteFx();
 }
 function flightModeLabel(){
  if(game.jump)return 'FOLD';
@@ -1177,6 +1187,7 @@ function loop(now){
  const p=poseBody(),ambience=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35,sky=systemSky(game.sys).kind;
  engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral'});
  try{engine.setFoldCharge(started&&game.jump&&!simPaused()?game.jump.progress/3:0,ambience,!!game.s.sound&&started&&!document.hidden);}catch{}
+ drainAudioCues();
  if(now-lastHUD>120){updateHUD();drainEvents();lastHUD=now;}
  if(started&&now-lastStore>4000){save();lastStore=now;}
  framePacer.record(performance.now()-t0);

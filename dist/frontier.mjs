@@ -4,6 +4,8 @@ import {createSurface,nearestAnomaly,updateSurface,terrainAt} from './surface.mj
 import {createOnFoot,nearestZone,interactZone,updateOnFoot,onFootSave} from './onfoot.mjs';
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
+import {createSiteTransition,siteTransitionDone} from './new-frontier.mjs';
+import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue} from './engine-audio.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan,eventObjective,salvageDerelict,createWreckLayout} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState,STATION_ROBOT} from './station-robot.mjs';
@@ -552,7 +554,7 @@ export class Game extends FlightGame{
  }
 
  land(){if(this.s.docked||this.jump)return false;if(!this.visiblePlanets.length){this.notify('Run a discovery scan to locate worlds first.');return false;}const candidates=this.visiblePlanets.filter(isLandableBody);if(!candidates.length){this.notify('No landable worlds here. Gas and ice giants cannot be entered.');return false;}const p=candidates.includes(this.target)?this.target:candidates[0];this.target=p;if(!isLandableBody(p)){this.notify((p.kind||'This giant')+' — not landable. Select a solid world or moon.');return false;}if(dist(this.player,p)>p.r+450){this.auto=p;this.notify('Approaching landing range. Tap LAND when you arrive.');return false;}if(Math.hypot(this.player.vx,this.player.vy)>100){this.notify('Slow below 100 m/s for atmospheric entry.');return false;}this.auto=null;this.scan=null;this.spectrumScan=null;this.discoveryScan=null;this.scooping=false;this.shots=[];this.onfoot=null;this.surface=createSurface(p,this.s.surfaceScanned);this.surfaceRecordsStart=this.s.records.length;this.player.vx=this.player.vy=0;this.notify('Surface flight · '+(this.surface.readout||p.kind)+'. Soft-land, then disembark.','good');return true;}
- takeoff(){if(!this.surface)return false;if(this.onfoot){this.notify('Board the skiff first.');return false;}const p=this.planets.find(p=>p.id===this.surface.planetId);this.surface=null;this.s.surface=null;this.onfoot=null;this.player.x=p.x;this.player.y=p.y+p.r+360;this.player.vx=this.player.vy=0;this.target=p;this.notify('Back in orbit. Dock to sell anomaly signals.');return true;}
+ takeoff(){if(!this.surface)return false;if(this.onfoot){this.notify('Board the skiff first.');return false;}const p=this.planets.find(p=>p.id===this.surface.planetId);this.endPlanetAmbience();this.surface=null;this.s.surface=null;this.onfoot=null;this.player.x=p.x;this.player.y=p.y+p.r+360;this.player.vx=this.player.vy=0;this.target=p;this.beginSiteTransition('takeoff');this.notify('Back in orbit. Dock to sell anomaly signals.');return true;}
  completeSurfaceRecord(a){
   if(!this.surface||!a)return false;
   if(this.s.surfaceScanned.includes(a.id)){a.scanned=true;return false;}
@@ -570,6 +572,7 @@ export class Game extends FlightGame{
   if(!this.surface.landed){this.notify('Touch down before leaving the skiff.');return false;}
   this.surface.scan=null;this.surface.vx=0;this.surface.vy=0;
   this.onfoot=createOnFoot(createPlanetLayout(this.surface),this.s.surface?.foot);
+  this.beginPlanetAmbience();
   this.notify('Disembarked. Walk to a signal pad, then board the skiff.','good');
   return true;
  }
@@ -577,11 +580,55 @@ export class Game extends FlightGame{
   if(!this.surface||!this.onfoot||this.onfoot.kind!=='planet')return false;
   const foot=onFootSave(this.onfoot);
   this.s.surface={planetId:this.surface.planetId,x:this.surface.x,y:this.surface.y,integrity:this.surface.integrity,recordStart:this.surfaceRecordsStart,foot};
+  this.endPlanetAmbience();
   this.onfoot=null;
   const ground=terrainAt(this.surface.x,this.surface.seed)-19;
   this.surface.y=ground;this.surface.vy=0;this.surface.vx*=.4;this.surface.landed=true;
+  this.beginSiteTransition('embark');
   this.notify('Back aboard the skiff.');
   return true;
+ }
+ beginSiteTransition(kind){
+  this.siteFx=createSiteTransition(kind);
+  this.fireAudioCue(SURFACE_AUDIO_CUES[kind]||SURFACE_AUDIO_CUES.embark);
+  return this.siteFx;
+ }
+ fireAudioCue(name){
+  if(!name)return;
+  (this.audioCues||=[]).push(name);
+  if(this.audioCues.length>16)this.audioCues.shift();
+ }
+ fireAudioStop(name){
+  if(!name)return;
+  (this.audioStops||=[]).push(name);
+  if(this.audioStops.length>8)this.audioStops.shift();
+ }
+ beginPlanetAmbience(){
+  const cue=surfaceAmbientCue(this.onfoot?.kindId||this.surface?.kindId);
+  if(this.siteAmbient&&this.siteAmbient!==cue)this.fireAudioStop(this.siteAmbient);
+  this.siteAmbient=cue||null;
+  if(cue)this.fireAudioCue(cue);
+ }
+ endPlanetAmbience(){
+  if(!this.siteAmbient)return;
+  this.fireAudioStop(this.siteAmbient);
+  this.siteAmbient=null;
+ }
+ updatePlanetFootGrit(dt){
+  const cue=surfaceGritCue(this.onfoot?.kindId||this.surface?.kindId);
+  if(!cue||!this.onfoot){this.gritCool=0;return;}
+  const spd=Math.hypot(this.onfoot.vx||0,this.onfoot.vy||0);
+  if(spd<=14){this.gritCool=Math.min(this.gritCool||0,.12);return;}
+  this.gritCool=(this.gritCool||0)-dt;
+  if(this.gritCool>0)return;
+  this.gritCool=.38;
+  this.fireAudioCue(cue);
+ }
+ advanceSiteTransition(dt){
+  if(!this.siteFx)return false;
+  this.siteFx.t=(this.siteFx.t||0)+dt;
+  if(siteTransitionDone(this.siteFx))this.siteFx=null;
+  return !!this.siteFx;
  }
  interactPlanet(){
   if(!this.surface||!this.onfoot||this.onfoot.kind!=='planet')return null;
@@ -605,6 +652,8 @@ export class Game extends FlightGame{
    if(a.scanned){this.notify('Already recorded.');return{done:true};}
    if(!this.onfoot.footScan||this.onfoot.footScan.id!==z.id){
     this.onfoot.footScan={id:z.id,progress:0,need:1.4};
+    this.fireAudioCue(SURFACE_AUDIO_CUES.inspectStart);
+    this.fireAudioCue(SURFACE_AUDIO_CUES.inspectLoop);
     this.notify('Surveying '+a.name.toLowerCase()+'. Hold position.');
     return{scanning:true};
    }
@@ -615,10 +664,11 @@ export class Game extends FlightGame{
  updatePlanetFootScan(dt){
   const scan=this.onfoot?.footScan;if(!scan||!this.onfoot)return;
   const z=this.onfoot.zones.find(z=>z.id===scan.id);
-  if(!z||Math.hypot(z.x-this.onfoot.x,z.y-this.onfoot.y)>(z.r||40)+8){this.onfoot.footScan=null;this.notify('Survey interrupted.');return;}
+  if(!z||Math.hypot(z.x-this.onfoot.x,z.y-this.onfoot.y)>(z.r||40)+8){this.onfoot.footScan=null;this.fireAudioCue(SURFACE_AUDIO_CUES.inspectStop);this.notify('Survey interrupted.');return;}
   scan.progress+=dt;
   if(scan.progress<scan.need)return;
   this.onfoot.footScan=null;
+  this.fireAudioCue(SURFACE_AUDIO_CUES.inspectStop);
   if(z.service!=='inspect'||!z.anomalyId)return;
   const a=this.surface.anomalies.find(a=>a.id===z.anomalyId);
   if(!a||a.scanned)return;
@@ -765,9 +815,10 @@ export class Game extends FlightGame{
    }
   }else{this.s.metrics.pirates++;if(this.s.allegiance)this.s.reputation[this.s.allegiance]=clamp(this.s.reputation[this.s.allegiance]+2,-100,100);}
  }
- rescue(){this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.system=this.nearestPort();this.s.route=null;super.rescue();this.s.heat=25;if(this.s.docked)this.enterStationDeck();}
+ rescue(){this.endPlanetAmbience();this.surface=null;this.s.surface=null;this.onfoot=null;this.s.stationPos=null;this.s.records=[];this.s.explorationLog=this.s.explorationLog.filter(e=>e.sold);this.s.system=this.nearestPort();this.s.route=null;super.rescue();this.s.heat=25;if(this.s.docked)this.enterStationDeck();}
  update(dt,input={}){
   dt=clamp(dt,0,.05);
+  this.advanceSiteTransition(dt);
   if(this.onfoot?.kind==='wreck'){
    this.time+=dt;this.s.playtime+=dt;
    updateOnFoot(this.onfoot,dt,input);
@@ -778,6 +829,7 @@ export class Game extends FlightGame{
    if(this.onfoot&&this.onfoot.kind==='planet'){
     updateOnFoot(this.onfoot,dt,input);
     this.updatePlanetFootScan(dt);
+    this.updatePlanetFootGrit(dt);
     if(this.s.surface)this.s.surface.foot=onFootSave(this.onfoot);
     return;
    }

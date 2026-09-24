@@ -124,7 +124,7 @@ export const FRONTIER_PREFETCH_ASSETS=[...FRONTIER_SHIPPED_ASSETS,...FRONTIER_KI
 
 const WARM_SURFACE=new Set(['volcanic','arid','gas','mineral','metal']);
 const WARM_PLATE=new Set(['volcanic','arid','gas','mineral']);
-/** Manifest: barren landing + surface also cover metal/mineral biomes. */
+/** Alias only while the kind file is unloaded. peek(kind) wins — drop landing-metal.png and it resolves with no code change. */
 const KIND_PLATE_ALIAS={metal:'barren',mineral:'barren'};
 const KIND_SURFACE_ALIAS={metal:'barren',mineral:'barren'};
 
@@ -189,6 +189,31 @@ export function ridgeCameraY(cameraY,vParallax=RIDGE_VERTICAL_PARALLAX,refY=VIST
 /** Vertical camera for planetary land. Locked so climb does not drag the first hill. */
 export function surfaceCameraY(playerY,refY=VISTA_LOCK_Y){
  return ridgeCameraY((Number(playerY)||0)-40,RIDGE_VERTICAL_PARALLAX,refY);
+}
+
+/** Short veil after embark / takeoff so the mode swap is not a hard snap. */
+export const SITE_TRANSITION_MS=480;
+export function createSiteTransition(kind,dur=SITE_TRANSITION_MS/1000){
+ return {kind,t:0,dur,mode:'in'};
+}
+export function siteTransitionAlpha(fx){
+ if(!fx)return 0;
+ const d=fx.dur>0?fx.dur:.48;
+ const u=Math.max(0,Math.min(1,(Number(fx.t)||0)/d));
+ return 1-u;
+}
+export function siteTransitionDone(fx){
+ return !fx||(Number(fx.t)||0)>=(fx.dur||.48);
+}
+export function drawSiteTransition(ctx,width,height,fx,color='#04080c'){
+ const a=siteTransitionAlpha(fx);
+ if(!ctx||a<=.01)return;
+ const lift=(1-a)*-10;
+ ctx.save();
+ ctx.globalAlpha=a;
+ ctx.fillStyle=color;
+ ctx.fillRect(0,lift,width,height+14);
+ ctx.restore();
 }
 
 /**

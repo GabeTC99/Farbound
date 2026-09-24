@@ -52,8 +52,106 @@ export function rampGain(param, value, t, seconds=0.04){
  }
 }
 
+/** Audio Designer MP3s. Stems match filenames under dist/assets/audio/planetary/. */
+export const PLANETARY_AUDIO_DIR='assets/audio/planetary/';
+export const PLANETARY_AUDIO_STEMS=['ambient_metal','ambient_mineral','ambient_icegiant','grit_metal','grit_mineral','grit_icegiant','pad_inspect_start','pad_inspect_loop','pad_inspect_stop','embark_whoosh'];
+export const PLANETARY_AMBIENT_KINDS=['metal','mineral','icegiant'];
+export const PLANETARY_GRIT_KINDS=['metal','mineral','icegiant'];
+export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';}
+export function surfaceAmbientCue(kindId){
+ return PLANETARY_AMBIENT_KINDS.includes(kindId)?'ambient_'+kindId:null;
+}
+export function surfaceGritCue(kindId){
+ return PLANETARY_GRIT_KINDS.includes(kindId)?'grit_'+kindId:null;
+}
+
+/** Fired in-game ids stay surface.*; preferred stems are aliases + file: fields. */
+export const SURFACE_AUDIO_CUES={
+ embark:'surface.embark',
+ takeoff:'surface.takeoff',
+ embarkWhoosh:'embark_whoosh',
+ inspectStart:'surface.inspect.start',
+ inspectLoop:'surface.inspect.loop',
+ inspectStop:'surface.inspect.stop',
+ padInspectStart:'pad_inspect_start',
+ padInspectLoop:'pad_inspect_loop',
+ padInspectStop:'pad_inspect_stop'
+};
+const CUE_CANON={
+ embark_whoosh:'surface.embark',
+ pad_inspect_start:'surface.inspect.start',
+ pad_inspect_loop:'surface.inspect.loop',
+ pad_inspect_stop:'surface.inspect.stop'
+};
+function cueDef(type,stem,extra={}){return {type,file:planetaryAudioFile(stem),...extra};}
+export const AUDIO_CUES={
+ [SURFACE_AUDIO_CUES.embark]:cueDef('oneshot','embark_whoosh'),
+ [SURFACE_AUDIO_CUES.takeoff]:cueDef('oneshot','embark_whoosh'),
+ [SURFACE_AUDIO_CUES.embarkWhoosh]:cueDef('oneshot','embark_whoosh'),
+ [SURFACE_AUDIO_CUES.inspectStart]:cueDef('oneshot','pad_inspect_start'),
+ [SURFACE_AUDIO_CUES.inspectLoop]:cueDef('loop','pad_inspect_loop'),
+ [SURFACE_AUDIO_CUES.inspectStop]:cueDef('oneshot','pad_inspect_stop',{stops:SURFACE_AUDIO_CUES.inspectLoop}),
+ [SURFACE_AUDIO_CUES.padInspectStart]:cueDef('oneshot','pad_inspect_start'),
+ [SURFACE_AUDIO_CUES.padInspectLoop]:cueDef('loop','pad_inspect_loop'),
+ [SURFACE_AUDIO_CUES.padInspectStop]:cueDef('oneshot','pad_inspect_stop',{stops:SURFACE_AUDIO_CUES.inspectLoop}),
+ ambient_metal:cueDef('loop','ambient_metal'),
+ ambient_mineral:cueDef('loop','ambient_mineral'),
+ ambient_icegiant:cueDef('loop','ambient_icegiant'),
+ grit_metal:cueDef('oneshot','grit_metal'),
+ grit_mineral:cueDef('oneshot','grit_mineral'),
+ grit_icegiant:cueDef('oneshot','grit_icegiant')
+};
+export function resolveAudioCue(name){return CUE_CANON[name]||name;}
+
 export class EngineAudio{
- constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;}
+ constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();this.cueEls=new Map();this.cueVolume=.35;}
+ playCue(name){
+  const canon=resolveAudioCue(name);
+  const def=AUDIO_CUES[canon]||AUDIO_CUES[name];
+  if(!def)return false;
+  this.lastCue=name;
+  this.cueLog.push(name);
+  if(this.cueLog.length>24)this.cueLog.shift();
+  if(def.type==='loop')this.loops.add(canon);
+  if(def.stops)this.stopCue(def.stops);
+  this.playCueFile(canon,def);
+  return true;
+ }
+ isCueLooping(name){return this.loops.has(resolveAudioCue(name));}
+ stopCue(name){
+  const canon=resolveAudioCue(name);
+  this.loops.delete(canon);
+  this.stopCueFile(canon);
+  return true;
+ }
+ playCueFile(canon,def){
+  const Ctor=globalThis.Audio;
+  if(typeof Ctor!=='function'||!def?.file)return;
+  try{
+   if(def.type==='loop'){
+    let el=this.cueEls.get(canon);
+    if(!el){el=new Ctor(def.file);el.loop=true;this.cueEls.set(canon,el);}
+    el.volume=this.cueVolume;
+    try{el.currentTime=0;}catch{}
+    const p=el.play();if(p&&p.catch)p.catch(()=>{});
+    return;
+   }
+   const el=new Ctor(def.file);
+   el.volume=this.cueVolume;
+   const p=el.play();if(p&&p.catch)p.catch(()=>{});
+  }catch{}
+ }
+ stopCueFile(canon){
+  const el=this.cueEls.get(canon);
+  if(!el)return;
+  try{el.pause();el.currentTime=0;}catch{}
+ }
+ setCueVolume(vol){
+  this.cueVolume=Math.max(0,Math.min(1,Number(vol)||0));
+  for(const el of this.cueEls.values()){
+   try{el.volume=this.cueVolume;}catch{}
+  }
+ }
  unlock(){
   if(!this.context){
    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;
@@ -130,11 +228,13 @@ export class EngineAudio{
   this.ambReady=true;
  }
  update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false}={}){
+  const vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
+  const live=enabled&&!paused;
+  this.setCueVolume(live?vol:0);
   if(!this.context)return;
   this.ensureHum();
   this.ensureAmb();
-  const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving)),vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
-  const live=enabled&&!paused;
+  const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
   this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*.32:0,t,.12);
   this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
   this.mid.frequency.setTargetAtTime(77+n*45+(boost?19:0),t,.18);
@@ -165,6 +265,8 @@ export class EngineAudio{
   rampGain(this.gain.gain,0,this.context.currentTime,.05);
  }
  muteAll(){
+  this.setCueVolume(0);
+  for(const canon of this.cueEls.keys())this.stopCueFile(canon);
   if(!this.context)return;
   const t=this.context.currentTime;
   for(const g of this.gains()){

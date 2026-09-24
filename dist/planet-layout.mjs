@@ -59,6 +59,7 @@ export function createPlanetLayout(surface){
   accent:pal.accent||surface.color||'#87b3ac',
   floor:pal.floor||'#142c31',
   kindId:surface.kindId||'mineral',
+  seed:surface.seed??0,
   width:W,height:H,
   hull:null,
   walls,

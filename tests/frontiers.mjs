@@ -452,17 +452,26 @@ test('Planetary space legs: disembark, inspect, board, then takeoff',()=>{
  g.onfoot.x=pad.x;g.onfoot.y=pad.y;
  const before=g.s.records.length;
  assert(g.interactPlanet()?.scanning);
+ assert(g.audioCues.includes('surface.inspect.start'));
+ assert(g.audioCues.includes('surface.inspect.loop'));
  ticks(g,1.6);
  assert.equal(g.s.records.length,before+1);
  assert(a.scanned);
  assert(g.s.surfaceScanned.includes(a.id));
+ assert(g.audioCues.includes('surface.inspect.stop'));
  const cache=g.onfoot.zones.find(z=>z.service==='cache'||z.id==='cache');
  if(cache){g.onfoot.x=cache.x;g.onfoot.y=cache.y;assert(g.interactPlanet()?.cache);assert(cache.looted||cache.service==='done');}
  g.onfoot.x=g.onfoot.zones.find(z=>z.board).x;g.onfoot.y=g.onfoot.zones.find(z=>z.board).y;
  assert(g.interactPlanet()?.board);
  assert(!g.onfoot);assert(g.surface.landed);
+ assert(g.siteFx);assert.equal(g.siteFx.kind,'embark');
+ assert(g.audioCues.includes('surface.embark'));
  assert(g.takeoff());
  assert(!g.surface);
+ assert(g.siteFx);assert.equal(g.siteFx.kind,'takeoff');
+ assert(g.audioCues.includes('surface.takeoff'));
+ ticks(g,.6);
+ assert(!g.siteFx);
 });
 test('Weapon modes, mining split, loadout identity, and combat feedback',()=>{
  const g=new Game();assert.equal(getStats(g.s).weapon,'pulse');assert.equal(getStats(g.s).weaponName,'Pulse cannon');
