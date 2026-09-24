@@ -53,57 +53,32 @@ function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,
  if(lit){
   const fromLeft=sunX<0;
   const fill=ctx.createLinearGradient(fromLeft?0:width,0,fromLeft?width:0,0);
-  fill.addColorStop(0,mixHex(color,'#fff6e8',.2));
+  fill.addColorStop(0,mixHex(color,'#fff6e8',.08));
   fill.addColorStop(.42,color);
   fill.addColorStop(1,shadeHex(color,.62));
   ctx.fillStyle=fill;
  }else ctx.fillStyle=color;
  ctx.fill();
- if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale*parallax,quality,lite,lit?.55:.28,color);
- if(!lit)return;
- shadeRidge(ctx,width,height,pts,sunX,seed,offset);
+ if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale*parallax,quality,lite,lit?.38:.2,color);
+ if(lit)shadeRidge(ctx,width,height,pts,sunX);
 }
 
-function shadeFaces(ctx,pts,seed,offset,sunX){
- let run=null;
- const flush=()=>{
-  if(!run||run.pts.length<2){run=null;return;}
-  const a=Math.min(.3,run.face*1.7);
-  ctx.fillStyle=run.lit?`rgba(255,246,232,${a})`:`rgba(0,6,12,${a})`;
-  ctx.beginPath();
-  ctx.moveTo(run.pts[0].x,run.pts[0].y);
-  for(let i=1;i<run.pts.length;i++)ctx.lineTo(run.pts[i].x,run.pts[i].y);
-  for(let i=run.pts.length-1;i>=0;i--)ctx.lineTo(run.pts[i].x,run.pts[i].y+20);
-  ctx.closePath();ctx.fill();
-  run=null;
- };
- for(const p of pts){
-  const face=terrainSlope(p.wx,seed+(offset||0))*sunX;
-  const lit=face>.045,shade=face<-.045;
-  if(!lit&&!shade){flush();continue;}
-  if(!run||run.lit!==lit){flush();run={lit,face:Math.abs(face),pts:[p]};}
-  else{run.pts.push(p);run.face=Math.max(run.face,Math.abs(face));}
- }
- flush();
-}
-
-function shadeRidge(ctx,width,height,pts,sunX,seed,offset){
+function shadeRidge(ctx,width,height,pts,sunX){
  ctx.save();
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
  const fromLeft=sunX<0;
  const sun=ctx.createLinearGradient(fromLeft?0:width,0,fromLeft?width:0,0);
- sun.addColorStop(0,'rgba(255,246,232,0.28)');
+ sun.addColorStop(0,'rgba(255,246,232,0.1)');
  sun.addColorStop(.38,'rgba(0,0,0,0)');
- sun.addColorStop(1,'rgba(0,8,16,0.36)');
+ sun.addColorStop(1,'rgba(0,8,16,0.28)');
  ctx.fillStyle=sun;ctx.fillRect(0,0,width,height);
  const down=ctx.createLinearGradient(0,0,0,height);
  down.addColorStop(0,'rgba(0,0,0,0)');
  down.addColorStop(.55,'rgba(0,8,16,0.1)');
  down.addColorStop(1,'rgba(0,8,16,0.38)');
  ctx.fillStyle=down;ctx.fillRect(0,0,width,height);
- if(seed!=null)shadeFaces(ctx,pts,seed,offset,sunX);
  ctx.restore();
 }
 
@@ -121,7 +96,7 @@ function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
  const scroll=((cameraX*scrollScale)%repeat+repeat)%repeat;
- ctx.translate(-scroll,height*.12);
+ ctx.translate(-scroll,0);
  ctx.scale(k,k);
  ctx.globalAlpha=alpha;
  ctx.globalCompositeOperation='source-over';
@@ -129,7 +104,7 @@ function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,
  const rx=scroll/k-8,ry=-height/k,rw=(width+repeat)/k+16,rh=height*2.4/k;
  ctx.fillRect(rx,ry,rw,rh);
  if(tint){
-  ctx.globalAlpha=lite?.4:.5;
+  ctx.globalAlpha=lite?.5:.62;
   ctx.globalCompositeOperation='multiply';
   ctx.fillStyle=tint;
   ctx.fillRect(rx,ry,rw,rh);
@@ -230,31 +205,12 @@ function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,su
  }
  ctx.fill();
  const tex=peekFrontierImage(surfaceTextureName(s.kindId));
- if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale,quality,lite,lite?.7:.95,ground);
- if(!lite)shadeRidge(ctx,width,height,pts,sunX,s.seed,0);
- ctx.strokeStyle=pal.stroke;ctx.lineWidth=lite?2:2.8;ctx.lineJoin='round';
+ if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale,quality,lite,lite?.7:.88,ground);
+ if(!lite)shadeRidge(ctx,width,height,pts,sunX);
+ ctx.strokeStyle=pal.stroke;ctx.lineWidth=lite?2:2.2;ctx.lineJoin='round';ctx.lineCap='round';
  ctx.beginPath();
  for(let i=0;i<pts.length;i++){if(i===0)ctx.moveTo(pts[i].x,pts[i].y);else ctx.lineTo(pts[i].x,pts[i].y);}
  ctx.stroke();
- if(!lite){
-  ctx.strokeStyle=fadeHex(pal.stroke,.16);ctx.lineWidth=1;
-  for(let k=1;k<=3;k++){
-   ctx.beginPath();
-   for(let i=0;i<pts.length;i++){
-    const y=pts[i].y+k*11;
-    if(i===0)ctx.moveTo(pts[i].x,y);else ctx.lineTo(pts[i].x,y);
-   }
-   ctx.stroke();
-  }
-  ctx.strokeStyle=fadeHex(pal.sun||pal.accent,.32);ctx.lineWidth=1.3;
-  ctx.beginPath();
-  for(let i=0;i<pts.length;i++){
-   const face=terrainSlope(pts[i].wx,s.seed)*sunX;
-   const y=pts[i].y-(face>0?1.8:0);
-   if(i===0)ctx.moveTo(pts[i].x,y);else ctx.lineTo(pts[i].x,y);
-  }
-  ctx.stroke();
- }
 }
 
 function drawSkiff(ctx,s,x,y,pal,clock,nearGround,lite,sunX){
@@ -340,7 +296,7 @@ export function renderSurface(ctx,width,height,s,clock,stats,opts={}){
  drawSky(ctx,width,height,pal,s.kindId,sun,lite,clock,cameraX,quality);
  const layers=lite
   ?[[-150,shadeHex(pal.hills[0],.75),.55,false],[-40,pal.hills[1],.78,true]]
-  :[[-260,shadeHex(pal.hills[0],.62),.32,false],[-180,pal.hills[0],.48,true],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true]];
+  :[[-260,shadeHex(pal.hills[0],.62),.32,false],[-180,pal.hills[0],.48,true],[-105,shadeHex(pal.hills[1],.82),.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true]];
  for(const [offset,color,parallax,lit] of layers){
   fillRidge(ctx,width,height,ridgeSy,cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX,groundTex,quality,lite);
  }
