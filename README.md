@@ -31,8 +31,9 @@ This delivery contains a playable browser/PWA prototype, a Fold-ready **Nullharb
 - **Crop / blend:** Taller plate crop and fuller-bleed dest height, with multiply tint plus soft sponges into sky and ridge tops (no hard clipped strip).
 - **Per-kind hooks:** Each `SURFACE_PALETTES` kindId maps to optional `landing-{kind}.png` / `surface-{kind}.png` under `dist/assets/new-frontier/`, falling back to shipped `landing-a/b` and `planet-surface-a/b`. Prefetch lists every known name; drop PNGs in a follow-up. Kind files are **not** in the service-worker `FILES` list until they ship.
 - **Phase 1b art:** Distinct Scenario plates for volcanic, earthlike, arid, ice, ocean, toxic, barren, gas; surfaces for volcanic, earthlike, arid, ice, toxic, barren. Metal/mineral reuse barren until their own files arrive.
-- **Ship:** Player-facing version stays **3.0.0**. Service worker cache is `farbound-v3.0.0-vista5` so Pages testers pick up the JS. Android `versionCode` stays **13**. Do **not** tag Android or Windows Releases.
-- **How to verify:** Land volcanic / ice / arid / metal. Climb and descend — hills stay screen-locked. Ridge tops should look like solid silhouettes, not a light stepped cap. Graphics → Performance still skips the plate.
+- **Ship:** Player-facing version stays **3.0.0**. Service worker cache is `farbound-v3.0.0-onfoot1` so Pages testers pick up the JS. Android `versionCode` stays **13**. Do **not** tag Android or Windows Releases.
+- **On-foot site:** `kindId` now reaches the pad view so plates/ground match LAND. Full-bleed site ground (no clipped floor slab). Skiff uses the New Frontier lander; the walker is the standing crew sprite. Inspect pads sit on the same ground line as the skiff. Rocks stay rocks, not station blocks. LAND climb lock and solid ridge tops are unchanged.
+- **How to verify:** Land volcanic / ice / arid / metal. Climb and descend — hills stay screen-locked. Ridge tops should look like solid silhouettes, not a light stepped cap. Disembark — lander, walker, and pads should share one ground line. Graphics → Performance still skips the plate.
 
 ### Candidate 3.0.0 · Phase 1
 

@@ -247,6 +247,10 @@ function drawSkiff(ctx,s,x,y,pal,clock,nearGround,lite,sunX){
  ctx.restore();
 }
 
+export function drawFrontierSkiff(ctx,x,y,pal,clock=0,opts={}){
+ drawSkiff(ctx,{vx:0,vy:0,throttle:opts.throttle||0},x,y,pal,clock,opts.nearGround!==false,!!opts.lite,opts.sunX??-1);
+}
+
 function drawLandingHud(ctx,width,height,s,pal,alt,sink,traveled){
  const panelW=Math.min(460,width-28),panelH=52;
  const x=(width-panelW)/2,y=Math.max(56,Math.min(height*.12,96));

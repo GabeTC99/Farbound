@@ -13,34 +13,36 @@ export function createPlanetLayout(surface){
  const W=980,H=720;
  const pal=SURFACE_PALETTES[surface.kindId]||SURFACE_PALETTES.mineral;
  const r=rng((surface.seed|0)^0x51f00d^(Math.round(surface.x)|0));
- const skiffX=170,skiffY=H*0.62;
+ const skiffX=220,skiffY=H*0.58;
  const nearby=surface.anomalies
   .filter(a=>!a.scanned&&Math.abs(a.x-surface.x)<=450)
   .sort((a,b)=>Math.abs(a.x-surface.x)-Math.abs(b.x-surface.x))
   .slice(0,3);
  const zones=[
-  zone('skiff','Skiff','board',skiffX,skiffY,54,'ship',{board:true})
+  zone('skiff','Skiff','board',skiffX,skiffY,58,'ship',{board:true})
  ];
  nearby.forEach((a,i)=>{
-  const span=W*0.42/450;
-  const x=clamp(W*0.52+(a.x-surface.x)*span+(i-1)*18,210,W-90);
-  const y=clamp(H*0.38+(i%2?70:-40)+((a.id.charCodeAt(a.id.length-1)%5)-2)*22,130,H-110);
-  zones.push(zone(a.id,a.name,'inspect',x,y,46,'data',{anomalyId:a.id,anomalyKind:a.kind}));
+  const x=clamp(skiffX+175+i*155+(a.x-surface.x)*.05,skiffX+160,W-90);
+  const y=skiffY+((i%2)?18:-16);
+  zones.push(zone(a.id,a.name,'inspect',x,y,48,'data',{anomalyId:a.id,anomalyKind:a.kind}));
  });
  const walls=[];
  for(let i=0;i<5;i++){
-  const wx=90+r()* (W-220),wy=90+r()*(H-220),ww=36+r()*70,hh=28+r()*55;
-  if(Math.hypot(wx+ww/2-skiffX,wy+hh/2-skiffY)<120)continue;
-  if(zones.some(z=>Math.hypot(wx+ww/2-z.x,wy+hh/2-z.y)<z.r+40))continue;
-  walls.push({x:wx,y:wy,w:ww,h:hh});
+  const along=120+r()*(W-260);
+  const side=r()<.5?-1:1;
+  const ww=26+r()*34,hh=20+r()*26;
+  const wx=along-ww/2,wy=skiffY+side*(78+r()*70)-hh/2;
+  if(wy<70||wy>H-80)continue;
+  if(Math.hypot(wx+ww/2-skiffX,wy+hh/2-skiffY)<140)continue;
+  if(zones.some(z=>Math.hypot(wx+ww/2-z.x,wy+hh/2-z.y)<z.r+52))continue;
+  walls.push({x:wx,y:wy,w:ww,h:hh,rock:true});
  }
- // ~50% of sites with rocks get a one-shot salvage cache.
  if(walls.length&&r()<.5){
   let placed=false;
   for(let tries=0;tries<8&&!placed;tries++){
-   const cx=220+r()*(W-320),cy=140+r()*(H-260);
-   if(Math.hypot(cx-skiffX,cy-skiffY)<130)continue;
-   if(zones.some(z=>Math.hypot(cx-z.x,cy-z.y)<z.r+50))continue;
+   const cx=skiffX+170+r()*420,cy=skiffY+((r()<.5)?-22:22);
+   if(Math.hypot(cx-skiffX,cy-skiffY)<140)continue;
+   if(zones.some(z=>Math.hypot(cx-z.x,cy-z.y)<z.r+52))continue;
    zones.push(zone('cache','Salvage cache','cache',cx,cy,42,'market',{cacheGood:CACHE_GOOD[surface.kindId]||'ore'}));
    placed=true;
   }
@@ -48,7 +50,7 @@ export function createPlanetLayout(surface){
  const signs=nearby.map((a,i)=>{
   const z=zones.find(z=>z.anomalyId===a.id);if(!z)return null;
   const ang=Math.atan2(z.y-skiffY,z.x-skiffX);
-  return{kind:'chevron',x:skiffX+Math.cos(ang)*90,y:skiffY+Math.sin(ang)*90,angle:ang,accent:i===0};
+  return{kind:'chevron',x:skiffX+Math.cos(ang)*88,y:skiffY+Math.sin(ang)*88,angle:ang,accent:i===0};
  }).filter(Boolean);
  return{
   kind:'planet',
@@ -63,7 +65,7 @@ export function createPlanetLayout(surface){
   windows:[],
   signs,
   zones,
-  spawn:{x:skiffX+70,y:skiffY-10,facing:0},
+  spawn:{x:skiffX+70,y:skiffY,facing:0},
   npcs:[]
  };
 }

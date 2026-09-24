@@ -11,8 +11,11 @@ import {
  tileBakeSize,tileScreenRepeat,tileSizeForQuality,prefetchFrontierArt
 } from '../dist/new-frontier.mjs';
 import {drawPlanetBody,warmPlanetTexture,PLANET_ART,samplePlanetColor} from '../dist/planet-render.mjs';
-import {SURFACE_PALETTES,renderSurface} from '../dist/surface-render.mjs';
+import {SURFACE_PALETTES,renderSurface,drawFrontierSkiff} from '../dist/surface-render.mjs';
 import {terrainAt,terrainSlope,createSurface} from '../dist/surface.mjs';
+import {createPlanetLayout} from '../dist/planet-layout.mjs';
+import {createOnFoot} from '../dist/onfoot.mjs';
+import {renderOnFoot} from '../dist/onfoot-render.mjs';
 import {RELEASE,RELEASE_NAME,RELEASE_EDITION} from '../dist/release.mjs';
 import {PLANET_KIND_IDS} from '../dist/frontier.mjs';
 
@@ -190,7 +193,17 @@ assert.match(surfaceSrc,/kindPlateName/);
 const onfootSrc=readFileSync(new URL('../dist/onfoot-render.mjs',import.meta.url),'utf8');
 assert.match(onfootSrc,/drawFrontierVista/);
 assert.match(onfootSrc,/kindPlateName/);
+assert.match(onfootSrc,/renderPlanetSite/);
+assert.match(onfootSrc,/paintSiteGround/);
+assert.match(onfootSrc,/drawSitePad/);
+assert.match(onfootSrc,/drawFrontierSkiff/);
+assert.match(onfootSrc,/drawStandingCrew/);
 assert.doesNotMatch(onfootSrc,/plateCrop/);
+const onfootLogic=readFileSync(new URL('../dist/onfoot.mjs',import.meta.url),'utf8');
+assert.match(onfootLogic,/kindId:layout\.kindId/);
+const layoutSrc=readFileSync(new URL('../dist/planet-layout.mjs',import.meta.url),'utf8');
+assert.match(layoutSrc,/skiffX=220/);
+assert.match(layoutSrc,/spawn:\{x:skiffX\+70/);
 const assetReadme=readFileSync(new URL('../dist/assets/new-frontier/README.md',import.meta.url),'utf8');
 assert.match(assetReadme,/landing-volcanic\.png/);
 assert.match(assetReadme,/surface-ice\.png/);
@@ -207,7 +220,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-vista5/);
+assert.match(sw,/farbound-v3\.0\.0-onfoot1/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
@@ -260,5 +273,25 @@ assert(c&&c.length===3);
 const gradle=readFileSync(new URL('../android/app/build.gradle',import.meta.url),'utf8');
 assert.match(gradle,/versionCode 13/);
 assert.match(gradle,/versionName '3\.0\.0'/);
+
+const siteSurface=createSurface({id:'planet-0-0',name:'Solace',kindId:'metal',kind:'Metal-rich world',seed:'1-2',color:'#8a9098',r:80,gravity:1.21,atmosphere:'none'});
+siteSurface.x=siteSurface.anomalies[0].x;siteSurface.y=siteSurface.anomalies[0].y;
+const siteLayout=createPlanetLayout(siteSurface);
+assert.equal(siteLayout.kindId,'metal');
+const foot=createOnFoot(siteLayout);
+assert.equal(foot.kindId,'metal');
+const skiff=siteLayout.zones.find(z=>z.board);
+const pads=siteLayout.zones.filter(z=>z.service==='inspect');
+assert(skiff);assert(pads.length);
+assert.ok(Math.abs(siteLayout.spawn.y-skiff.y)<1);
+assert.ok(siteLayout.spawn.x>skiff.x);
+for(const pad of pads){
+ assert.ok(Math.abs(pad.y-skiff.y)<30,'inspect pads share the skiff ground line');
+ assert.ok(pad.x>skiff.x,'inspect pads sit ahead of the skiff');
+}
+const fctx=fakeCtx();
+renderOnFoot(fctx,1280,720,foot,1);
+assert.ok(fctx.calls.includes('fillRect'));
+assert.ok(typeof drawFrontierSkiff==='function');
 
 console.log('PASS New Frontier mapping, vista lock, kind-plate hooks, and 3.0.0 branding');

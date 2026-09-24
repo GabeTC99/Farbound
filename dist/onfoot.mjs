@@ -23,6 +23,7 @@ export function createOnFoot(layout,saved=null){
   kind:layout.kind,
   title:layout.title,
   role:layout.role,
+  kindId:layout.kindId||null,
   accent:layout.accent,
   floor:layout.floor,
   width:layout.width,
