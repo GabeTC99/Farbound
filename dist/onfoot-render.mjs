@@ -72,7 +72,6 @@ function drawPlanetBackdrop(ctx,width,height,s,opts={}){
  const amp=kind==='ocean'?8:kind==='ice'?26:kind==='volcanic'?22:kind==='arid'?14:18;
  const freq=kind==='arid'?.012:kind==='barren'?.035:kind==='ice'?.04:.02;
  const site=!!opts.site;
- const scrollX=Number(opts.scrollX)||0;
  const bands=site
   ?[[height*.46,shadeHex(pal.terrain,.55),amp*1.05,.7],[height*.51,pal.hills[0],amp*.8,.85]]
   :[[height*.58,shadeHex(pal.terrain,.55),amp*1.35,.7],[height*.66,pal.hills[0],amp*1.1,.85],[height*.72,pal.terrain,amp,1]];
@@ -85,9 +84,8 @@ function drawPlanetBackdrop(ctx,width,height,s,opts={}){
   ctx.fillStyle=color;
   ctx.beginPath();ctx.moveTo(0,height);
   for(let x=0;x<=width;x+=14){
-   const sample=x+scrollX*par;
-   let y=base+Math.sin(sample*freq*par+iHash(s.title||'',sample+par))*a;
-   if(kind==='barren'&&iHash(s.title||'c',sample)>.78)y-=10;
+   let y=base+Math.sin(x*freq*par+iHash(s.title||'',x+par))*a;
+   if(kind==='barren'&&iHash(s.title||'c',x)>.78)y-=10;
    ctx.lineTo(x,y);
   }
   ctx.lineTo(width,height);ctx.closePath();ctx.fill();
@@ -107,10 +105,10 @@ function drawPlanetBackdrop(ctx,width,height,s,opts={}){
  ctx.fillStyle=haze;ctx.fillRect(0,0,width,height);
 }
 
-/** Screen pixels the site camera has traveled. Ground tiles shift by this so they stay world-locked. */
-export function siteWorldScroll(cameraX,cameraY,scale){
+/** Horizontal screen pixels of camera travel. Y stays 0 so the horizon and props are not lifted. */
+export function siteWorldScroll(cameraX,_cameraY,scale){
  const s=Number(scale)||1;
- return {x:(Number(cameraX)||0)*s,y:(Number(cameraY)||0)*s};
+ return {x:(Number(cameraX)||0)*s,y:0};
 }
 
 function paintSiteGround(ctx,width,height,s,scroll){
@@ -128,16 +126,16 @@ function paintSiteGround(ctx,width,height,s,scroll){
  const pat=tile&&ctx.createPattern?ctx.createPattern(tile,'repeat'):null;
  if(pat){
   const pk=repeat/bake;
-  const scrollX=scroll?.x||0,scrollY=scroll?.y||0;
-  const ox=((scrollX%repeat)+repeat)%repeat,oy=((scrollY%repeat)+repeat)%repeat;
+  const scrollX=scroll?.x||0;
+  const ox=((scrollX%repeat)+repeat)%repeat;
   ctx.save();
   ctx.beginPath();ctx.rect(0,y0,width,height-y0);ctx.clip();
-  ctx.translate(-ox,-oy);
+  ctx.translate(-ox,0);
   ctx.scale(pk,pk);
   ctx.globalAlpha=.82;ctx.globalCompositeOperation='source-over';
-  ctx.fillStyle=pat;ctx.fillRect((ox-repeat)/pk,(y0+oy-repeat)/pk,(width+repeat*2)/pk,(height-y0+repeat*2)/pk);
+  ctx.fillStyle=pat;ctx.fillRect((ox-repeat)/pk,(y0-repeat)/pk,(width+repeat*2)/pk,(height-y0+repeat*2)/pk);
   ctx.globalAlpha=.55;ctx.globalCompositeOperation='multiply';
-  ctx.fillStyle=pal.terrain;ctx.fillRect((ox-repeat)/pk,(y0+oy-repeat)/pk,(width+repeat*2)/pk,(height-y0+repeat*2)/pk);
+  ctx.fillStyle=pal.terrain;ctx.fillRect((ox-repeat)/pk,(y0-repeat)/pk,(width+repeat*2)/pk,(height-y0+repeat*2)/pk);
   ctx.restore();
  }
  const blend=ctx.createLinearGradient(0,y0-6,0,y0+72);
@@ -1146,11 +1144,12 @@ function renderPlanetSite(ctx,width,height,s,clock){
  const sun=surfaceSun(s.seed??1);
  const sunX=sun.x||-1;
  const scale=width<650?1.08:1.2;
- const cameraX=s.x-width*.4/scale,cameraY=s.y-height*.68/scale;
+ const anchorY=s.spawn?.y??s.y;
+ const cameraX=s.x-width*.4/scale,cameraY=anchorY-height*.68/scale;
  const sx=x=>(x-cameraX)*scale,sy=y=>(y-cameraY)*scale;
- const scroll=siteWorldScroll(cameraX,cameraY,scale);
+ const scroll=siteWorldScroll(cameraX,0,scale);
  prefetchFrontierArt();
- drawPlanetBackdrop(ctx,width,height,s,{site:true,scrollX:scroll.x});
+ drawPlanetBackdrop(ctx,width,height,s,{site:true});
  paintSiteGround(ctx,width,height,s,scroll);
  const zone=nearestZone(s);
  for(const z of s.zones){

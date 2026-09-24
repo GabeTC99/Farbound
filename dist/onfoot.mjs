@@ -105,6 +105,10 @@ export function updateOnFoot(s,dt,input={}){
  if(spd>10)s.facing=Math.atan2(s.vy,s.vx);
  s.walk=(s.walk||0)+(spd>14?dt*(spd*.018):0);
  const moved=resolveWalls(s,s.x+s.vx*dt,s.y+s.vy*dt);
+ if(s.kind==='planet'&&s.spawn&&Number.isFinite(s.spawn.y)){
+  const band=110;
+  moved.y=clamp(moved.y,s.spawn.y-band,s.spawn.y+band);
+ }
  if(Math.abs(moved.x-s.x)<.01)s.vx=0;
  if(Math.abs(moved.y-s.y)<.01)s.vy=0;
  s.x=moved.x;s.y=moved.y;
