@@ -54,9 +54,13 @@ export function rampGain(param, value, t, seconds=0.04){
 
 /** Audio Designer MP3s. Stems match filenames under dist/assets/audio/planetary/. */
 export const PLANETARY_AUDIO_DIR='assets/audio/planetary/';
-export const PLANETARY_AUDIO_STEMS=['ambient_metal','ambient_mineral','ambient_icegiant','grit_metal','grit_mineral','grit_icegiant','pad_inspect_start','pad_inspect_loop','pad_inspect_stop','embark_whoosh'];
-export const PLANETARY_AMBIENT_KINDS=['metal','mineral','icegiant'];
-export const PLANETARY_GRIT_KINDS=['metal','mineral','icegiant'];
+export const PLANETARY_AMBIENT_KINDS=['earthlike','ocean','arid','ice','metal','mineral','volcanic','barren','toxic','gas','icegiant'];
+export const PLANETARY_GRIT_KINDS=PLANETARY_AMBIENT_KINDS;
+export const PLANETARY_AUDIO_STEMS=[
+ ...PLANETARY_AMBIENT_KINDS.map(id=>'ambient_'+id),
+ ...PLANETARY_GRIT_KINDS.map(id=>'grit_'+id),
+ 'pad_inspect_start','pad_inspect_loop','pad_inspect_stop','embark_whoosh'
+];
 export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';}
 export function cueAssetUrl(file){
  try{
@@ -101,12 +105,10 @@ export const AUDIO_CUES={
  [SURFACE_AUDIO_CUES.padInspectStart]:cueDef('oneshot','pad_inspect_start'),
  [SURFACE_AUDIO_CUES.padInspectLoop]:cueDef('loop','pad_inspect_loop'),
  [SURFACE_AUDIO_CUES.padInspectStop]:cueDef('oneshot','pad_inspect_stop',{stops:SURFACE_AUDIO_CUES.inspectLoop}),
- ambient_metal:cueDef('loop','ambient_metal'),
- ambient_mineral:cueDef('loop','ambient_mineral'),
- ambient_icegiant:cueDef('loop','ambient_icegiant'),
- grit_metal:cueDef('oneshot','grit_metal'),
- grit_mineral:cueDef('oneshot','grit_mineral'),
- grit_icegiant:cueDef('oneshot','grit_icegiant')
+ ...Object.fromEntries(PLANETARY_AMBIENT_KINDS.flatMap(id=>[
+  ['ambient_'+id,cueDef('loop','ambient_'+id)],
+  ['grit_'+id,cueDef('oneshot','grit_'+id)]
+ ]))
 };
 export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
