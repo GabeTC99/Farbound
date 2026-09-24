@@ -116,13 +116,13 @@ console.log('PASS Fleet atlas: 20 hulls, '+NPC_KINDS.length+' NPC kinds, grounde
 console.log('PASS Hangar previews use class kits, framed canopies, and recessed bells');
 
 import {shipPlateUrl} from '../dist/hull-defs.mjs';
-for(const id of ['wren','sparrow','kestrel']){
+for(const id of ['wren','sparrow','kestrel','mule','rook','tern','jackal']){
  const svg=hullPreviewSvg({id,class:'explorer',accent:'#7ad9c8'});
  assert.match(svg,new RegExp('assets/ships/'+id+'\\.png'));
  assert.match(svg,/<polygon /);
  assert.equal(shipPlateUrl(id),'assets/ships/'+id+'.png');
 }
-assert.equal(shipPlateUrl('mule'),null);
+assert.equal(shipPlateUrl('eagle'),null);
 rememberShipPlate('wren',{width:1024,naturalWidth:1024,height:512});
 assert.ok(peekShipPlate('wren'));
 let drawn=0,grads2=0;

@@ -3,7 +3,11 @@
 export const SHIP_PLATES={
  wren:'assets/ships/wren.png',
  sparrow:'assets/ships/sparrow.png',
- kestrel:'assets/ships/kestrel.png'
+ kestrel:'assets/ships/kestrel.png',
+ mule:'assets/ships/mule.png',
+ rook:'assets/ships/rook.png',
+ tern:'assets/ships/tern.png',
+ jackal:'assets/ships/jackal.png'
 };
 export function shipPlateUrl(id){return SHIP_PLATES[id]||null;}
 const stroke=(pts,alpha=.55)=>({type:'stroke',pts,alpha});
