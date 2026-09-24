@@ -58,6 +58,13 @@ export const PLANETARY_AUDIO_STEMS=['ambient_metal','ambient_mineral','ambient_i
 export const PLANETARY_AMBIENT_KINDS=['metal','mineral','icegiant'];
 export const PLANETARY_GRIT_KINDS=['metal','mineral','icegiant'];
 export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';}
+export function cueAssetUrl(file){
+ try{
+  const base=globalThis.location?.href||globalThis.document?.baseURI;
+  if(base)return new URL(file,base).href;
+ }catch{}
+ return file;
+}
 export function surfaceAmbientCue(kindId){
  return PLANETARY_AMBIENT_KINDS.includes(kindId)?'ambient_'+kindId:null;
 }
@@ -104,7 +111,7 @@ export const AUDIO_CUES={
 export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
 export class EngineAudio{
- constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();this.cueEls=new Map();this.cueVolume=.35;}
+ constructor(){this.context=null;this.humReady=false;this.ambReady=false;this.foldReady=false;this.lastCue=null;this.cueLog=[];this.loops=new Set();this.cueSources=new Map();this.cueGen=new Map();this.cueVolume=.35;}
  playCue(name){
   const canon=resolveAudioCue(name);
   const def=AUDIO_CUES[canon]||AUDIO_CUES[name];
@@ -125,32 +132,69 @@ export class EngineAudio{
   return true;
  }
  playCueFile(canon,def){
-  const Ctor=globalThis.Audio;
-  if(typeof Ctor!=='function'||!def?.file)return;
-  try{
-   if(def.type==='loop'){
-    let el=this.cueEls.get(canon);
-    if(!el){el=new Ctor(def.file);el.loop=true;this.cueEls.set(canon,el);}
-    el.volume=this.cueVolume;
-    try{el.currentTime=0;}catch{}
-    const p=el.play();if(p&&p.catch)p.catch(()=>{});
-    return;
-   }
-   const el=new Ctor(def.file);
-   el.volume=this.cueVolume;
-   const p=el.play();if(p&&p.catch)p.catch(()=>{});
-  }catch{}
+  if(!def?.file)return;
+  if(!this.context){try{this.unlock();}catch{}}
+  if(!this.context)return;
+  if(this.context.state==='suspended')this.context.resume?.().catch(()=>{});
+  const gen=def.type==='loop'?(this.cueGen.set(canon,(this.cueGen.get(canon)||0)+1),this.cueGen.get(canon)):0;
+  this.ensureCueBuffer(def.file).then(buffer=>{
+   if(!buffer||!this.context)return;
+   if(def.type==='loop'&&(!this.loops.has(canon)||this.cueGen.get(canon)!==gen))return;
+   this.startCueSource(canon,def,buffer);
+  }).catch(()=>{});
+ }
+ ensureCueGain(){
+  if(this.cueGain||!this.context)return;
+  const g=this.context.createGain();
+  g.gain.value=this.cueVolume;
+  g.connect(this.context.destination);
+  this.cueGain=g;
+ }
+ ensureCueBuffer(file){
+  this.cueBuffers||(this.cueBuffers=new Map());
+  this.cueLoads||(this.cueLoads=new Map());
+  if(this.cueBuffers.has(file))return Promise.resolve(this.cueBuffers.get(file));
+  if(this.cueLoads.has(file))return this.cueLoads.get(file);
+  const p=(async()=>{
+   const res=await fetch(cueAssetUrl(file));
+   if(!res.ok)throw new Error('cue '+res.status);
+   const raw=await res.arrayBuffer();
+   const audio=await this.context.decodeAudioData(raw.slice(0));
+   this.cueBuffers.set(file,audio);
+   return audio;
+  })();
+  this.cueLoads.set(file,p);
+  p.finally(()=>this.cueLoads.delete(file));
+  return p;
+ }
+ startCueSource(canon,def,buffer){
+  this.ensureCueGain();
+  if(def.type==='loop')this.stopCueFile(canon);
+  const src=this.context.createBufferSource();
+  src.buffer=buffer;src.loop=def.type==='loop';
+  src.connect(this.cueGain);
+  try{src.start();}catch{return;}
+  if(def.type==='loop')this.cueSources.set(canon,src);
  }
  stopCueFile(canon){
-  const el=this.cueEls.get(canon);
-  if(!el)return;
-  try{el.pause();el.currentTime=0;}catch{}
+  const src=this.cueSources.get(canon);
+  if(!src)return;
+  this.cueSources.delete(canon);
+  try{src.stop();}catch{}
+ }
+ preloadPlanetaryCues(){
+  if(!this.context||this.cuePreloaded)return;
+  this.cuePreloaded=true;
+  for(const stem of PLANETARY_AUDIO_STEMS)this.ensureCueBuffer(planetaryAudioFile(stem)).catch(()=>{});
  }
  setCueVolume(vol){
   this.cueVolume=Math.max(0,Math.min(1,Number(vol)||0));
-  for(const el of this.cueEls.values()){
-   try{el.volume=this.cueVolume;}catch{}
-  }
+  const g=this.cueGain?.gain;
+  if(!g)return;
+  try{
+   if(this.context&&g.setTargetAtTime)g.setTargetAtTime(this.cueVolume,this.context.currentTime,.04);
+   else g.value=this.cueVolume;
+  }catch{try{g.value=this.cueVolume;}catch{}}
  }
  unlock(){
   if(!this.context){
@@ -168,6 +212,7 @@ export class EngineAudio{
    this.silenceInstant();
    this.context.resume().catch(()=>{});
   }
+  this.preloadPlanetaryCues();
  }
  gains(){return [this.gain,this.humGain,this.noiseGain,this.ambGain,this.foldGain,this.foldNoiseGain];}
  silenceInstant(){
@@ -266,7 +311,7 @@ export class EngineAudio{
  }
  muteAll(){
   this.setCueVolume(0);
-  for(const canon of this.cueEls.keys())this.stopCueFile(canon);
+  for(const canon of [...this.cueSources.keys()])this.stopCueFile(canon);
   if(!this.context)return;
   const t=this.context.currentTime;
   for(const g of this.gains()){
