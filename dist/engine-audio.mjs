@@ -167,13 +167,24 @@ export class EngineAudio{
   p.finally(()=>this.cueLoads.delete(file));
   return p;
  }
+ copyCueBuffer(buffer){
+  const ctx=this.context;
+  if(!ctx?.createBuffer||!buffer?.getChannelData||!buffer.numberOfChannels||!buffer.length)return buffer;
+  try{
+   const copy=ctx.createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate||ctx.sampleRate||44100);
+   for(let c=0;c<buffer.numberOfChannels;c++)copy.getChannelData(c).set(buffer.getChannelData(c));
+   return copy;
+  }catch{return buffer;}
+ }
  startCueSource(canon,def,buffer){
   this.ensureCueGain();
+  if(!this.cueGain)return;
   if(def.type==='loop')this.stopCueFile(canon);
   const src=this.context.createBufferSource();
-  src.buffer=buffer;src.loop=def.type==='loop';
+  src.buffer=this.copyCueBuffer(buffer);
+  src.loop=def.type==='loop';
   src.connect(this.cueGain);
-  try{src.start();}catch{return;}
+  try{src.start(this.context.currentTime||0);}catch{return;}
   if(def.type==='loop')this.cueSources.set(canon,src);
  }
  stopCueFile(canon){

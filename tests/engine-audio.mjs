@@ -45,8 +45,9 @@ class FakeCtx{
  constructor(){this.currentTime=0;this.state='running';this.destination={};}
  resume(){this.state='running';return Promise.resolve();}
  createGain(){return {gain:{value:1,setTargetAtTime(v){this.value=v;}},connect(){}};}
- createBufferSource(){const s={buffer:null,loop:false,connect(){},start(){plays.push(s);},stop(){stops.push(s);}};return s;}
- decodeAudioData(){return Promise.resolve({duration:.4});}
+ createBuffer(ch,len,rate){return {numberOfChannels:ch,length:len,sampleRate:rate,duration:len/rate,getChannelData:()=>new Float32Array(len)};}
+ createBufferSource(){const s={buffer:null,loop:false,connect(){},start(){if(s.buffer?.used)throw new Error('buffer already started');if(s.buffer)s.buffer.used=true;plays.push(s);},stop(){stops.push(s);}};return s;}
+ decodeAudioData(){const data=new Float32Array(8);return Promise.resolve({duration:.4,numberOfChannels:1,length:8,sampleRate:8000,getChannelData:()=>data});}
 }
 const audio=new EngineAudio();
 audio.context=new FakeCtx();
@@ -66,6 +67,13 @@ await new Promise(r=>setTimeout(r,20));
 assert.ok(stops.length>=1,'inspect stop kills the working loop');
 assert.ok(plays.some(s=>s.buffer&&!s.loop&&plays.indexOf(s)>1)||plays.length>=3);
 assert.ok(audio.playCue(SURFACE_AUDIO_CUES.embark));
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectStart));
 await new Promise(r=>setTimeout(r,20));
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.embark));
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.takeoff));
+assert.ok(audio.playCue(SURFACE_AUDIO_CUES.inspectStart));
+await new Promise(r=>setTimeout(r,20));
+const whoosh=plays.filter(s=>!s.loop&&s.buffer?.sampleRate===8000);
+assert.ok(whoosh.length>=4,'embark and inspect start each replay on a fresh buffer');
 assert.ok(fetched.some(u=>u.includes('embark_whoosh.mp3')));
-console.log('PASS Planetary cues decode through AudioContext and stop the inspect loop');
+console.log('PASS Planetary cues decode through AudioContext and replay oneshots');
