@@ -65,7 +65,7 @@ export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';
 /** Hull thruster loops and flyby/land oneshots. Stems match dist/assets/audio/ships/. */
 export const SHIP_AUDIO_DIR='assets/audio/ships/';
 export const SHIP_AUDIO_HULLS=['wren','sparrow','kestrel','mule','rook','tern','jackal'];
-export const SHIP_AUDIO_READY=['wren','sparrow','kestrel'];
+export const SHIP_AUDIO_READY=['wren','sparrow','kestrel','mule','rook','tern','jackal'];
 export const SHIP_AUDIO_KINDS=['thruster','flyby','land'];
 export const SHIP_AUDIO_STEMS=SHIP_AUDIO_READY.flatMap(hull=>SHIP_AUDIO_KINDS.map(kind=>kind+'_'+hull));
 export function shipAudioFile(stem){return SHIP_AUDIO_DIR+stem+'.mp3';}

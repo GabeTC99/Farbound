@@ -78,7 +78,7 @@ assert.ok(whoosh.length>=4,'embark and inspect start each replay on a fresh buff
 assert.ok(fetched.some(u=>u.includes('embark_whoosh.mp3')));
 console.log('PASS Planetary cues decode through AudioContext and replay oneshots');
 
-assert.equal(SHIP_AUDIO_STEMS.length,9);
+assert.equal(SHIP_AUDIO_STEMS.length,21);
 for(const stem of SHIP_AUDIO_STEMS){
  assert.equal(AUDIO_CUES[stem].file,'assets/audio/ships/'+stem+'.mp3');
  assert.equal(AUDIO_CUES[stem].type,stem.startsWith('thruster_')?'loop':'oneshot');
@@ -86,13 +86,14 @@ for(const stem of SHIP_AUDIO_STEMS){
 assert.equal(shipAudioCue('thruster','wren'),'thruster_wren');
 assert.equal(shipAudioCue('flyby','sparrow'),'flyby_sparrow');
 assert.equal(shipAudioCue('land','kestrel'),'land_kestrel');
-assert.equal(shipAudioCue('thruster','mule'),null);
-assert.equal(resolveShipCue('land','mule'),'embark_whoosh');
-assert.equal(resolveShipCue('flyby','rook'),'embark_whoosh');
-assert.equal(resolveShipCue('thruster','tern'),null);
-assert.equal(resolveShipCue('land','jackal'),'embark_whoosh');
+assert.equal(shipAudioCue('thruster','mule'),'thruster_mule');
+assert.equal(shipAudioCue('thruster','jackal'),'thruster_jackal');
+assert.equal(resolveShipCue('land','mule'),'land_mule');
+assert.equal(resolveShipCue('flyby','rook'),'flyby_rook');
+assert.equal(resolveShipCue('thruster','tern'),'thruster_tern');
+assert.equal(resolveShipCue('land','jackal'),'land_jackal');
 assert.equal(resolveShipCue('flyby','wren'),'flyby_wren');
-assert.equal(resolveShipCue('land','not-a-hull'),null);
+assert.equal(resolveShipCue('land','eagle'),null);
 audio.syncHullThruster({hull:'wren',thrust:1,live:true});
 audio.playCue('flyby_wren');
 audio.playCue('land_kestrel');
@@ -108,6 +109,10 @@ audio.playCue('flyby_wren');
 await new Promise(r=>setTimeout(r,20));
 assert.ok(plays.filter(s=>!s.loop).length>=3,'flyby and land replay as oneshots');
 assert.equal(plays.filter(s=>s.loop).length,loopsBefore);
-audio.syncHullThruster({hull:'mule',thrust:1,live:true});
+audio.syncHullThruster({hull:'eagle',thrust:1,live:true});
 assert.equal(audio.hullThrusterOn,false,'hulls without a thruster file keep the oscillator bed');
+audio.syncHullThruster({hull:'jackal',thrust:1,live:true});
+await new Promise(r=>setTimeout(r,20));
+assert.equal(audio.hullThrusterOn,true);
+assert.ok(fetched.some(u=>u.includes('thruster_jackal.mp3')));
 console.log('PASS Ship thruster loops and flyby/land oneshots resolve by hull');
