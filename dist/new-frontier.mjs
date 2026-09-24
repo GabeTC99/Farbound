@@ -113,10 +113,20 @@ export function kindPlateName(kindId){return 'landing-'+String(kindId||'mineral'
 export function kindSurfaceName(kindId){return 'surface-'+String(kindId||'mineral')+'.png';}
 
 export const FRONTIER_KIND_ASSETS=FRONTIER_KIND_IDS.flatMap(id=>[kindPlateName(id),kindSurfaceName(id)]);
+/** Phase 1b Scenario plates/surfaces that actually ship (must be in sw.js FILES). */
+export const FRONTIER_KIND_SHIPPED=[
+ 'landing-volcanic.png','landing-earthlike.png','landing-arid.png','landing-ice.png',
+ 'landing-ocean.png','landing-toxic.png','landing-barren.png','landing-gas.png',
+ 'surface-volcanic.png','surface-earthlike.png','surface-arid.png','surface-ice.png',
+ 'surface-toxic.png','surface-barren.png'
+];
 export const FRONTIER_PREFETCH_ASSETS=[...FRONTIER_SHIPPED_ASSETS,...FRONTIER_KIND_ASSETS];
 
 const WARM_SURFACE=new Set(['volcanic','arid','gas','mineral','metal']);
 const WARM_PLATE=new Set(['volcanic','arid','gas','mineral']);
+/** Manifest: barren landing + surface also cover metal/mineral biomes. */
+const KIND_PLATE_ALIAS={metal:'barren',mineral:'barren'};
+const KIND_SURFACE_ALIAS={metal:'barren',mineral:'barren'};
 
 export function fallbackSurfaceName(kindId){
  return WARM_SURFACE.has(kindId)?FRONTIER_SURFACE_A:FRONTIER_SURFACE_B;
@@ -131,23 +141,34 @@ export function resolveFrontierName(preferred,fallback){
  return fallback;
 }
 
+function resolveKindAsset(kindId,nameOf,aliasMap,fallbackOf){
+ const kind=nameOf(kindId);
+ if(peekFrontierImage(kind))return kind;
+ const alias=aliasMap[kindId];
+ if(alias){
+  const aliased=nameOf(alias);
+  if(peekFrontierImage(aliased))return aliased;
+ }
+ return fallbackOf(kindId);
+}
+
 export function surfaceTextureName(kindId){
- return resolveFrontierName(kindSurfaceName(kindId),fallbackSurfaceName(kindId));
+ return resolveKindAsset(kindId,kindSurfaceName,KIND_SURFACE_ALIAS,fallbackSurfaceName);
 }
 
 export function landingPlateName(kindId){
- return resolveFrontierName(kindPlateName(kindId),fallbackPlateName(kindId));
+ return resolveKindAsset(kindId,kindPlateName,KIND_PLATE_ALIAS,fallbackPlateName);
 }
 
 /**
- * Source crop that drops title/HUD chrome. Fractions of the plate.
- * Shipped a/b plates are cinematic stills — take a tall horizon band,
- * not a thin mid-sky strip. Per-kind files use the same generous default.
+ * Source crop. Shipped a/b plates are cinematic stills with title chrome —
+ * take a tall horizon band. Phase 1b kind plates are clean landscapes
+ * (no HUD) so we take a fuller-bleed sky-to-fog band.
  */
 export function plateCrop(name){
  if(name===FRONTIER_PLATE_A)return {sx:.28,sy:.06,sw:.70,sh:.50};
  if(name===FRONTIER_PLATE_B)return {sx:.34,sy:.05,sw:.64,sh:.48};
- return {sx:.10,sy:.08,sw:.82,sh:.52};
+ return {sx:.0,sy:.05,sw:1,sh:.58};
 }
 
 /** Screen-space dest height for the cinematic plate (fuller-bleed horizon). */

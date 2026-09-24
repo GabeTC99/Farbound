@@ -3,56 +3,42 @@
 Phase 1 of **3.0 New Frontier** paints lighting in-engine (Canvas 2D) and
 composites Gabe-approved Scenario Pro plates (commercial use cleared by Risk).
 
+`dist/new-frontier.mjs` prefers a kind file when it has loaded, then an
+alias (metal/mineral → barren), then the shipped warm/cool pair.
+`prefetchFrontierArt` lists every known kind name. Missing files fail silent.
+
 ## Shipped files (must stay in `dist/sw.js` FILES)
 
+Warm/cool fallbacks:
+
 - `planet-surface-a.png` / `planet-surface-b.png` — tileable ground diffuse
-- `landing-a.png` / `landing-b.png` — cinematic plates, cropped as far-field
-  vistas (title / HUD chrome is not drawn over gameplay)
+- `landing-a.png` / `landing-b.png` — cinematic plates (title / HUD cropped out)
 
-## Optional per-kind drop-ins
+Phase 1b per-kind plates (clean landscapes, no HUD):
 
-`dist/new-frontier.mjs` prefers a kind file when it has loaded, then falls
-back to the shipped warm/cool pair. Prefetch lists every name below so a
-PNG dropped here is picked up on the next load. Do **not** add these to
-the service-worker `FILES` list until the file actually ships (`cache.addAll`
-fails on 404).
-
-Plates (far-field vista):
-
+- `landing-volcanic.png`
 - `landing-earthlike.png`
-- `landing-ocean.png`
 - `landing-arid.png`
 - `landing-ice.png`
-- `landing-metal.png`
-- `landing-mineral.png`
-- `landing-volcanic.png`
-- `landing-barren.png`
+- `landing-ocean.png`
 - `landing-toxic.png`
+- `landing-barren.png` (also covers metal / mineral until those files arrive)
 - `landing-gas.png`
-- `landing-icegiant.png`
 
-Surfaces (near-ground grain):
+Phase 1b per-kind surfaces (tileable grain):
 
+- `surface-volcanic.png`
 - `surface-earthlike.png`
-- `surface-ocean.png`
 - `surface-arid.png`
 - `surface-ice.png`
-- `surface-metal.png`
-- `surface-mineral.png`
-- `surface-volcanic.png`
-- `surface-barren.png`
 - `surface-toxic.png`
-- `surface-gas.png`
-- `surface-icegiant.png`
+- `surface-barren.png` (also covers metal / mineral)
 
-Fallbacks until a kind file arrives:
+Ocean and gas have no dedicated surface tiles yet — they keep
+`planet-surface-a/b`. Icegiant still uses the cool fallbacks.
 
-| kindId | plate | surface |
-|---|---|---|
-| volcanic, arid, gas, mineral | `landing-a.png` | `planet-surface-a.png` (metal surface too) |
-| earthlike, ocean, ice, barren, toxic, icegiant | `landing-b.png` | `planet-surface-b.png` |
-| metal | `landing-b.png` | `planet-surface-a.png` |
+## Still optional (do not add to SW FILES until the file ships)
 
-`dist/new-frontier.mjs` exposes `frontierAssetUrl`, `loadFrontierImage`,
-`peekFrontierImage`, `prefetchFrontierArt`, `kindPlateName`, `kindSurfaceName`.
-Missing files still fail silent.
+- `landing-metal.png` / `landing-mineral.png` / `landing-icegiant.png`
+- `surface-ocean.png` / `surface-gas.png` / `surface-metal.png` /
+  `surface-mineral.png` / `surface-icegiant.png`

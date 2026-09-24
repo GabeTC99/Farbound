@@ -4,7 +4,7 @@ import {
  FRONTIER_EDITION,FRONTIER_ASSET_DIR,qualityOf,planetTexSize,surfaceStep,
  lightDir,hexRgb,rgbHex,mixHex,fadeHex,shadeHex,surfaceSun,terminatorStops,
  atmosphereRimAlpha,frontierAssetUrl,loadFrontierImage,peekFrontierImage,
- FRONTIER_SHIPPED_ASSETS,FRONTIER_KIND_IDS,FRONTIER_KIND_ASSETS,FRONTIER_PREFETCH_ASSETS,
+ FRONTIER_SHIPPED_ASSETS,FRONTIER_KIND_IDS,FRONTIER_KIND_ASSETS,FRONTIER_KIND_SHIPPED,FRONTIER_PREFETCH_ASSETS,
  surfaceTextureName,landingPlateName,kindPlateName,kindSurfaceName,
  fallbackPlateName,fallbackSurfaceName,resolveFrontierName,rememberFrontierImage,
  clearFrontierAssets,plateCrop,vistaDestHeight,ridgeCameraY,VISTA_LOCK_Y,
@@ -56,11 +56,19 @@ assert.equal(peekFrontierImage('missing-optional.png'),null);
 assert.equal(FRONTIER_SHIPPED_ASSETS.length,4);
 assert.equal(FRONTIER_KIND_IDS.length,11);
 assert.equal(FRONTIER_KIND_ASSETS.length,22);
+assert.equal(FRONTIER_KIND_SHIPPED.length,14);
 assert.equal(FRONTIER_PREFETCH_ASSETS.length,26);
 assert.ok(FRONTIER_KIND_ASSETS.includes('landing-volcanic.png'));
 assert.ok(FRONTIER_KIND_ASSETS.includes('surface-ice.png'));
 assert.ok(FRONTIER_KIND_ASSETS.includes('landing-arid.png'));
+assert.ok(FRONTIER_KIND_ASSETS.includes('landing-ocean.png'));
 assert.ok(FRONTIER_KIND_ASSETS.includes('surface-earthlike.png'));
+assert.ok(FRONTIER_PREFETCH_ASSETS.includes('landing-volcanic.png'));
+assert.ok(FRONTIER_PREFETCH_ASSETS.includes('surface-toxic.png'));
+assert.ok(FRONTIER_KIND_SHIPPED.includes('landing-gas.png'));
+assert.ok(FRONTIER_KIND_SHIPPED.includes('surface-barren.png'));
+assert.ok(!FRONTIER_KIND_SHIPPED.includes('landing-metal.png'));
+for(const name of FRONTIER_KIND_SHIPPED)assert.ok(FRONTIER_PREFETCH_ASSETS.includes(name),name+' must be prefetched');
 assert.equal(kindPlateName('volcanic'),'landing-volcanic.png');
 assert.equal(kindSurfaceName('ice'),'surface-ice.png');
 assert.equal(fallbackPlateName('volcanic'),'landing-a.png');
@@ -80,9 +88,14 @@ rememberFrontierImage('surface-ice.png',{width:8,height:8});
 assert.equal(landingPlateName('volcanic'),'landing-volcanic.png');
 assert.equal(surfaceTextureName('ice'),'surface-ice.png');
 assert.equal(resolveFrontierName('landing-volcanic.png','landing-a.png'),'landing-volcanic.png');
+rememberFrontierImage('landing-barren.png',{width:8,height:8});
+rememberFrontierImage('surface-barren.png',{width:8,height:8});
+assert.equal(landingPlateName('metal'),'landing-barren.png');
+assert.equal(surfaceTextureName('mineral'),'surface-barren.png');
 clearFrontierAssets();
 assert.equal(landingPlateName('volcanic'),'landing-a.png');
 assert.equal(surfaceTextureName('ice'),'planet-surface-b.png');
+assert.equal(landingPlateName('metal'),'landing-b.png');
 for(const id of FRONTIER_KIND_IDS){
  assert.equal(kindPlateName(id),'landing-'+id+'.png');
  assert.equal(kindSurfaceName(id),'surface-'+id+'.png');
@@ -110,6 +123,10 @@ assert.ok(tileScreenRepeat('high',false)*4<=512);
 assert.equal(tileSizeForQuality('high',false),tileBakeSize('high',false));
 prefetchFrontierArt();
 for(const name of FRONTIER_SHIPPED_ASSETS){
+ const file=new URL('../dist/assets/new-frontier/'+name,import.meta.url);
+ assert.ok(readFileSync(file).length>100000,name+' must ship');
+}
+for(const name of FRONTIER_KIND_SHIPPED){
  const file=new URL('../dist/assets/new-frontier/'+name,import.meta.url);
  assert.ok(readFileSync(file).length>100000,name+' must ship');
 }
@@ -157,7 +174,9 @@ const assetReadme=readFileSync(new URL('../dist/assets/new-frontier/README.md',i
 assert.match(assetReadme,/landing-volcanic\.png/);
 assert.match(assetReadme,/surface-ice\.png/);
 assert.match(assetReadme,/landing-arid\.png/);
-assert.match(assetReadme,/Do \*\*not\*\* add these to/);
+assert.match(assetReadme,/landing-ocean\.png/);
+assert.match(assetReadme,/Phase 1b/);
+assert.match(assetReadme,/Still optional/);
 assert.doesNotMatch(surfaceSrc,/fillRect\(x,\s*gy/);
 const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 assert.match(app,/NEW FRONTIER/);
@@ -167,11 +186,15 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-vista/);
+assert.match(sw,/farbound-v3\.0\.0-vista2/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
-assert.doesNotMatch(sw,/landing-volcanic\.png/);
-assert.doesNotMatch(sw,/surface-ice\.png/);
+assert.match(sw,/landing-volcanic\.png/);
+assert.match(sw,/landing-ocean\.png/);
+assert.match(sw,/surface-ice\.png/);
+assert.match(sw,/surface-barren\.png/);
+assert.doesNotMatch(sw,/landing-metal\.png/);
+assert.doesNotMatch(sw,/surface-ocean\.png/);
 const notes=JSON.parse(readFileSync(new URL('../releases/v3.0.0.json',import.meta.url),'utf8'));
 assert.equal(notes.release,'3.0.0');
 assert.equal(notes.edition,'New Frontier');
