@@ -71,11 +71,11 @@ export function terminatorStops(kindId='mineral'){
  const ice=kindId==='ice'||kindId==='icegiant'||kindId==='ocean';
  const twilight=warm?'#ffb07044':ice?'#9ad4ff33':'#c8e0ff28';
  return [
-  [0,'#fff6e818'],
-  [.38,'#00000000'],
-  [.55,twilight],
-  [.72,'#00040c88'],
-  [1,'#00030af5']
+  [0,'#fff6e828'],
+  [.32,'#00000000'],
+  [.52,twilight],
+  [.68,'#00040c99'],
+  [1,'#000208f8']
  ];
 }
 

@@ -306,10 +306,10 @@ function paintTerminator(ctx,p,kindId,ux,uy,lite){
  const gx0=p.x-ux*p.r,gy0=p.y-uy*p.r,gx1=p.x+ux*p.r,gy1=p.y+uy*p.r;
  const shade=ctx.createLinearGradient(gx0,gy0,gx1,gy1);
  if(lite){
-  shade.addColorStop(0,'#ffffff10');
-  shade.addColorStop(.46,'#00000000');
-  shade.addColorStop(.78,'#00040c99');
-  shade.addColorStop(1,'#00030ae8');
+  shade.addColorStop(0,'#ffffff18');
+  shade.addColorStop(.4,'#00000000');
+  shade.addColorStop(.68,'#00040caa');
+  shade.addColorStop(1,'#000208f4');
  }else{
   for(const [t,col] of terminatorStops(kindId))shade.addColorStop(t,col);
  }

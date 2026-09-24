@@ -46,20 +46,25 @@ function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,
  ctx.lineTo(width,height);ctx.closePath();
  ctx.fillStyle=color;ctx.fill();
  if(!lit)return;
+ shadeRidge(ctx,width,height,pts,sunX);
+}
+
+function shadeRidge(ctx,width,height,pts,sunX){
  ctx.save();
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
- for(let i=1;i<pts.length;i++){
-  const slope=terrainSlope(pts[i].wx,seed+offset);
-  const face=slope*sunX;
-  if(Math.abs(face)<.04)continue;
-  ctx.globalAlpha=Math.min(.38,Math.abs(face)*2.4);
-  ctx.fillStyle=face>0?'#fff6e8':'#000810';
-  ctx.fillRect(pts[i-1].x,0,pts[i].x-pts[i-1].x+1,height);
- }
+ const fromLeft=sunX<0;
+ const sun=ctx.createLinearGradient(fromLeft?0:width,0,fromLeft?width:0,0);
+ sun.addColorStop(0,'rgba(255,246,232,0.18)');
+ sun.addColorStop(.42,'rgba(0,0,0,0)');
+ sun.addColorStop(1,'rgba(0,8,16,0.24)');
+ ctx.fillStyle=sun;ctx.fillRect(0,0,width,height);
+ const down=ctx.createLinearGradient(0,0,0,height);
+ down.addColorStop(0,'rgba(0,0,0,0)');
+ down.addColorStop(1,'rgba(0,8,16,0.26)');
+ ctx.fillStyle=down;ctx.fillRect(0,0,width,height);
  ctx.restore();
- ctx.globalAlpha=1;
 }
 
 function drawSky(ctx,width,height,pal,kind,sun,lite,clock){
@@ -132,25 +137,9 @@ function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,su
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();
- ctx.fillStyle=pal.terrain;ctx.fill();
- if(!lite){
-  ctx.save();
-  ctx.beginPath();ctx.moveTo(0,height);
-  for(const p of pts)ctx.lineTo(p.x,p.y);
-  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
-  for(let i=1;i<pts.length;i++){
-   const tint=groundTint(s.kindId,s.seed,pts[i].wx);
-   const slope=terrainSlope(pts[i].wx,s.seed);
-   const face=slope*sunX;
-   const base=tint||pal.terrain;
-   ctx.fillStyle=face>0?mixHex(base,'#fff6e8',Math.min(.28,face*1.6)):shadeHex(base,Math.max(.55,1+face*1.8));
-   ctx.fillRect(pts[i-1].x,Math.min(pts[i-1].y,pts[i].y)-2,pts[i].x-pts[i-1].x+1,height);
-  }
-  const dirt=ctx.createLinearGradient(0,height*.7,0,height);
-  dirt.addColorStop(0,'#0000');dirt.addColorStop(1,'#00081055');
-  ctx.fillStyle=dirt;ctx.fillRect(0,0,width,height);
-  ctx.restore();
- }
+ const tint=groundTint(s.kindId,s.seed,s.x)||pal.terrain;
+ ctx.fillStyle=mixHex(pal.terrain,tint,.35);ctx.fill();
+ if(!lite)shadeRidge(ctx,width,height,pts,sunX);
  ctx.strokeStyle=pal.stroke;ctx.lineWidth=lite?2:2.8;ctx.lineJoin='round';
  ctx.beginPath();
  for(let i=0;i<pts.length;i++){if(i===0)ctx.moveTo(pts[i].x,pts[i].y);else ctx.lineTo(pts[i].x,pts[i].y);}
