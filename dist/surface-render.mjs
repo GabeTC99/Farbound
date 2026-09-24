@@ -3,7 +3,8 @@ import {samplePlanetColor} from './planet-render.mjs';
 import {
  surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex,
  prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
- surfaceTextureName,landingPlateName,kindPlateName,drawFrontierVista,ridgeCameraY,
+ surfaceTextureName,landingPlateName,kindPlateName,drawFrontierVista,
+ ridgeCameraY,RIDGE_VERTICAL_PARALLAX,
  tileBakeSize,tileScreenRepeat
 } from './new-frontier.mjs';
 
@@ -330,17 +331,18 @@ export function renderSurface(ctx,width,height,s,clock,stats,opts={}){
  const step=surfaceStep(quality,lite);
  const scale=width<650?.62:.86,cameraX=s.x-width*.08/scale,cameraY=s.y-40;
  const sx=x=>(x-cameraX)*scale+width/2,sy=y=>(y-cameraY)*scale+height/2;
- const ridgeSy=v=>{const cy=ridgeCameraY(cameraY,v);return y=>(y-cy)*scale+height/2;};
+ const ridgeCy=ridgeCameraY(cameraY,RIDGE_VERTICAL_PARALLAX);
+ const ridgeSy=y=>(y-ridgeCy)*scale+height/2;
  prefetchFrontierArt();
  const sun=surfaceSun(s.seed);
  const sunX=sun.x|| -1;
  const groundTex=peekFrontierImage(surfaceTextureName(s.kindId));
  drawSky(ctx,width,height,pal,s.kindId,sun,lite,clock,cameraX,quality);
  const layers=lite
-  ?[[-150,shadeHex(pal.hills[0],.75),.55,false,.12],[-40,pal.hills[1],.78,true,.5]]
-  :[[-260,shadeHex(pal.hills[0],.62),.32,false,0],[-180,pal.hills[0],.48,true,.08],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true,.28],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true,.68]];
- for(const [offset,color,parallax,lit,vPar] of layers){
-  fillRidge(ctx,width,height,ridgeSy(vPar),cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX,groundTex,quality,lite);
+  ?[[-150,shadeHex(pal.hills[0],.75),.55,false],[-40,pal.hills[1],.78,true]]
+  :[[-260,shadeHex(pal.hills[0],.62),.32,false],[-180,pal.hills[0],.48,true],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true]];
+ for(const [offset,color,parallax,lit] of layers){
+  fillRidge(ctx,width,height,ridgeSy,cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX,groundTex,quality,lite);
  }
  const sponge=ctx.createLinearGradient(0,height*.34,0,height*.7);
  sponge.addColorStop(0,'#0000');
