@@ -4,7 +4,7 @@ import {
  surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex,
  prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
  surfaceTextureName,landingPlateName,kindPlateName,drawFrontierVista,
- ridgeCameraY,RIDGE_VERTICAL_PARALLAX,
+ surfaceCameraY,
  tileBakeSize,tileScreenRepeat
 } from './new-frontier.mjs';
 
@@ -329,10 +329,10 @@ export function renderSurface(ctx,width,height,s,clock,stats,opts={}){
  const lite=!!opts.lite;
  const quality=opts.quality||(lite?'performance':'high');
  const step=surfaceStep(quality,lite);
- const scale=width<650?.62:.86,cameraX=s.x-width*.08/scale,cameraY=s.y-40;
+ const scale=width<650?.62:.86,cameraX=s.x-width*.08/scale;
+ const cameraY=surfaceCameraY(s.y);
  const sx=x=>(x-cameraX)*scale+width/2,sy=y=>(y-cameraY)*scale+height/2;
- const ridgeCy=ridgeCameraY(cameraY,RIDGE_VERTICAL_PARALLAX);
- const ridgeSy=y=>(y-ridgeCy)*scale+height/2;
+ const ridgeSy=sy;
  prefetchFrontierArt();
  const sun=surfaceSun(s.seed);
  const sunX=sun.x|| -1;
