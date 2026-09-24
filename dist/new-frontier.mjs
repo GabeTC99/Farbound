@@ -96,7 +96,37 @@ export function frontierAssetUrl(name){
 /**
  * Optional Scenario / PNG hook. Returns a cached Image or null.
  * Missing files fail silently so procedural art always paints.
+ * First call starts the load and returns null; later frames peek the Image.
  */
+export const FRONTIER_SURFACE_A='planet-surface-a.png';
+export const FRONTIER_SURFACE_B='planet-surface-b.png';
+export const FRONTIER_PLATE_A='landing-a.png';
+export const FRONTIER_PLATE_B='landing-b.png';
+export const FRONTIER_SHIPPED_ASSETS=[FRONTIER_SURFACE_A,FRONTIER_SURFACE_B,FRONTIER_PLATE_A,FRONTIER_PLATE_B];
+
+const WARM_SURFACE=new Set(['volcanic','arid','gas','mineral','metal']);
+const WARM_PLATE=new Set(['volcanic','arid','gas','mineral']);
+
+export function surfaceTextureName(kindId){
+ return WARM_SURFACE.has(kindId)?FRONTIER_SURFACE_A:FRONTIER_SURFACE_B;
+}
+
+export function landingPlateName(kindId){
+ return WARM_PLATE.has(kindId)?FRONTIER_PLATE_A:FRONTIER_PLATE_B;
+}
+
+/** Source crop that drops title/HUD chrome. Fractions of the plate. */
+export function plateCrop(name){
+ if(name===FRONTIER_PLATE_A)return {sx:.10,sy:.13,sw:.88,sh:.38};
+ return {sx:.14,sy:.09,sw:.84,sh:.36};
+}
+
+export function tileSizeForQuality(quality,lite){
+ if(lite||quality==='performance')return 192;
+ if(quality==='balanced')return 384;
+ return 512;
+}
+
 export function loadFrontierImage(name){
  if(!name)return null;
  if(assetCache.has(name))return assetCache.get(name);
@@ -114,4 +144,27 @@ export function peekFrontierImage(name){
  return assetCache.get(name)||null;
 }
 
-export function clearFrontierAssets(){assetCache.clear();}
+export function prefetchFrontierArt(){
+ for(const n of FRONTIER_SHIPPED_ASSETS)loadFrontierImage(n);
+}
+
+const tileCache=new Map();
+
+export function frontierTile(img,size){
+ if(!img||!img.width||!size)return null;
+ const key=(img.src||img)+'|'+size;
+ const hit=tileCache.get(key);
+ if(hit)return hit;
+ if(typeof document==='undefined')return img;
+ const c=document.createElement('canvas');
+ c.width=c.height=size;
+ const x=c.getContext('2d');
+ if(!x)return img;
+ x.imageSmoothingEnabled=true;
+ x.drawImage(img,0,0,size,size);
+ tileCache.set(key,c);
+ if(tileCache.size>12)tileCache.delete(tileCache.keys().next().value);
+ return c;
+}
+
+export function clearFrontierAssets(){assetCache.clear();tileCache.clear();}

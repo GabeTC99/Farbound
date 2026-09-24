@@ -4,7 +4,7 @@
  * 3.0 New Frontier: sharper terminator, sunward atmosphere rim, quality-aware caches.
  */
 import {PLANET_KINDS} from './system-layout.mjs';
-import {planetTexSize,lightDir,terminatorStops,atmosphereRimAlpha} from './new-frontier.mjs';
+import {planetTexSize,lightDir,terminatorStops,atmosphereRimAlpha,prefetchFrontierArt,peekFrontierImage,surfaceTextureName} from './new-frontier.mjs';
 
 export const PLANET_ART={
  earthlike:{limb:'#7ec8ff',haze:.58,features:['continents','clouds','ice-caps','ocean']},
@@ -338,6 +338,15 @@ export function drawPlanetBody(ctx,p,opts={}){
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.clip();
  if(tex)ctx.drawImage(tex,p.x-p.r,p.y-p.r,p.r*2,p.r*2);
  else{ctx.fillStyle=p.color||'#6a8890';ctx.fill();}
+ if(!lite&&quality==='high'){
+  prefetchFrontierArt();
+  const rock=peekFrontierImage(surfaceTextureName(kindId));
+  if(rock&&rock.width){
+   ctx.globalAlpha=.32;ctx.globalCompositeOperation='overlay';
+   ctx.drawImage(rock,p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+   ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  }
+ }
  paintTerminator(ctx,p,kindId,ux,uy,lite);
  if(!lite)drawNightLights(ctx,p,kindId,ux,uy);
  ctx.restore();

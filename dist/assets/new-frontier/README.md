@@ -1,15 +1,14 @@
-# New Frontier art hooks
+# New Frontier art
 
-Phase 1 of **3.0 New Frontier** paints lighting, planets, and landings in-engine
-(Canvas 2D). This folder is the drop point for later Scenario Pro / external
-PNG or sprite sheets.
+Phase 1 of **3.0 New Frontier** paints lighting in-engine (Canvas 2D) and
+composites Gabe-approved Scenario Pro plates (commercial use cleared by Risk).
 
-`dist/new-frontier.mjs` exposes:
+Shipped files:
 
-- `frontierAssetUrl(name)` — resolve a file in this directory
-- `loadFrontierImage(name)` — optional Image load; missing files fail silent
-- `peekFrontierImage(name)` — cached hit or `null`
+- `planet-surface-a.png` / `planet-surface-b.png` — tileable ground diffuse
+- `landing-a.png` / `landing-b.png` — cinematic plates, cropped as far-field
+  vistas (title / HUD chrome is not drawn over gameplay)
 
-Do **not** add placeholder PNGs here. The renderer never waits on these files.
-When a real atlas lands, keep names stable (`planet-rim.png`, `skiff-overlay.png`,
-`surface-dust.png`) and add only shipped files to `dist/sw.js` `FILES`.
+`dist/new-frontier.mjs` exposes `frontierAssetUrl`, `loadFrontierImage`,
+`peekFrontierImage`, `prefetchFrontierArt`. Missing files still fail silent.
+Every shipped PNG must stay listed in `dist/sw.js` `FILES`.

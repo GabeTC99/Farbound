@@ -1,6 +1,10 @@
 import {terrainAt,terrainSlope,nearestAnomaly,surfaceAltitude} from './surface.mjs';
 import {samplePlanetColor} from './planet-render.mjs';
-import {surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex} from './new-frontier.mjs';
+import {
+ surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex,
+ prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
+ surfaceTextureName,landingPlateName,plateCrop,tileSizeForQuality
+} from './new-frontier.mjs';
 
 export const SURFACE_PALETTES={
  earthlike:{sky0:'#041820',sky1:'#0d3a48',sky2:'#2a5a58',terrain:'#2a6854',stroke:'#6ec4a0',hills:['#163848','#2e5c50'],dust:'#9ad4c066',skiff:'#1a4a45',skiffLine:'#a8f0d8',floor:'#2a6854',accent:'#6ec4a0',sun:'#d8f4e8',haze:'#6ec4a044'},
@@ -35,7 +39,7 @@ function groundTint(kindId,seed,wx){
  return hex;
 }
 
-function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,step,lit,sunX){
+function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,step,lit,sunX,tex,quality,lite){
  const pts=[];
  for(let x=0;x<=width+step;x+=step){
   const wx=cameraX*parallax+(x-width/2)/scale;
@@ -53,6 +57,7 @@ function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,
   ctx.fillStyle=fill;
  }else ctx.fillStyle=color;
  ctx.fill();
+ if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale*parallax,quality,lite,.22);
  if(!lit)return;
  shadeRidge(ctx,width,height,pts,sunX,seed,offset);
 }
@@ -100,13 +105,57 @@ function shadeRidge(ctx,width,height,pts,sunX,seed,offset){
  ctx.restore();
 }
 
-function drawSky(ctx,width,height,pal,kind,sun,lite,clock){
+function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,lite,alpha){
+ if(!img||!ctx.createPattern)return;
+ const size=tileSizeForQuality(quality,lite);
+ const tile=frontierTile(img,size);
+ if(!tile)return;
+ const pat=ctx.createPattern(tile,'repeat');
+ if(!pat)return;
+ ctx.save();
+ ctx.beginPath();ctx.moveTo(0,height);
+ for(const p of pts)ctx.lineTo(p.x,p.y);
+ ctx.lineTo(width,height);ctx.closePath();ctx.clip();
+ ctx.globalAlpha=alpha;
+ ctx.globalCompositeOperation='overlay';
+ const scroll=((cameraX*scrollScale)%size+size)%size;
+ ctx.translate(-scroll,height*.12);
+ ctx.fillStyle=pat;
+ ctx.fillRect(scroll-8,-height,width+size+16,height*2.4);
+ ctx.restore();
+}
+
+function drawPlateVista(ctx,width,height,pal,kind,cameraX,lite,quality){
+ if(lite||quality==='performance')return;
+ const name=landingPlateName(kind);
+ const img=peekFrontierImage(name)||loadFrontierImage(name);
+ if(!img||!img.width)return;
+ const crop=plateCrop(name);
+ const sx=img.width*crop.sx,sy=img.height*crop.sy,sw=img.width*crop.sw,sh=img.height*crop.sh;
+ const destH=height*(quality==='balanced'?.38:.46);
+ const shift=((cameraX*.02)%80+80)%80;
+ ctx.save();
+ ctx.globalAlpha=quality==='balanced'?.5:.68;
+ ctx.drawImage(img,sx,sy,sw,sh,-20-shift*.2,0,width+40,destH);
+ ctx.globalAlpha=1;
+ const fade=ctx.createLinearGradient(0,destH*.42,0,destH);
+ fade.addColorStop(0,'#0000');
+ fade.addColorStop(1,pal.sky2);
+ ctx.fillStyle=fade;ctx.fillRect(0,destH*.42,width,destH*.58);
+ const sides=ctx.createLinearGradient(0,0,width,0);
+ sides.addColorStop(0,pal.sky0);sides.addColorStop(.12,'#0000');sides.addColorStop(.88,'#0000');sides.addColorStop(1,pal.sky0);
+ ctx.globalAlpha=.45;ctx.fillStyle=sides;ctx.fillRect(0,0,width,destH);
+ ctx.restore();
+}
+
+function drawSky(ctx,width,height,pal,kind,sun,lite,clock,cameraX,quality){
  const sky=ctx.createLinearGradient(0,0,0,height);
  sky.addColorStop(0,pal.sky0);
  sky.addColorStop(.42,pal.sky1);
  sky.addColorStop(.78,pal.sky2);
  sky.addColorStop(1,mixHex(pal.sky2,pal.terrain,.28));
  ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
+ drawPlateVista(ctx,width,height,pal,kind,cameraX,lite,quality);
  const sx=width*(.18+sun.x*.12),sy=height*(.16-sun.y*.05);
  const glow=ctx.createRadialGradient(sx,sy,8,sx,sy,width*(lite?.28:.42));
  glow.addColorStop(0,fadeHex(pal.sun||pal.accent,.55));
@@ -161,7 +210,7 @@ function drawKindCues(ctx,width,height,s,sx,sy,pal,cameraX,scale){
  }
 }
 
-function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,sunX){
+function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,sunX,quality){
  const pts=[];
  for(let x=0;x<=width+step;x+=step){
   const wx=cameraX+(x-width/2)/scale;
@@ -182,6 +231,8 @@ function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,su
   ctx.fillStyle=fill;
  }
  ctx.fill();
+ const tex=peekFrontierImage(surfaceTextureName(s.kindId));
+ if(tex)paintRidgeTexture(ctx,width,height,pts,tex,cameraX,scale,quality,lite,lite?.32:.55);
  if(!lite)shadeRidge(ctx,width,height,pts,sunX,s.seed,0);
  ctx.strokeStyle=pal.stroke;ctx.lineWidth=lite?2:2.8;ctx.lineJoin='round';
  ctx.beginPath();
@@ -282,16 +333,18 @@ export function renderSurface(ctx,width,height,s,clock,stats,opts={}){
  const step=surfaceStep(quality,lite);
  const scale=width<650?.62:.86,cameraX=s.x-width*.08/scale,cameraY=s.y-40;
  const sx=x=>(x-cameraX)*scale+width/2,sy=y=>(y-cameraY)*scale+height/2;
+ prefetchFrontierArt();
  const sun=surfaceSun(s.seed);
  const sunX=sun.x|| -1;
- drawSky(ctx,width,height,pal,s.kindId,sun,lite,clock);
+ const groundTex=peekFrontierImage(surfaceTextureName(s.kindId));
+ drawSky(ctx,width,height,pal,s.kindId,sun,lite,clock,cameraX,quality);
  const layers=lite
   ?[[-150,shadeHex(pal.hills[0],.75),.55,false],[-40,pal.hills[1],.78,true]]
   :[[-260,shadeHex(pal.hills[0],.62),.32,false],[-180,pal.hills[0],.48,true],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true]];
  for(const [offset,color,parallax,lit] of layers){
-  fillRidge(ctx,width,height,sy,cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX);
+  fillRidge(ctx,width,height,sy,cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX,groundTex,quality,lite);
  }
- drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,sunX);
+ drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,sunX,quality);
  drawKindCues(ctx,width,height,s,sx,sy,pal,cameraX,scale);
  ctx.fillStyle=pal.stroke+'88';
  const rocks=lite?5:9;

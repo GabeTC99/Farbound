@@ -38,7 +38,7 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 
 ## Change history
 
-- September 24, 2026: Candidate 3.0.0 New Frontier Phase 1 — in-engine lighting/shading and planetary landing overhaul (terminator + sunward atmosphere rim, lit surface terrain, landing HUD, orbital station/asteroid star light). Scenario PNG pack deferred; `assets/new-frontier/` is the hook. versionName 3.0.0 / Android versionCode 13. Pages-first; do not tag Android or Windows Releases until merge. Service worker cache bumped to `farbound-v3.0.0`. Save keys stay `farbound-save-v2`. Rollback tag `v2.16.11`.
+- September 24, 2026: Candidate 3.0.0 New Frontier Phase 1 — in-engine lighting/shading and planetary landing overhaul, plus Gabe-approved Scenario Pro plates (commercial cleared by Risk) tiled on landing ground and cropped as far-field vistas. versionName 3.0.0 / Android versionCode 13. Pages-first; do not tag Android or Windows Releases until merge. Service worker cache `farbound-v3.0.0` (56 files). Save keys stay `farbound-save-v2`. Rollback tag `v2.16.11`.
 
 - September 23, 2026: Candidate 2.16.11 Windows portable `.exe` launcher (Electron) bundling `dist/` at `https://appassets.nullharbor.local/assets/`. Tag `windows-v*` / `v*-windows` publishes `Nullharbor.exe` + `nullharbor-X.Y.Z-win.exe` without becoming GitHub `/releases/latest` (Android APK latest stays). Install app hidden via `NullharborDesktop`. HTTPS open for optional cloud sync. Unsigned — SmartScreen may warn. versionName 2.16.11 / Android versionCode stays 12. Service worker cache bumped to `farbound-v2.16.11`. Save keys stay `farbound-save-v2`. Rollback tag `v2.16.10`.
 

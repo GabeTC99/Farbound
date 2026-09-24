@@ -1,6 +1,10 @@
 import {nearestZone,STATION_ISO} from './onfoot.mjs';
 import {SURFACE_PALETTES} from './surface-render.mjs';
-import {surfaceSun,mixHex,fadeHex,shadeHex} from './new-frontier.mjs';
+import {
+ surfaceSun,mixHex,fadeHex,shadeHex,
+ prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
+ surfaceTextureName,landingPlateName,plateCrop,tileSizeForQuality
+} from './new-frontier.mjs';
 
 function rr(ctx,x,y,w,h,r){
  if(typeof ctx.roundRect==='function')ctx.roundRect(x,y,w,h,r);
@@ -44,12 +48,25 @@ function drawSpaceBackdrop(ctx,width,height,clock,accent){
 function iHash(str,n){let h=n|0;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))|0;return ((h>>>0)%1000)/1000;}
 
 function drawPlanetBackdrop(ctx,width,height,s){
+ prefetchFrontierArt();
  const pal=SURFACE_PALETTES[s.kindId]||SURFACE_PALETTES.mineral;
  const kind=s.kindId||'mineral';
  const sun=surfaceSun((s.title||kind).length*97);
  const sky=ctx.createLinearGradient(0,0,0,height);
  sky.addColorStop(0,pal.sky0);sky.addColorStop(.4,pal.sky1);sky.addColorStop(.78,pal.sky2);sky.addColorStop(1,mixHex(pal.sky2,pal.terrain,.3));
  ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
+ const plate=peekFrontierImage(landingPlateName(kind))||loadFrontierImage(landingPlateName(kind));
+ if(plate&&plate.width){
+  const crop=plateCrop(landingPlateName(kind));
+  const destH=height*.44;
+  ctx.save();ctx.globalAlpha=.62;
+  ctx.drawImage(plate,plate.width*crop.sx,plate.height*crop.sy,plate.width*crop.sw,plate.height*crop.sh,0,0,width,destH);
+  ctx.globalAlpha=1;
+  const fade=ctx.createLinearGradient(0,destH*.4,0,destH);
+  fade.addColorStop(0,'#0000');fade.addColorStop(1,pal.sky2);
+  ctx.fillStyle=fade;ctx.fillRect(0,destH*.4,width,destH*.6);
+  ctx.restore();
+ }
  const sx=width*(.2+sun.x*.1),sy=height*.18;
  const glow=ctx.createRadialGradient(sx,sy,6,sx,sy,width*.4);
  glow.addColorStop(0,fadeHex(pal.sun||pal.accent,.5));glow.addColorStop(.4,fadeHex(pal.sun||pal.accent,.14));glow.addColorStop(1,'#0000');
@@ -62,6 +79,9 @@ function drawPlanetBackdrop(ctx,width,height,s){
  const amp=kind==='ocean'?8:kind==='ice'?26:kind==='volcanic'?22:kind==='arid'?14:18;
  const freq=kind==='arid'?.012:kind==='barren'?.035:kind==='ice'?.04:.02;
  const bands=[[height*.58,shadeHex(pal.terrain,.55),amp*1.35,.7],[height*.66,pal.hills[0],amp*1.1,.85],[height*.72,pal.terrain,amp,1]];
+ const ground=peekFrontierImage(surfaceTextureName(kind));
+ const tile=ground?frontierTile(ground,tileSizeForQuality('high',false)):null;
+ const pat=tile&&ctx.createPattern?ctx.createPattern(tile,'repeat'):null;
  for(const [base,color,a,par] of bands){
   ctx.fillStyle=color;
   ctx.beginPath();ctx.moveTo(0,height);
@@ -71,6 +91,10 @@ function drawPlanetBackdrop(ctx,width,height,s){
    ctx.lineTo(x,y);
   }
   ctx.lineTo(width,height);ctx.closePath();ctx.fill();
+  if(pat&&par>0.9){
+   ctx.save();ctx.clip();ctx.globalAlpha=.5;ctx.globalCompositeOperation='overlay';
+   ctx.fillStyle=pat;ctx.fillRect(0,base-40,width,height-base+40);ctx.restore();
+  }
  }
  if(kind==='ice'){ctx.fillStyle='#e8f4ff33';ctx.beginPath();ctx.moveTo(0,height*.74);for(let x=0;x<=width;x+=20)ctx.lineTo(x,height*.7+Math.sin(x*.05)*8);ctx.lineTo(width,height);ctx.lineTo(0,height);ctx.fill();}
  const haze=ctx.createLinearGradient(0,height*.5,0,height*.72);

@@ -3,7 +3,9 @@ import {readFileSync} from 'node:fs';
 import {
  FRONTIER_EDITION,FRONTIER_ASSET_DIR,qualityOf,planetTexSize,surfaceStep,
  lightDir,hexRgb,rgbHex,mixHex,fadeHex,shadeHex,surfaceSun,terminatorStops,
- atmosphereRimAlpha,frontierAssetUrl,loadFrontierImage,peekFrontierImage
+ atmosphereRimAlpha,frontierAssetUrl,loadFrontierImage,peekFrontierImage,
+ FRONTIER_SHIPPED_ASSETS,surfaceTextureName,landingPlateName,plateCrop,
+ tileSizeForQuality,prefetchFrontierArt
 } from '../dist/new-frontier.mjs';
 import {drawPlanetBody,warmPlanetTexture,PLANET_ART,samplePlanetColor} from '../dist/planet-render.mjs';
 import {SURFACE_PALETTES,renderSurface} from '../dist/surface-render.mjs';
@@ -48,6 +50,20 @@ assert.equal(atmosphereRimAlpha(0,false),0);
 assert.match(frontierAssetUrl('planet-rim.png'),/assets\/new-frontier\/planet-rim\.png/);
 assert.equal(loadFrontierImage('missing-optional.png'),null);
 assert.equal(peekFrontierImage('missing-optional.png'),null);
+assert.equal(FRONTIER_SHIPPED_ASSETS.length,4);
+assert.equal(surfaceTextureName('volcanic'),'planet-surface-a.png');
+assert.equal(surfaceTextureName('earthlike'),'planet-surface-b.png');
+assert.equal(landingPlateName('volcanic'),'landing-a.png');
+assert.equal(landingPlateName('ice'),'landing-b.png');
+assert.ok(plateCrop('landing-a.png').sy>=.1);
+assert.ok(plateCrop('landing-b.png').sy>=.08);
+assert.equal(tileSizeForQuality('high',false),512);
+assert.equal(tileSizeForQuality('performance',false),192);
+prefetchFrontierArt();
+for(const name of FRONTIER_SHIPPED_ASSETS){
+ const file=new URL('../dist/assets/new-frontier/'+name,import.meta.url);
+ assert.ok(readFileSync(file).length>100000,name+' must ship');
+}
 
 const slopeUp=terrainSlope(0,1,20);
 assert.ok(Number.isFinite(slopeUp));
@@ -71,6 +87,10 @@ assert.match(surfaceSrc,/shadeRidge/);
 assert.match(surfaceSrc,/shadeFaces/);
 assert.match(surfaceSrc,/terrainSlope/);
 assert.match(surfaceSrc,/samplePlanetColor/);
+assert.match(surfaceSrc,/paintRidgeTexture/);
+assert.match(surfaceSrc,/drawPlateVista/);
+assert.match(surfaceSrc,/surfaceTextureName/);
+assert.match(surfaceSrc,/landingPlateName/);
 assert.doesNotMatch(surfaceSrc,/fillRect\(x,\s*gy/);
 const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 assert.match(app,/NEW FRONTIER/);
@@ -81,12 +101,15 @@ assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
 assert.match(sw,/farbound-v3\.0\.0/);
+assert.match(sw,/planet-surface-a\.png/);
+assert.match(sw,/landing-b\.png/);
 const notes=JSON.parse(readFileSync(new URL('../releases/v3.0.0.json',import.meta.url),'utf8'));
 assert.equal(notes.release,'3.0.0');
 assert.equal(notes.edition,'New Frontier');
 assert.equal(notes.save_key,'farbound-save-v2');
 assert.ok(notes.notes.some(n=>/versionCode 13/.test(n)));
 assert.ok(notes.notes.some(n=>/Pages-first/.test(n)));
+assert.ok(notes.notes.some(n=>/Scenario Pro/.test(n)));
 
 function fakeCtx(){
  const calls=[];
@@ -102,6 +125,7 @@ function fakeCtx(){
   fill(){calls.push('fill');},stroke(){calls.push('stroke');},
   fillRect(){calls.push('fillRect');},strokeRect(){},fillText(){calls.push('text');},
   clip(){},drawImage(){calls.push('drawImage');},
+  createPattern(){calls.push('pattern');return grad;},
   setLineDash(){},roundRect(){}
  };
 }
