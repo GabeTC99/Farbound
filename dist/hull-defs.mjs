@@ -1,5 +1,5 @@
 /** Data-driven player hull silhouettes. Shared by flight canvas and hangar SVG previews. */
-/** Scenario redesign batch 1 side plates. Alts stay out of dist. Missing file falls back to procedural paint. */
+/** Scenario redesign side plates for every player hull. Alts stay out of dist. Missing file falls back to procedural paint. */
 export const SHIP_PLATES={
  wren:'assets/ships/wren.png',
  sparrow:'assets/ships/sparrow.png',
@@ -7,7 +7,20 @@ export const SHIP_PLATES={
  mule:'assets/ships/mule.png',
  rook:'assets/ships/rook.png',
  tern:'assets/ships/tern.png',
- jackal:'assets/ships/jackal.png'
+ jackal:'assets/ships/jackal.png',
+ magpie:'assets/ships/magpie.png',
+ mole:'assets/ships/mole.png',
+ osprey:'assets/ships/osprey.png',
+ falcon:'assets/ships/falcon.png',
+ albatross:'assets/ships/albatross.png',
+ ox:'assets/ships/ox.png',
+ vulture:'assets/ships/vulture.png',
+ heron:'assets/ships/heron.png',
+ badger:'assets/ships/badger.png',
+ raptor:'assets/ships/raptor.png',
+ condor:'assets/ships/condor.png',
+ goliath:'assets/ships/goliath.png',
+ eagle:'assets/ships/eagle.png'
 };
 export function shipPlateUrl(id){return SHIP_PLATES[id]||null;}
 const stroke=(pts,alpha=.55)=>({type:'stroke',pts,alpha});
