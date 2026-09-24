@@ -17,7 +17,7 @@ import {SURFACE_PALETTES,renderSurface,drawFrontierSkiff} from '../dist/surface-
 import {terrainAt,terrainSlope,createSurface} from '../dist/surface.mjs';
 import {createPlanetLayout} from '../dist/planet-layout.mjs';
 import {createOnFoot} from '../dist/onfoot.mjs';
-import {renderOnFoot} from '../dist/onfoot-render.mjs';
+import {renderOnFoot,siteWorldScroll} from '../dist/onfoot-render.mjs';
 import {RELEASE,RELEASE_NAME,RELEASE_EDITION} from '../dist/release.mjs';
 import {Game,PLANET_KIND_IDS} from '../dist/frontier.mjs';
 
@@ -212,7 +212,18 @@ assert.match(onfootSrc,/paintSiteGround/);
 assert.match(onfootSrc,/drawSitePad/);
 assert.match(onfootSrc,/drawFrontierSkiff/);
 assert.match(onfootSrc,/drawStandingCrew/);
-assert.match(onfootSrc,/const sunX=sun\.x/);
+assert.match(onfootSrc,/siteWorldScroll/);
+assert.match(onfootSrc,/translate\(-ox,-oy\)/);
+assert.match(onfootSrc,/scrollX:scroll\.x/);
+{
+ const scale=1.2,width=1280,rock=400;
+ const cam=x=>x-width*.4/scale;
+ const a=cam(290),b=cam(490);
+ const sa=siteWorldScroll(a,0,scale),sb=siteWorldScroll(b,0,scale);
+ const sx=(x,c)=>(x-c)*scale;
+ assert.ok(Math.abs((sb.x-sa.x)-(b-a)*scale)<1e-6);
+ assert.ok(Math.abs(-(sb.x-sa.x)-(sx(rock,b)-sx(rock,a)))<1e-6);
+}
 assert.match(onfootSrc,/surfaceSun\(s\.seed/);
 assert.doesNotMatch(onfootSrc,/sunX:-1/);
 assert.doesNotMatch(onfootSrc,/plateCrop/);
@@ -237,7 +248,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-onfoot3/);
+assert.match(sw,/farbound-v3\.0\.0-onfoot4/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
