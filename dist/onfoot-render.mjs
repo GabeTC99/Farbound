@@ -3,7 +3,7 @@ import {SURFACE_PALETTES} from './surface-render.mjs';
 import {
  surfaceSun,mixHex,fadeHex,shadeHex,
  prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
- surfaceTextureName,landingPlateName,plateCrop,tileSizeForQuality
+ surfaceTextureName,landingPlateName,plateCrop,tileBakeSize,tileScreenRepeat
 } from './new-frontier.mjs';
 
 function rr(ctx,x,y,w,h,r){
@@ -80,8 +80,10 @@ function drawPlanetBackdrop(ctx,width,height,s){
  const freq=kind==='arid'?.012:kind==='barren'?.035:kind==='ice'?.04:.02;
  const bands=[[height*.58,shadeHex(pal.terrain,.55),amp*1.35,.7],[height*.66,pal.hills[0],amp*1.1,.85],[height*.72,pal.terrain,amp,1]];
  const ground=peekFrontierImage(surfaceTextureName(kind));
- const tile=ground?frontierTile(ground,tileSizeForQuality('high',false)):null;
+ const bake=tileBakeSize('high',false),repeat=tileScreenRepeat('high',false);
+ const tile=ground?frontierTile(ground,bake):null;
  const pat=tile&&ctx.createPattern?ctx.createPattern(tile,'repeat'):null;
+ const pk=repeat/bake;
  for(const [base,color,a,par] of bands){
   ctx.fillStyle=color;
   ctx.beginPath();ctx.moveTo(0,height);
@@ -93,10 +95,11 @@ function drawPlanetBackdrop(ctx,width,height,s){
   ctx.lineTo(width,height);ctx.closePath();ctx.fill();
   if(pat&&par>0.9){
    ctx.save();ctx.clip();
+   ctx.scale(pk,pk);
    ctx.globalAlpha=.9;ctx.globalCompositeOperation='source-over';
-   ctx.fillStyle=pat;ctx.fillRect(0,base-40,width,height-base+40);
+   ctx.fillStyle=pat;ctx.fillRect(0,(base-40)/pk,width/pk,(height-base+40)/pk);
    ctx.globalAlpha=.48;ctx.globalCompositeOperation='multiply';
-   ctx.fillStyle=color;ctx.fillRect(0,base-40,width,height-base+40);
+   ctx.fillStyle=color;ctx.fillRect(0,(base-40)/pk,width/pk,(height-base+40)/pk);
    ctx.restore();
   }
  }

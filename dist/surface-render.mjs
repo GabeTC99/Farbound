@@ -3,7 +3,7 @@ import {samplePlanetColor} from './planet-render.mjs';
 import {
  surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex,
  prefetchFrontierArt,peekFrontierImage,loadFrontierImage,frontierTile,
- surfaceTextureName,landingPlateName,plateCrop,tileSizeForQuality
+ surfaceTextureName,landingPlateName,plateCrop,tileBakeSize,tileScreenRepeat
 } from './new-frontier.mjs';
 
 export const SURFACE_PALETTES={
@@ -107,26 +107,30 @@ function shadeRidge(ctx,width,height,pts,sunX,seed,offset){
 
 function paintRidgeTexture(ctx,width,height,pts,img,cameraX,scrollScale,quality,lite,alpha,tint){
  if(!img||!ctx.createPattern)return;
- const size=tileSizeForQuality(quality,lite);
- const tile=frontierTile(img,size);
+ const bake=tileBakeSize(quality,lite);
+ const repeat=tileScreenRepeat(quality,lite);
+ const tile=frontierTile(img,bake);
  if(!tile)return;
  const pat=ctx.createPattern(tile,'repeat');
  if(!pat)return;
+ const k=repeat/bake;
  ctx.save();
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
- const scroll=((cameraX*scrollScale)%size+size)%size;
+ const scroll=((cameraX*scrollScale)%repeat+repeat)%repeat;
  ctx.translate(-scroll,height*.12);
+ ctx.scale(k,k);
  ctx.globalAlpha=alpha;
  ctx.globalCompositeOperation='source-over';
  ctx.fillStyle=pat;
- ctx.fillRect(scroll-8,-height,width+size+16,height*2.4);
+ const rx=scroll/k-8,ry=-height/k,rw=(width+repeat)/k+16,rh=height*2.4/k;
+ ctx.fillRect(rx,ry,rw,rh);
  if(tint){
   ctx.globalAlpha=lite?.4:.5;
   ctx.globalCompositeOperation='multiply';
   ctx.fillStyle=tint;
-  ctx.fillRect(scroll-8,-height,width+size+16,height*2.4);
+  ctx.fillRect(rx,ry,rw,rh);
  }
  ctx.restore();
 }

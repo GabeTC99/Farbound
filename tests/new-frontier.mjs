@@ -5,7 +5,7 @@ import {
  lightDir,hexRgb,rgbHex,mixHex,fadeHex,shadeHex,surfaceSun,terminatorStops,
  atmosphereRimAlpha,frontierAssetUrl,loadFrontierImage,peekFrontierImage,
  FRONTIER_SHIPPED_ASSETS,surfaceTextureName,landingPlateName,plateCrop,
- tileSizeForQuality,prefetchFrontierArt
+ tileBakeSize,tileScreenRepeat,tileSizeForQuality,prefetchFrontierArt
 } from '../dist/new-frontier.mjs';
 import {drawPlanetBody,warmPlanetTexture,PLANET_ART,samplePlanetColor} from '../dist/planet-render.mjs';
 import {SURFACE_PALETTES,renderSurface} from '../dist/surface-render.mjs';
@@ -59,8 +59,15 @@ assert.ok(plateCrop('landing-a.png').sy>=.08);
 assert.ok(plateCrop('landing-a.png').sh<=.3);
 assert.ok(plateCrop('landing-b.png').sy>=.06);
 assert.ok(plateCrop('landing-b.png').sh<=.3);
-assert.equal(tileSizeForQuality('high',false),512);
-assert.equal(tileSizeForQuality('performance',false),192);
+assert.equal(tileBakeSize('high',false),384);
+assert.equal(tileBakeSize('balanced',false),256);
+assert.equal(tileBakeSize('performance',false),192);
+assert.equal(tileScreenRepeat('high',false),112);
+assert.equal(tileScreenRepeat('balanced',false),80);
+assert.equal(tileScreenRepeat('performance',false),56);
+assert.ok(tileScreenRepeat('high',false)<tileBakeSize('high',false));
+assert.ok(tileScreenRepeat('high',false)*4<=512);
+assert.equal(tileSizeForQuality('high',false),tileBakeSize('high',false));
 prefetchFrontierArt();
 for(const name of FRONTIER_SHIPPED_ASSETS){
  const file=new URL('../dist/assets/new-frontier/'+name,import.meta.url);
@@ -90,6 +97,7 @@ assert.match(surfaceSrc,/shadeFaces/);
 assert.match(surfaceSrc,/terrainSlope/);
 assert.match(surfaceSrc,/samplePlanetColor/);
 assert.match(surfaceSrc,/paintRidgeTexture/);
+assert.match(surfaceSrc,/tileScreenRepeat/);
 assert.match(surfaceSrc,/drawPlateVista/);
 assert.match(surfaceSrc,/surfaceTextureName/);
 assert.match(surfaceSrc,/landingPlateName/);

@@ -121,10 +121,26 @@ export function plateCrop(name){
  return {sx:.34,sy:.07,sw:.64,sh:.24};
 }
 
-export function tileSizeForQuality(quality,lite){
+/** Bake resolution for the tile atlas. Not the on-screen repeat. */
+export function tileBakeSize(quality,lite){
  if(lite||quality==='performance')return 192;
- if(quality==='balanced')return 384;
- return 512;
+ if(quality==='balanced')return 256;
+ return 384;
+}
+
+/**
+ * On-screen pattern repeat in CSS pixels.
+ * ~4.5× smaller than the old bake-as-repeat (512 / 384 / 192).
+ */
+export function tileScreenRepeat(quality,lite){
+ if(lite||quality==='performance')return 56;
+ if(quality==='balanced')return 80;
+ return 112;
+}
+
+/** @deprecated Bake size only. Use tileScreenRepeat for pattern scale. */
+export function tileSizeForQuality(quality,lite){
+ return tileBakeSize(quality,lite);
 }
 
 export function loadFrontierImage(name){
