@@ -213,14 +213,17 @@ assert.match(onfootSrc,/drawSitePad/);
 assert.match(onfootSrc,/drawFrontierSkiff/);
 assert.match(onfootSrc,/drawStandingCrew/);
 assert.match(onfootSrc,/siteWorldScroll/);
-assert.match(onfootSrc,/translate\(-ox,-oy\)/);
-assert.match(onfootSrc,/scrollX:scroll\.x/);
+assert.match(onfootSrc,/translate\(-ox,0\)/);
+assert.match(onfootSrc,/anchorY=s\.spawn\?\.y/);
+assert.doesNotMatch(onfootSrc,/scrollX\*par/);
 {
  const scale=1.2,width=1280,rock=400;
  const cam=x=>x-width*.4/scale;
  const a=cam(290),b=cam(490);
- const sa=siteWorldScroll(a,0,scale),sb=siteWorldScroll(b,0,scale);
+ const sa=siteWorldScroll(a,80,scale),sb=siteWorldScroll(b,400,scale);
  const sx=(x,c)=>(x-c)*scale;
+ assert.equal(sa.y,0);
+ assert.equal(sb.y,0);
  assert.ok(Math.abs((sb.x-sa.x)-(b-a)*scale)<1e-6);
  assert.ok(Math.abs(-(sb.x-sa.x)-(sx(rock,b)-sx(rock,a)))<1e-6);
 }
@@ -248,7 +251,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-onfoot4/);
+assert.match(sw,/farbound-v3\.0\.0-onfoot5/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
