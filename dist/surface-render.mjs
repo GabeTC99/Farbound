@@ -3,17 +3,17 @@ import {samplePlanetColor} from './planet-render.mjs';
 import {surfaceStep,surfaceSun,mixHex,fadeHex,shadeHex} from './new-frontier.mjs';
 
 export const SURFACE_PALETTES={
- earthlike:{sky0:'#041820',sky1:'#0d3a48',sky2:'#2a5a58',terrain:'#1a3a30',stroke:'#6ec4a0',hills:['#0a2830','#1a4038'],dust:'#9ad4c066',skiff:'#1a4a45',skiffLine:'#a8f0d8',floor:'#1a3a30',accent:'#6ec4a0',sun:'#d8f4e8',haze:'#6ec4a044'},
- ocean:{sky0:'#041820',sky1:'#0d3a48',sky2:'#1a5a5e',terrain:'#0f2e36',stroke:'#6ec4c8',hills:['#0a2830','#123840'],dust:'#9ad4d866',skiff:'#1a4a55',skiffLine:'#a8f0ea',floor:'#0f2e36',accent:'#6ec4c8',sun:'#c8f0f4',haze:'#6ec4c844'},
- arid:{sky0:'#1a1008',sky1:'#3a2814',sky2:'#6a4a28',terrain:'#2a1c10',stroke:'#d4a86a',hills:['#241808','#3a2814'],dust:'#e8c48a55',skiff:'#3a2a18',skiffLine:'#f0d4a0',floor:'#2a1c10',accent:'#d4a86a',sun:'#ffd080',haze:'#e8b07033'},
- ice:{sky0:'#0a1420',sky1:'#1a3048',sky2:'#4a6a80',terrain:'#152030',stroke:'#c8e0f0',hills:['#101c28','#1e3040'],dust:'#d8ecff66',skiff:'#1a2838',skiffLine:'#d0e8f8',floor:'#152030',accent:'#c8e0f0',sun:'#e8f4ff',haze:'#c8e0f044'},
- metal:{sky0:'#0a0c10',sky1:'#1a2030',sky2:'#3a4450',terrain:'#1a2028',stroke:'#a8b0b8',hills:['#141820','#242a34'],dust:'#c8d0d866',skiff:'#2a3038',skiffLine:'#d0d8e0',floor:'#1a2028',accent:'#a8b0b8',sun:'#e0e8f0',haze:'#a8b0b833'},
- mineral:{sky0:'#07131f',sky1:'#183141',sky2:'#3a4545',terrain:'#142c31',stroke:'#87b3ac',hills:['#233f49','#2a474e'],dust:'#bbd5e066',skiff:'#25444f',skiffLine:'#b7eee0',floor:'#142c31',accent:'#87b3ac',sun:'#c8efe4',haze:'#87b3ac33'},
- volcanic:{sky0:'#180808',sky1:'#3a1810',sky2:'#6a2a18',terrain:'#2a1410',stroke:'#ff7040',hills:['#241008','#3a1c10'],dust:'#ff8a4055',skiff:'#3a2018',skiffLine:'#ffb080',floor:'#2a1410',accent:'#ff7040',sun:'#ffb070',haze:'#ff704033'},
- barren:{sky0:'#080808',sky1:'#141414',sky2:'#2a2824',terrain:'#1c1a18',stroke:'#b0a898',hills:['#161412','#242220'],dust:'#c8c0b055',skiff:'#2a2824',skiffLine:'#d0c8bc',floor:'#1c1a18',accent:'#b0a898',sun:'#e0d8c8',haze:'#b0a89822'},
- toxic:{sky0:'#101408',sky1:'#2a3010',sky2:'#4a5820',terrain:'#222810',stroke:'#d4e060',hills:['#1a2010','#2e3414'],dust:'#d8e07066',skiff:'#2a3018',skiffLine:'#e8f090',floor:'#222810',accent:'#d4e060',sun:'#e8f090',haze:'#d4e06033'},
- gas:{sky0:'#120818',sky1:'#2a1840',sky2:'#4a3860',terrain:'#1a1428',stroke:'#b8a0d8',hills:['#221830','#2e2040'],dust:'#d0b8f055',skiff:'#2a2038',skiffLine:'#e0d0f8',floor:'#1a1428',accent:'#b8a0d8',sun:'#e0d0f8',haze:'#b8a0d833'},
- icegiant:{sky0:'#081018',sky1:'#183048',sky2:'#3a5870',terrain:'#142030',stroke:'#88b8d0',hills:['#101c28','#1e3040'],dust:'#a8d0e066',skiff:'#1a2838',skiffLine:'#c0e0f0',floor:'#142030',accent:'#88b8d0',sun:'#c8e8f8',haze:'#88b8d033'}
+ earthlike:{sky0:'#041820',sky1:'#0d3a48',sky2:'#2a5a58',terrain:'#2a6854',stroke:'#6ec4a0',hills:['#163848','#2e5c50'],dust:'#9ad4c066',skiff:'#1a4a45',skiffLine:'#a8f0d8',floor:'#2a6854',accent:'#6ec4a0',sun:'#d8f4e8',haze:'#6ec4a044'},
+ ocean:{sky0:'#041820',sky1:'#0d3a48',sky2:'#1a5a5e',terrain:'#1e5460',stroke:'#6ec4c8',hills:['#163848','#245860'],dust:'#9ad4d866',skiff:'#1a4a55',skiffLine:'#a8f0ea',floor:'#1e5460',accent:'#6ec4c8',sun:'#c8f0f4',haze:'#6ec4c844'},
+ arid:{sky0:'#1a1008',sky1:'#3a2814',sky2:'#6a4a28',terrain:'#5a3c22',stroke:'#d4a86a',hills:['#3a2814','#6a4a28'],dust:'#e8c48a55',skiff:'#3a2a18',skiffLine:'#f0d4a0',floor:'#5a3c22',accent:'#d4a86a',sun:'#ffd080',haze:'#e8b07033'},
+ ice:{sky0:'#0a1420',sky1:'#1a3048',sky2:'#4a6a80',terrain:'#3a5878',stroke:'#c8e0f0',hills:['#1e3858','#4a6a88'],dust:'#d8ecff66',skiff:'#1a2838',skiffLine:'#d0e8f8',floor:'#3a5878',accent:'#c8e0f0',sun:'#e8f4ff',haze:'#c8e0f044'},
+ metal:{sky0:'#0a0c10',sky1:'#1a2030',sky2:'#3a4450',terrain:'#3a4652',stroke:'#a8b0b8',hills:['#242c38','#4a5460'],dust:'#c8d0d866',skiff:'#2a3038',skiffLine:'#d0d8e0',floor:'#3a4652',accent:'#a8b0b8',sun:'#e0e8f0',haze:'#a8b0b833'},
+ mineral:{sky0:'#07131f',sky1:'#183141',sky2:'#3a4545',terrain:'#2e5858',stroke:'#87b3ac',hills:['#2a4a54','#3e6468'],dust:'#bbd5e066',skiff:'#25444f',skiffLine:'#b7eee0',floor:'#2e5858',accent:'#87b3ac',sun:'#c8efe4',haze:'#87b3ac33'},
+ volcanic:{sky0:'#180808',sky1:'#3a1810',sky2:'#6a2a18',terrain:'#5a2a1c',stroke:'#ff7040',hills:['#3a1810','#6a3018'],dust:'#ff8a4055',skiff:'#3a2018',skiffLine:'#ffb080',floor:'#5a2a1c',accent:'#ff7040',sun:'#ffb070',haze:'#ff704033'},
+ barren:{sky0:'#080808',sky1:'#141414',sky2:'#2a2824',terrain:'#3a3630',stroke:'#b0a898',hills:['#242220','#4a4640'],dust:'#c8c0b055',skiff:'#2a2824',skiffLine:'#d0c8bc',floor:'#3a3630',accent:'#b0a898',sun:'#e0d8c8',haze:'#b0a89822'},
+ toxic:{sky0:'#101408',sky1:'#2a3010',sky2:'#4a5820',terrain:'#3e4c18',stroke:'#d4e060',hills:['#2a3414','#4e5820'],dust:'#d8e07066',skiff:'#2a3018',skiffLine:'#e8f090',floor:'#3e4c18',accent:'#d4e060',sun:'#e8f090',haze:'#d4e06033'},
+ gas:{sky0:'#120818',sky1:'#2a1840',sky2:'#4a3860',terrain:'#3a2c50',stroke:'#b8a0d8',hills:['#2a2040','#4a3860'],dust:'#d0b8f055',skiff:'#2a2038',skiffLine:'#e0d0f8',floor:'#3a2c50',accent:'#b8a0d8',sun:'#e0d0f8',haze:'#b8a0d833'},
+ icegiant:{sky0:'#081018',sky1:'#183048',sky2:'#3a5870',terrain:'#2e4c68',stroke:'#88b8d0',hills:['#1e3850','#3a5c78'],dust:'#a8d0e066',skiff:'#1a2838',skiffLine:'#c0e0f0',floor:'#2e4c68',accent:'#88b8d0',sun:'#c8e8f8',haze:'#88b8d033'}
 };
 
 function rr(ctx,x,y,w,h,r){
@@ -44,26 +44,59 @@ function fillRidge(ctx,width,height,sy,cameraX,scale,seed,offset,parallax,color,
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();
- ctx.fillStyle=color;ctx.fill();
+ if(lit){
+  const fromLeft=sunX<0;
+  const fill=ctx.createLinearGradient(fromLeft?0:width,0,fromLeft?width:0,0);
+  fill.addColorStop(0,mixHex(color,'#fff6e8',.2));
+  fill.addColorStop(.42,color);
+  fill.addColorStop(1,shadeHex(color,.62));
+  ctx.fillStyle=fill;
+ }else ctx.fillStyle=color;
+ ctx.fill();
  if(!lit)return;
- shadeRidge(ctx,width,height,pts,sunX);
+ shadeRidge(ctx,width,height,pts,sunX,seed,offset);
 }
 
-function shadeRidge(ctx,width,height,pts,sunX){
+function shadeFaces(ctx,pts,seed,offset,sunX){
+ let run=null;
+ const flush=()=>{
+  if(!run||run.pts.length<2){run=null;return;}
+  const a=Math.min(.3,run.face*1.7);
+  ctx.fillStyle=run.lit?`rgba(255,246,232,${a})`:`rgba(0,6,12,${a})`;
+  ctx.beginPath();
+  ctx.moveTo(run.pts[0].x,run.pts[0].y);
+  for(let i=1;i<run.pts.length;i++)ctx.lineTo(run.pts[i].x,run.pts[i].y);
+  for(let i=run.pts.length-1;i>=0;i--)ctx.lineTo(run.pts[i].x,run.pts[i].y+20);
+  ctx.closePath();ctx.fill();
+  run=null;
+ };
+ for(const p of pts){
+  const face=terrainSlope(p.wx,seed+(offset||0))*sunX;
+  const lit=face>.045,shade=face<-.045;
+  if(!lit&&!shade){flush();continue;}
+  if(!run||run.lit!==lit){flush();run={lit,face:Math.abs(face),pts:[p]};}
+  else{run.pts.push(p);run.face=Math.max(run.face,Math.abs(face));}
+ }
+ flush();
+}
+
+function shadeRidge(ctx,width,height,pts,sunX,seed,offset){
  ctx.save();
  ctx.beginPath();ctx.moveTo(0,height);
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();ctx.clip();
  const fromLeft=sunX<0;
  const sun=ctx.createLinearGradient(fromLeft?0:width,0,fromLeft?width:0,0);
- sun.addColorStop(0,'rgba(255,246,232,0.18)');
- sun.addColorStop(.42,'rgba(0,0,0,0)');
- sun.addColorStop(1,'rgba(0,8,16,0.24)');
+ sun.addColorStop(0,'rgba(255,246,232,0.28)');
+ sun.addColorStop(.38,'rgba(0,0,0,0)');
+ sun.addColorStop(1,'rgba(0,8,16,0.36)');
  ctx.fillStyle=sun;ctx.fillRect(0,0,width,height);
  const down=ctx.createLinearGradient(0,0,0,height);
  down.addColorStop(0,'rgba(0,0,0,0)');
- down.addColorStop(1,'rgba(0,8,16,0.26)');
+ down.addColorStop(.55,'rgba(0,8,16,0.1)');
+ down.addColorStop(1,'rgba(0,8,16,0.38)');
  ctx.fillStyle=down;ctx.fillRect(0,0,width,height);
+ if(seed!=null)shadeFaces(ctx,pts,seed,offset,sunX);
  ctx.restore();
 }
 
@@ -138,18 +171,37 @@ function drawNearTerrain(ctx,width,height,s,sx,sy,pal,cameraX,scale,step,lite,su
  for(const p of pts)ctx.lineTo(p.x,p.y);
  ctx.lineTo(width,height);ctx.closePath();
  const tint=groundTint(s.kindId,s.seed,s.x)||pal.terrain;
- ctx.fillStyle=mixHex(pal.terrain,tint,.35);ctx.fill();
- if(!lite)shadeRidge(ctx,width,height,pts,sunX);
+ const ground=mixHex(mixHex(pal.terrain,tint,.45),pal.stroke,.22);
+ if(lite)ctx.fillStyle=ground;
+ else{
+  const fromLeft=sunX<0;
+  const fill=ctx.createLinearGradient(fromLeft?0:width,0,fromLeft?width:0,0);
+  fill.addColorStop(0,mixHex(ground,pal.sun||'#fff6e8',.24));
+  fill.addColorStop(.4,ground);
+  fill.addColorStop(1,shadeHex(ground,.55));
+  ctx.fillStyle=fill;
+ }
+ ctx.fill();
+ if(!lite)shadeRidge(ctx,width,height,pts,sunX,s.seed,0);
  ctx.strokeStyle=pal.stroke;ctx.lineWidth=lite?2:2.8;ctx.lineJoin='round';
  ctx.beginPath();
  for(let i=0;i<pts.length;i++){if(i===0)ctx.moveTo(pts[i].x,pts[i].y);else ctx.lineTo(pts[i].x,pts[i].y);}
  ctx.stroke();
  if(!lite){
-  ctx.strokeStyle=fadeHex(pal.sun||pal.accent,.28);ctx.lineWidth=1.2;
+  ctx.strokeStyle=fadeHex(pal.stroke,.16);ctx.lineWidth=1;
+  for(let k=1;k<=3;k++){
+   ctx.beginPath();
+   for(let i=0;i<pts.length;i++){
+    const y=pts[i].y+k*11;
+    if(i===0)ctx.moveTo(pts[i].x,y);else ctx.lineTo(pts[i].x,y);
+   }
+   ctx.stroke();
+  }
+  ctx.strokeStyle=fadeHex(pal.sun||pal.accent,.32);ctx.lineWidth=1.3;
   ctx.beginPath();
   for(let i=0;i<pts.length;i++){
    const face=terrainSlope(pts[i].wx,s.seed)*sunX;
-   const y=pts[i].y-(face>0?1.6:0);
+   const y=pts[i].y-(face>0?1.8:0);
    if(i===0)ctx.moveTo(pts[i].x,y);else ctx.lineTo(pts[i].x,y);
   }
   ctx.stroke();
@@ -192,7 +244,7 @@ function drawSkiff(ctx,s,x,y,pal,clock,nearGround,lite,sunX){
 
 function drawLandingHud(ctx,width,height,s,pal,alt,sink,traveled){
  const panelW=Math.min(460,width-28),panelH=52;
- const x=(width-panelW)/2,y=Math.max(132,height*.22);
+ const x=(width-panelW)/2,y=Math.max(56,Math.min(height*.12,96));
  ctx.save();
  ctx.fillStyle='#061018d4';
  ctx.strokeStyle=fadeHex(pal.accent,.55);
@@ -234,8 +286,8 @@ export function renderSurface(ctx,width,height,s,clock,stats,opts={}){
  const sunX=sun.x|| -1;
  drawSky(ctx,width,height,pal,s.kindId,sun,lite,clock);
  const layers=lite
-  ?[[-150,shadeHex(pal.hills[0],.7),.55,false],[-40,pal.hills[1],.78,true]]
-  :[[-260,shadeHex(pal.hills[0],.55),.32,false],[-180,pal.hills[0],.48,true],[-105,pal.hills[1],.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.35),.9,true]];
+  ?[[-150,shadeHex(pal.hills[0],.75),.55,false],[-40,pal.hills[1],.78,true]]
+  :[[-260,shadeHex(pal.hills[0],.62),.32,false],[-180,pal.hills[0],.48,true],[-105,mixHex(pal.hills[1],pal.sky2,.18),.72,true],[-28,mixHex(pal.hills[1],pal.terrain,.18),.9,true]];
  for(const [offset,color,parallax,lit] of layers){
   fillRidge(ctx,width,height,sy,cameraX,scale,s.seed,offset,parallax,color,step+(lite?4:0),lit&&!lite,sunX);
  }

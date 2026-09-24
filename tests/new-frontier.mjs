@@ -68,6 +68,7 @@ const surfaceSrc=readFileSync(new URL('../dist/surface-render.mjs',import.meta.u
 assert.match(surfaceSrc,/drawLandingHud/);
 assert.match(surfaceSrc,/fillRidge/);
 assert.match(surfaceSrc,/shadeRidge/);
+assert.match(surfaceSrc,/shadeFaces/);
 assert.match(surfaceSrc,/terrainSlope/);
 assert.match(surfaceSrc,/samplePlanetColor/);
 assert.doesNotMatch(surfaceSrc,/fillRect\(x,\s*gy/);
