@@ -251,7 +251,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-onfoot6/);
+assert.match(sw,/farbound-v3\.0\.0-onfoot7/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
@@ -347,11 +347,15 @@ assert.equal(AUDIO_CUES.ambient_icegiant.type,'loop');
 assert.equal(AUDIO_CUES.grit_metal.type,'oneshot');
 assert.equal(AUDIO_CUES.grit_mineral.type,'oneshot');
 assert.equal(AUDIO_CUES.grit_icegiant.type,'oneshot');
-assert.equal(PLANETARY_AUDIO_STEMS.length,10);
+assert.equal(PLANETARY_AUDIO_STEMS.length,26);
 assert.equal(surfaceAmbientCue('metal'),'ambient_metal');
-assert.equal(surfaceAmbientCue('earthlike'),null);
+assert.equal(surfaceAmbientCue('ice'),'ambient_ice');
+assert.equal(surfaceAmbientCue('earthlike'),'ambient_earthlike');
+assert.equal(surfaceAmbientCue('gas'),'ambient_gas');
+assert.equal(surfaceGritCue('ice'),'grit_ice');
 assert.equal(surfaceGritCue('icegiant'),'grit_icegiant');
 assert.equal(surfaceGritCue('mineral'),'grit_mineral');
+assert.equal(surfaceAmbientCue('station'),null);
 for(const stem of PLANETARY_AUDIO_STEMS){
  const file=new URL('../dist/assets/audio/planetary/'+stem+'.mp3',import.meta.url);
  assert.ok(readFileSync(file).length>1000,stem+' mp3 must ship');
