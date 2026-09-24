@@ -176,10 +176,12 @@ export function vistaDestHeight(height,quality){
  return height*(quality==='balanced'?.56:.68);
 }
 
-/** World-Y the farthest ridges lock to so climb/descent does not drag them. */
+/** World-Y the hill/ridge bands lock to so climb/descent does not drag them. */
 export const VISTA_LOCK_Y=400;
+/** Mid/far ridge layers stay screen-locked vertically. Near play-surface still follows the camera. */
+export const RIDGE_VERTICAL_PARALLAX=0;
 
-export function ridgeCameraY(cameraY,vParallax=1,refY=VISTA_LOCK_Y){
+export function ridgeCameraY(cameraY,vParallax=RIDGE_VERTICAL_PARALLAX,refY=VISTA_LOCK_Y){
  const v=vParallax<0?0:vParallax>1?1:vParallax;
  return refY+(cameraY-refY)*v;
 }

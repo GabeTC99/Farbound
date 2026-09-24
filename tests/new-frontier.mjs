@@ -7,7 +7,7 @@ import {
  FRONTIER_SHIPPED_ASSETS,FRONTIER_KIND_IDS,FRONTIER_KIND_ASSETS,FRONTIER_KIND_SHIPPED,FRONTIER_PREFETCH_ASSETS,
  surfaceTextureName,landingPlateName,kindPlateName,kindSurfaceName,
  fallbackPlateName,fallbackSurfaceName,resolveFrontierName,rememberFrontierImage,
- clearFrontierAssets,plateCrop,vistaDestHeight,ridgeCameraY,VISTA_LOCK_Y,
+ clearFrontierAssets,plateCrop,vistaDestHeight,ridgeCameraY,VISTA_LOCK_Y,RIDGE_VERTICAL_PARALLAX,
  tileBakeSize,tileScreenRepeat,tileSizeForQuality,prefetchFrontierArt
 } from '../dist/new-frontier.mjs';
 import {drawPlanetBody,warmPlanetTexture,PLANET_ART,samplePlanetColor} from '../dist/planet-render.mjs';
@@ -108,10 +108,20 @@ assert.ok(plateCrop('landing-b.png').sh>=.42);
 assert.ok(plateCrop('landing-volcanic.png').sh>=.45);
 assert.ok(vistaDestHeight(800,'high')>vistaDestHeight(800,'balanced'));
 assert.ok(vistaDestHeight(800,'high')>=800*.6);
+assert.equal(RIDGE_VERTICAL_PARALLAX,0);
+assert.equal(ridgeCameraY(120),VISTA_LOCK_Y);
 assert.equal(ridgeCameraY(120,0),VISTA_LOCK_Y);
 assert.equal(ridgeCameraY(800,0),VISTA_LOCK_Y);
+assert.equal(ridgeCameraY(800,RIDGE_VERTICAL_PARALLAX),VISTA_LOCK_Y);
 assert.equal(ridgeCameraY(800,1),800);
 assert.ok(Math.abs(ridgeCameraY(800,.5)-(VISTA_LOCK_Y+(800-VISTA_LOCK_Y)*.5))<1e-9);
+{
+ const scale=.86,height=720,hill=470,ground=650;
+ const lock=(worldY,camY)=>(worldY-ridgeCameraY(camY,RIDGE_VERTICAL_PARALLAX))*scale+height/2;
+ const follow=(worldY,camY)=>(worldY-camY)*scale+height/2;
+ assert.equal(lock(hill,400),lock(hill,50));
+ assert.notEqual(follow(ground,400),follow(ground,50));
+}
 assert.equal(tileBakeSize('high',false),384);
 assert.equal(tileBakeSize('balanced',false),256);
 assert.equal(tileBakeSize('performance',false),192);
@@ -162,7 +172,12 @@ assert.match(surfaceSrc,/tileScreenRepeat/);
 assert.match(surfaceSrc,/drawPlateVista/);
 assert.match(surfaceSrc,/drawFrontierVista/);
 assert.match(surfaceSrc,/ridgeCameraY/);
+assert.match(surfaceSrc,/RIDGE_VERTICAL_PARALLAX/);
 assert.match(surfaceSrc,/ridgeSy/);
+assert.doesNotMatch(surfaceSrc,/ridgeSy\(vPar\)/);
+assert.doesNotMatch(surfaceSrc,/true,\.68/);
+assert.doesNotMatch(surfaceSrc,/true,\.28/);
+assert.doesNotMatch(surfaceSrc,/true,\.5\]/);
 assert.match(surfaceSrc,/surfaceTextureName/);
 assert.match(surfaceSrc,/landingPlateName/);
 assert.match(surfaceSrc,/kindPlateName/);
@@ -186,7 +201,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-vista2/);
+assert.match(sw,/farbound-v3\.0\.0-vista3/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
