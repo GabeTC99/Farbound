@@ -1,0 +1,18 @@
+{
+  "release": "3.0.0",
+  "name": "Nullharbor",
+  "edition": "New Frontier",
+  "date": "2026-09-24",
+  "notes": [
+    "3.0 New Frontier Phase 1 — in-engine lighting/shading and planetary landing overhaul. Scenario Pro plates are in (commercial use cleared by Risk): planet-surface-a/b tile landing ground; landing-a/b crop as far-field vistas so title HUD never covers play.",
+    "Planets in local space: quality-aware albedo (256/192/96), baked relief, sharper terminator with twilight, sunward atmosphere rim, cheap Performance terminator so disks are not flat.",
+    "Planetary landings: sun-facing ridge gradients (no per-column stripes), planet-albedo ground tint, aerial-perspective hill bands, approach haze, volumetric skiff, instrument HUD (ALT / SINK / SIGNALS).",
+    "On-foot planet pads: layered horizon, sun disc, 2.5D rocks, marked landing ellipse. Orbital stations and asteroids take star-relative rim light.",
+    "Welcome / Flight menu show New Frontier. Graphics toggle still Full / Balanced / Performance — Full keeps the new lighting; Performance drops extra surface layers and atmosphere rims. FPS meter and 120 Hz Android wrapper are unchanged.",
+    "Pages-first graphics ship. versionName 3.0.0 · Android versionCode 13 so a later android-v* tag can replace the 2.16.x APK. Do not tag Android or Windows Releases until this PR is merged. Service worker cache bumped to farbound-v3.0.0. Save keys stay farbound-save-v2."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}

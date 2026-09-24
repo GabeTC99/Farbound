@@ -326,8 +326,8 @@ const gradle=readFileSync(new URL('../android/app/build.gradle',import.meta.url)
 assert.match(gradle,/applicationId 'com\.nullharbor\.game'/);
 assert.match(gradle,/namespace 'com\.nullharbor\.game'/);
 assert.match(gradle,/syncWebAssets/);
-assert.match(gradle,/versionName '2\.16\.11'/);
-assert.match(gradle,/versionCode 12/);
+assert.match(gradle,/versionName '3\.0\.0'/);
+assert.match(gradle,/versionCode 13/);
 assert.match(gradle,/signingConfigs/);
 assert.match(gradle,/sideload/);
 
@@ -357,7 +357,7 @@ assert.match(pages,/path: dist/);
 assert.ok(!pages.includes('assembleDebug'),'Pages deploy must stay web-only');
 const apkCi=readFileSync(new URL('../.github/workflows/android-debug.yml',import.meta.url),'utf8');
 assert.match(apkCi,/assembleDebug/);
-assert.match(apkCi,/nullharbor-2\.16\.11-debug/);
+assert.match(apkCi,/nullharbor-3\.0\.0-debug/);
 assert.match(apkCi,/ci-accept-licenses/);
 assert.ok(!apkCi.includes('android-actions/setup-android'),'obsolete sdkmanager tools package breaks CI');
 const apkRel=readFileSync(new URL('../.github/workflows/android-release.yml',import.meta.url),'utf8');
@@ -371,7 +371,7 @@ const readme=readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.match(readme,/## Android sideload/);
 assert.match(readme,/## Windows sideload/);
 assert.match(readme,/github.com\/GabeTC99\/Nullharbor\/releases\/latest\/download\/Nullharbor\.apk/);
-assert.match(readme,/releases\/download\/windows-v2\.16\.11\/Nullharbor\.exe/);
+assert.match(readme,/releases\/download\/windows-v3\.0\.0\/Nullharbor\.exe/);
 assert.match(readme,/versionCode/);
 assert.match(readme,/optional \*\*Cloud sync\*\*/);
 assert.ok(!/The shell has no internet permission/.test(readme));
@@ -385,7 +385,7 @@ assert.match(manifest,/"fullscreen"/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v2\.16\.11/);
+assert.match(sw,/farbound-v3\.0\.0/);
 const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
 assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
 assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);

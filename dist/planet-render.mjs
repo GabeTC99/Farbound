@@ -1,8 +1,10 @@
 /**
  * Kind-driven planet artwork for local space.
  * Albedo is seeded once per body and cached; lighting/atmosphere composite each frame.
+ * 3.0 New Frontier: sharper terminator, sunward atmosphere rim, quality-aware caches.
  */
 import {PLANET_KINDS} from './system-layout.mjs';
+import {planetTexSize,lightDir,terminatorStops,atmosphereRimAlpha,prefetchFrontierArt,peekFrontierImage,surfaceTextureName} from './new-frontier.mjs';
 
 export const PLANET_ART={
  earthlike:{limb:'#7ec8ff',haze:.58,features:['continents','clouds','ice-caps','ocean']},
@@ -207,17 +209,18 @@ function paintAlbedo(canvas,kindId,seed,size){
    const d=Math.sqrt(d2);
    const c=colorAt(kindId,seed,nx,ny,d);
    const edge=d>.97?Math.max(0,(1-d)/.03):1;
-   data[i]=c[0];data[i+1]=c[1];data[i+2]=c[2];data[i+3]=(255*edge)|0;
+   const relief=(fbm(nx*3.1,ny*3.1,seed+5,3)-.5)*22;
+   data[i]=clamp8(c[0]+relief);data[i+1]=clamp8(c[1]+relief);data[i+2]=clamp8(c[2]+relief);data[i+3]=(255*edge)|0;
   }
  }
  ctx.putImageData(img,0,0);
  return canvas;
 }
 
-function textureFor(p,lite){
+function textureFor(p,lite,quality){
  const kindId=p.kindId||'mineral';
  const seed=seedNum(p.seed||p.id);
- const size=lite?96:192;
+ const size=planetTexSize(quality,lite);
  const key=kindId+'|'+seed+'|'+size;
  const hit=cache.get(key);
  if(hit){cache.delete(key);cache.set(key,hit);return hit;}
@@ -232,9 +235,9 @@ function textureFor(p,lite){
 export function clearPlanetTextures(){cache.clear();}
 
 /** Paint a body's albedo off the hot path (after a jump or on launch). */
-export function warmPlanetTexture(p,lite=false){
+export function warmPlanetTexture(p,lite=false,quality){
  if(!p)return null;
- return textureFor(p,!!lite);
+ return textureFor(p,!!lite,quality);
 }
 
 function drawRings(ctx,p,front){
@@ -257,52 +260,99 @@ function drawRings(ctx,p,front){
  ctx.restore();
 }
 
-function drawAtmosphere(ctx,p,art,lite){
+function drawAtmosphere(ctx,p,art,lite,ux,uy){
  if(!art.limb||art.haze<=0)return;
- const span=p.r*(1.08+art.haze*(lite?.1:.2));
- const g=ctx.createRadialGradient(p.x,p.y,p.r*.86,p.x,p.y,span);
- const a0=Math.floor(20+art.haze*30).toString(16).padStart(2,'0');
- const a1=Math.floor(70+art.haze*80).toString(16).padStart(2,'0');
+ const span=p.r*(1.1+art.haze*(lite?.1:.24));
+ const ox=p.x-ux*p.r*.08,oy=p.y-uy*p.r*.08;
+ const g=ctx.createRadialGradient(ox,oy,p.r*.82,p.x,p.y,span);
+ const a0=Math.floor(24+art.haze*36).toString(16).padStart(2,'0');
+ const a1=Math.floor(78+art.haze*90).toString(16).padStart(2,'0');
  g.addColorStop(0,art.limb+'00');
- g.addColorStop(.62,art.limb+a0);
- g.addColorStop(.86,art.limb+a1);
+ g.addColorStop(.58,art.limb+a0);
+ g.addColorStop(.84,art.limb+a1);
  g.addColorStop(1,art.limb+'00');
  ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,span,0,6.28);ctx.fill();
 }
 
-/** Draw a body at world coords. opts: {lite, lightX, lightY} */
+function drawSunwardRim(ctx,p,art,ux,uy,lite){
+ if(!art.limb||art.haze<=0)return;
+ const a=atmosphereRimAlpha(art.haze,lite);
+ const hx=p.x-ux*p.r*.55,hy=p.y-uy*p.r*.55;
+ const g=ctx.createRadialGradient(hx,hy,p.r*.15,p.x+ux*p.r*.2,p.y+uy*p.r*.2,p.r*1.16);
+ g.addColorStop(0,art.limb+Math.floor(a*180).toString(16).padStart(2,'0'));
+ g.addColorStop(.42,art.limb+Math.floor(a*70).toString(16).padStart(2,'0'));
+ g.addColorStop(1,art.limb+'00');
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.16,0,6.28);ctx.fill();
+}
+
+function drawNightLights(ctx,p,kindId,ux,uy){
+ if(kindId!=='earthlike'&&kindId!=='toxic')return;
+ const seed=seedNum(p.seed||p.id);
+ ctx.save();
+ ctx.beginPath();ctx.arc(p.x,p.y,p.r*.98,0,6.28);ctx.clip();
+ for(let i=0;i<18;i++){
+  const ang=((hashu(seed+i*41)&1023)/1023)*6.28;
+  const rad=.35+((hashu(seed+i*73)&255)/255)*.5;
+  const nx=Math.cos(ang)*rad,ny=Math.sin(ang)*rad;
+  if(nx*ux+ny*uy>-.08)continue;
+  const x=p.x+nx*p.r,y=p.y+ny*p.r;
+  ctx.fillStyle=kindId==='toxic'?'#d4e06055':'#ffd08066';
+  ctx.beginPath();ctx.arc(x,y,Math.max(0.6,p.r*.018),0,6.28);ctx.fill();
+ }
+ ctx.restore();
+}
+
+function paintTerminator(ctx,p,kindId,ux,uy,lite){
+ const gx0=p.x-ux*p.r,gy0=p.y-uy*p.r,gx1=p.x+ux*p.r,gy1=p.y+uy*p.r;
+ const shade=ctx.createLinearGradient(gx0,gy0,gx1,gy1);
+ if(lite){
+  shade.addColorStop(0,'#ffffff18');
+  shade.addColorStop(.4,'#00000000');
+  shade.addColorStop(.68,'#00040caa');
+  shade.addColorStop(1,'#000208f4');
+ }else{
+  for(const [t,col] of terminatorStops(kindId))shade.addColorStop(t,col);
+ }
+ ctx.fillStyle=shade;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+ if(lite)return;
+ const hx=p.x-ux*p.r*.42,hy=p.y-uy*p.r*.42;
+ const spec=ctx.createRadialGradient(hx,hy,0,hx,hy,p.r*.52);
+ spec.addColorStop(0,kindId==='metal'||kindId==='ice'?'#ffffff70':'#ffffff38');
+ spec.addColorStop(.38,'#ffffff12');spec.addColorStop(1,'#0000');
+ ctx.fillStyle=spec;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+}
+
+/** Draw a body at world coords. opts: {lite, quality, lightX, lightY} */
 export function drawPlanetBody(ctx,p,opts={}){
  if(!p||!ctx)return;
  const lite=!!opts.lite;
+ const quality=opts.quality||(lite?'performance':'high');
  const kindId=p.kindId||'mineral';
  const art=artOf(kindId);
- const lx=opts.lightX??-1,ly=opts.lightY??-.8;
+ const {x:ux,y:uy}=lightDir(opts.lightX??-1,opts.lightY??-.8);
  if(p.ring)drawRings(ctx,p,false);
- if(!lite)drawAtmosphere(ctx,p,art,lite);
- else if(art.limb&&art.haze>0){ctx.strokeStyle=art.limb+'66';ctx.lineWidth=Math.max(1.2,p.r*.04);ctx.beginPath();ctx.arc(p.x,p.y,p.r+1.5,0,6.28);ctx.stroke();}
- const tex=textureFor(p,lite);
+ if(!lite)drawAtmosphere(ctx,p,art,lite,ux,uy);
+ else if(art.limb&&art.haze>0){ctx.strokeStyle=art.limb+'88';ctx.lineWidth=Math.max(1.2,p.r*.045);ctx.beginPath();ctx.arc(p.x,p.y,p.r+1.8,0,6.28);ctx.stroke();}
+ const tex=textureFor(p,lite,quality);
  ctx.save();
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.clip();
  if(tex)ctx.drawImage(tex,p.x-p.r,p.y-p.r,p.r*2,p.r*2);
  else{ctx.fillStyle=p.color||'#6a8890';ctx.fill();}
- if(!lite){
-  const len=Math.hypot(lx,ly)||1,ux=lx/len,uy=ly/len;
-  const gx0=p.x-ux*p.r,gy0=p.y-uy*p.r,gx1=p.x+ux*p.r,gy1=p.y+uy*p.r;
-  const shade=ctx.createLinearGradient(gx0,gy0,gx1,gy1);
-  shade.addColorStop(0,'#ffffff14');
-  shade.addColorStop(.42,'#00000000');
-  shade.addColorStop(.7,'#00040c77');
-  shade.addColorStop(1,'#00040cf2');
-  ctx.fillStyle=shade;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
-  const hx=p.x-ux*p.r*.45,hy=p.y-uy*p.r*.45;
-  const spec=ctx.createRadialGradient(hx,hy,0,hx,hy,p.r*.5);
-  spec.addColorStop(0,kindId==='metal'||kindId==='ice'?'#ffffff66':'#ffffff33');
-  spec.addColorStop(.4,'#ffffff10');spec.addColorStop(1,'#0000');
-  ctx.fillStyle=spec;ctx.fillRect(p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+ if(!lite&&quality==='high'){
+  prefetchFrontierArt();
+  const rock=peekFrontierImage(surfaceTextureName(kindId));
+  if(rock&&rock.width){
+   ctx.globalAlpha=.32;ctx.globalCompositeOperation='overlay';
+   ctx.drawImage(rock,p.x-p.r,p.y-p.r,p.r*2,p.r*2);
+   ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  }
  }
+ paintTerminator(ctx,p,kindId,ux,uy,lite);
+ if(!lite)drawNightLights(ctx,p,kindId,ux,uy);
  ctx.restore();
+ if(!lite)drawSunwardRim(ctx,p,art,ux,uy,lite);
  if(p.ring)drawRings(ctx,p,true);
- ctx.lineWidth=1;ctx.strokeStyle=(art.limb||p.color||'#88a')+'55';
+ ctx.lineWidth=1;ctx.strokeStyle=(art.limb||p.color||'#88a')+'66';
  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.28);ctx.stroke();
 }
 

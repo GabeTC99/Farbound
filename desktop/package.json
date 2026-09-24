@@ -1,6 +1,6 @@
 {
   "name": "nullharbor",
-  "version": "2.16.11",
+  "version": "3.0.0",
   "private": true,
   "description": "Nullharbor Windows desktop shell — bundled dist/ plus HTTPS for optional cloud sync",
   "author": "Voidwake Studios",

@@ -126,3 +126,24 @@
  .fire{width:78px;height:78px}
  .aux-actions button{min-width:62px;padding:8px 10px}
 }
+
+/* 3.0 New Frontier — landing HUD + welcome edition */
+.welcome h1 span{letter-spacing:.32em;color:#9fd8cc}
+.target-panel .landing-button{
+ background:linear-gradient(180deg,#2a3148,#1a2034);
+ border-color:#8a90b8;
+ color:#e8ecff;
+ font-weight:700;
+ letter-spacing:.04em;
+}
+.target-panel .landing-button:hover{border-color:#b8c0e8;background:#323a58}
+.surface-mode .target-panel{
+ border-left-color:#c9b18d;
+ background:linear-gradient(90deg,#1a1824ee,#0d1c2910);
+}
+.surface-mode .target-panel .eyebrow{color:#d4c4a0}
+.surface-mode .landing-button{
+ background:linear-gradient(180deg,#3a2a18,#241810);
+ border-color:#d4a86a;
+ color:#f0d4a0;
+}

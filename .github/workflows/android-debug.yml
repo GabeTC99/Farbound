@@ -40,6 +40,6 @@ jobs:
       - name: Upload Nullharbor debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: nullharbor-2.16.11-debug
+          name: nullharbor-3.0.0-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

@@ -42,7 +42,7 @@ assert.match(preload, /exportSave/);
 assert.match(preload, /refreshLock/);
 
 const pkg = JSON.parse(readFileSync(new URL('../desktop/package.json', import.meta.url), 'utf8'));
-assert.equal(pkg.version, '2.16.11');
+assert.equal(pkg.version, '3.0.0');
 assert.equal(pkg.build?.appId, 'com.nullharbor.game');
 assert.equal(pkg.build?.productName, 'Nullharbor');
 assert.equal(pkg.build?.win?.artifactName, 'Nullharbor.exe');
