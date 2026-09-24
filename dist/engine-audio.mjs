@@ -62,6 +62,23 @@ export const PLANETARY_AUDIO_STEMS=[
  'pad_inspect_start','pad_inspect_loop','pad_inspect_stop','embark_whoosh'
 ];
 export function planetaryAudioFile(stem){return PLANETARY_AUDIO_DIR+stem+'.mp3';}
+/** Hull thruster loops and flyby/land oneshots. Stems match dist/assets/audio/ships/. */
+export const SHIP_AUDIO_DIR='assets/audio/ships/';
+export const SHIP_AUDIO_HULLS=['wren','sparrow','kestrel'];
+export const SHIP_AUDIO_KINDS=['thruster','flyby','land'];
+export const SHIP_AUDIO_STEMS=SHIP_AUDIO_HULLS.flatMap(hull=>SHIP_AUDIO_KINDS.map(kind=>kind+'_'+hull));
+export function shipAudioFile(stem){return SHIP_AUDIO_DIR+stem+'.mp3';}
+export function shipAudioCue(kind,hullId){
+ const stem=kind+'_'+hullId;
+ return SHIP_AUDIO_STEMS.includes(stem)?stem:null;
+}
+/** Plated hull cue, else null so thrust stays on the oscillator and flyby/land stay silent. A plated hull with a missing stem falls back to embark_whoosh. */
+export function resolveShipCue(kind,hullId){
+ const stem=shipAudioCue(kind,hullId);
+ if(stem)return stem;
+ if((kind==='flyby'||kind==='land')&&SHIP_AUDIO_HULLS.includes(hullId))return 'embark_whoosh';
+ return null;
+}
 export function cueAssetUrl(file){
  try{
   const base=globalThis.location?.href||globalThis.document?.baseURI;
@@ -108,7 +125,8 @@ export const AUDIO_CUES={
  ...Object.fromEntries(PLANETARY_AMBIENT_KINDS.flatMap(id=>[
   ['ambient_'+id,cueDef('loop','ambient_'+id)],
   ['grit_'+id,cueDef('oneshot','grit_'+id)]
- ]))
+ ])),
+ ...Object.fromEntries(SHIP_AUDIO_STEMS.map(stem=>[stem,{type:stem.startsWith('thruster_')?'loop':'oneshot',file:shipAudioFile(stem)}]))
 };
 export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
@@ -199,6 +217,18 @@ export class EngineAudio{
   if(!this.context||this.cuePreloaded)return;
   this.cuePreloaded=true;
   for(const stem of PLANETARY_AUDIO_STEMS)this.ensureCueBuffer(planetaryAudioFile(stem)).catch(()=>{});
+  for(const stem of SHIP_AUDIO_STEMS)this.ensureCueBuffer(shipAudioFile(stem)).catch(()=>{});
+ }
+ syncHullThruster({hull,thrust=0,live=false}={}){
+  const want=live&&thrust>0.08?shipAudioCue('thruster',hull):null;
+  this.hullThrusterOn=!!want;
+  if(want&&want===this.hullThrusterCue){
+   if(!this.isCueLooping(want))this.playCue(want);
+   return;
+  }
+  if(this.hullThrusterCue)this.stopCue(this.hullThrusterCue);
+  this.hullThrusterCue=want;
+  if(want)this.playCue(want);
  }
  setCueVolume(vol){
   this.cueVolume=Math.max(0,Math.min(1,Number(vol)||0));
@@ -285,7 +315,7 @@ export class EngineAudio{
   this.amb.start();
   this.ambReady=true;
  }
- update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false}={}){
+ update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0}={}){
   const vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
   const live=enabled&&!paused;
   this.setCueVolume(live?vol:0);
@@ -293,7 +323,9 @@ export class EngineAudio{
   this.ensureHum();
   this.ensureAmb();
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
-  this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*.32:0,t,.12);
+  this.syncHullThruster({hull,thrust,live:live&&!station&&!surface&&!planetFeet});
+  const hullTone=this.hullThrusterOn?0:1;
+  this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*hullTone*.32:0,t,.12);
   this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
   this.mid.frequency.setTargetAtTime(77+n*45+(boost?19:0),t,.18);
   this.filter.frequency.setTargetAtTime(100+n*150+(boost?75:0),t,.2);

@@ -2,7 +2,7 @@
  * Grounded spacecraft paint for local space and hangar.
  * Geometry stays in hull-defs; this module adds class kits, materials, and physical engines.
  */
-import {HULL_DEFS,getHullDef} from './hull-defs.mjs';
+import {HULL_DEFS,getHullDef,SHIP_PLATES,shipPlateUrl} from './hull-defs.mjs';
 import {worldStroke,strokeSilhouette} from './flight-loop.mjs';
 let paintScale=1;
 const lw=px=>worldStroke(px,paintScale);
@@ -516,6 +516,27 @@ function drawNavLights(ctx,def,size,clock,opts){
  }
 }
 
+const plateCache=new Map();
+export function loadShipPlate(id){
+ const url=shipPlateUrl(id);
+ if(!url)return null;
+ if(plateCache.has(id))return plateCache.get(id);
+ if(typeof Image==='undefined'){plateCache.set(id,null);return null;}
+ const img=new Image();
+ img.decoding='async';
+ img.onload=()=>{if(img.naturalWidth)plateCache.set(id,img);};
+ img.onerror=()=>plateCache.set(id,null);
+ plateCache.set(id,null);
+ try{img.src=url;}catch{return null;}
+ return null;
+}
+export function peekShipPlate(id){
+ const img=plateCache.get(id);
+ return img&&(img.naturalWidth||img.width)?img:null;
+}
+export function rememberShipPlate(id,img){if(id)plateCache.set(id,img||null);}
+export function prefetchShipPlates(){for(const id of Object.keys(SHIP_PLATES))loadShipPlate(id);}
+
 export function drawCraft(ctx,opts={}){
  const kind=opts.kind||opts.id||'wren';
  const {def,classId}=resolveHull(kind);
@@ -526,6 +547,15 @@ export function drawCraft(ctx,opts={}){
  paintScale=opts.pixelScale||1;
  ctx.lineJoin='round';ctx.lineCap='round';
  drawFlames(ctx,def,size,thrust,boost,lite);
+ const plate=peekShipPlate(kind);
+ if(plate){
+  const w=size*2.75,h=w*.5;
+  const smooth=ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(plate,-w/2,-h/2,w,h);
+  ctx.imageSmoothingEnabled=smooth;
+  return;
+ }
  drawVolume(ctx,def,size,art,lx,ly,art.sheen,lite,!!opts.hostile);
  drawPanels(ctx,def,size,art,lite);
  if(!lite){
@@ -704,8 +734,12 @@ export function hullPreviewSvg(ship){
  const cw=20,ch=12;
  const cockpit=def.cockpit?`<g class="canopy"><ellipse cx="${(cx+1.5).toFixed(1)}" cy="${oy+2.2}" rx="10" ry="6.4" fill="${shadow}" opacity=".5"/><rect x="${(cx-cw/2).toFixed(1)}" y="${(oy-ch/2).toFixed(1)}" width="${cw}" height="${ch}" rx="2.4" fill="${plate}" stroke="${shadow}" stroke-width="1.2"/><rect x="${(cx-cw/2+2).toFixed(1)}" y="${(oy-ch/2+1.7).toFixed(1)}" width="${cw-4}" height="${ch-3.4}" rx="1.4" fill="url(#${gid}-g)"/><rect x="${(cx-cw/2+3.4).toFixed(1)}" y="${(oy-ch/2+2.8).toFixed(1)}" width="${cw-7.2}" height="${ch-5.4}" rx="1" fill="#061014" opacity=".4"/><path d="M${(cx-2).toFixed(1)} ${(oy-ch/2+1.7).toFixed(1)} L${(cx-.2).toFixed(1)} ${(oy+ch/2-1.7).toFixed(1)}" stroke="${plate}" stroke-width=".8" opacity=".55"/><path d="M${(cx+3.6).toFixed(1)} ${(oy-ch/2+1.7).toFixed(1)} L${(cx+5).toFixed(1)} ${(oy+ch/2-1.7).toFixed(1)}" stroke="${plate}" stroke-width=".75" opacity=".45"/><ellipse cx="${(cx-4).toFixed(1)}" cy="${(oy-1.8).toFixed(1)}" rx="3.6" ry="2" fill="#c8e0ea" opacity=".28"/></g>`:'';
  const accents=(def.accents||[]).map(bar=>`<rect x="${(ox+bar.x*sc).toFixed(1)}" y="${(oy+bar.y*sc).toFixed(1)}" width="${bar.w}" height="${Math.max(1.2,bar.h*.6)}" fill="${a}" opacity=".32"/>`).join('');
- return `<svg class="ship-preview" viewBox="0 0 140 88" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${spec}${deckEl}${spine}${seam}${brush}${rivets}${tiles}${parts}${kit}${bells}${cockpit}${accents}</svg>`;
+ const svg=`<svg class="ship-preview" viewBox="0 0 140 88" aria-hidden="true">${defs}${shadowEl}${flames}${walls}${thick}${body}${wash}${spec}${deckEl}${spine}${seam}${brush}${rivets}${tiles}${parts}${kit}${bells}${cockpit}${accents}</svg>`;
+ const plateUrl=shipPlateUrl(id);
+ if(!plateUrl)return svg;
+ return `<img class="ship-preview ship-plate" src="${plateUrl}" alt="" onerror="this.style.display='none';var n=this.nextElementSibling;if(n)n.style.display=''">${svg.replace('<svg class="ship-preview"','<svg class="ship-preview" style="display:none"')}`;
 }
+prefetchShipPlates();
 
 export function sampleShipColor(classId,nx=0,ny=0){
  const art=artOf(classId);

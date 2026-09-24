@@ -5,7 +5,7 @@ import {createOnFoot,nearestZone,interactZone,updateOnFoot,onFootSave} from './o
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {createSiteTransition,siteTransitionDone} from './new-frontier.mjs';
-import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue} from './engine-audio.mjs';
+import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue,resolveShipCue} from './engine-audio.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan,eventObjective,salvageDerelict,createWreckLayout} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState,STATION_ROBOT} from './station-robot.mjs';
@@ -833,7 +833,9 @@ export class Game extends FlightGame{
     if(this.s.surface)this.s.surface.foot=onFootSave(this.onfoot);
     return;
    }
+   const wasLanded=!!this.surface.landed;
    const wasScan=!!this.surface.scan,result=updateSurface(this.surface,dt,input,getStats(this.s));
+   if(!wasLanded&&this.surface.landed){const cue=resolveShipCue('land',this.s.ship);if(cue)this.fireAudioCue(cue);}
    if(result.completed)this.completeSurfaceRecord(result.completed);
    else if(wasScan&&!this.surface.scan)this.notify('Scan interrupted. Hover within range.');
    if(result.crashed){
@@ -862,7 +864,10 @@ export class Game extends FlightGame{
    this.updateTraffic(dt);this.updateSecurity(dt);this.dyn?.update(dt);this.shots=this.shots.filter(b=>b.life>0);
    return;
   }
-  if(this.jump){this.scooping=false;this.scoopRate=0;return;}
+  if(this.jump){this.scooping=false;this.scoopRate=0;this._flybyArm=false;return;}
+  const flyby=!!this.player.boost&&!this._flybyArm;
+  this._flybyArm=!!this.player.boost;
+  if(flyby){const cue=resolveShipCue('flyby',this.s.ship);if(cue)this.fireAudioCue(cue);}
   advanceOrbits(this.planets.filter(p=>p.type==='planet'),this.planets.filter(p=>p.type==='moon'),this.stars,dt);
   this.updateStellar(dt);
   this.updateTraffic(dt);

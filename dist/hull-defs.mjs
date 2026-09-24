@@ -1,4 +1,11 @@
 /** Data-driven player hull silhouettes. Shared by flight canvas and hangar SVG previews. */
+/** Scenario redesign batch 1 side plates. Alts stay out of dist. Missing file falls back to procedural paint. */
+export const SHIP_PLATES={
+ wren:'assets/ships/wren.png',
+ sparrow:'assets/ships/sparrow.png',
+ kestrel:'assets/ships/kestrel.png'
+};
+export function shipPlateUrl(id){return SHIP_PLATES[id]||null;}
 const stroke=(pts,alpha=.55)=>({type:'stroke',pts,alpha});
 const rect=(x,y,w,h,alpha=.5)=>({type:'rect',x,y,w,h,alpha});
 const accentBar=(x,y,w,h)=>({type:'accent',x,y,w,h,alpha:.7});
