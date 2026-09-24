@@ -166,7 +166,11 @@ const surfaceSrc=readFileSync(new URL('../dist/surface-render.mjs',import.meta.u
 assert.match(surfaceSrc,/drawLandingHud/);
 assert.match(surfaceSrc,/fillRidge/);
 assert.match(surfaceSrc,/shadeRidge/);
-assert.match(surfaceSrc,/shadeFaces/);
+assert.doesNotMatch(surfaceSrc,/shadeFaces/);
+assert.doesNotMatch(surfaceSrc,/y\+20/);
+assert.doesNotMatch(surfaceSrc,/k\*11/);
+assert.doesNotMatch(surfaceSrc,/RIDGE_CREST_INSET/);
+assert.doesNotMatch(surfaceSrc,/strokeRidgeFill/);
 assert.match(surfaceSrc,/terrainSlope/);
 assert.match(surfaceSrc,/samplePlanetColor/);
 assert.match(surfaceSrc,/paintRidgeTexture/);
@@ -203,7 +207,7 @@ assert.match(app,/renderSurface\(ctx,width,height,game\.surface,clock,getStats\(
 assert.match(app,/New Frontier lighting follows this toggle/);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/new-frontier\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-vista4/);
+assert.match(sw,/farbound-v3\.0\.0-vista5/);
 assert.match(sw,/planet-surface-a\.png/);
 assert.match(sw,/landing-b\.png/);
 assert.match(sw,/landing-volcanic\.png/);
