@@ -925,7 +925,7 @@ function drawSkyBackdrop(){
  const star=(game.stars||[game.star]).find(s=>s&&s.primary!==false)||game.star;
  if(spaceSkyReady()){
   fillSpaceClear(ctx,dpr,w,h,'#05070c');
-  if(drawSpaceSky(ctx,{width:w,height:h,camX:cam.x,camY:cam.y,zoom:cam.zoom,skyKind:sky.kind,lite,soft,stations:game.stations,player:game.player,star}))return;
+  if(drawSpaceSky(ctx,{width:w,height:h,camX:cam.x,camY:cam.y,zoom:cam.zoom,skyKind:sky.kind,lite,soft,stations:game.stations,player:game.player,star,clock}))return;
  }
  fillSpaceClear(ctx,dpr,width,height,sky.bg||SPACE_CLEAR);
  if(galaxy){
