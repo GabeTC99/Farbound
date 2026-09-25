@@ -107,6 +107,16 @@ export function gritLevel(kindId){
 /** Ship MP3s into the cue bus. Thruster loops sit under the sky bed; flyby/land are a step hotter. */
 export const SHIP_THRUST_LEVEL=.30;
 export const SHIP_SHOT_LEVEL=.42;
+/** Thrust input, or cruise/assist speed, keeps the plated loop running. Boost still fires flyby separately. */
+export function hullThrusterWanted({hull,thrust=0,moving=0,live=false}={}){
+ if(!live||!(thrust>0.08||moving>0.05))return null;
+ return shipAudioCue('thruster',hull);
+}
+/** Space stays at 0. The speed-linked oscillator whistled on brake and cruise; plates carry that character. */
+export function flightEngineTone(vol,moving,{surface=false,hullLoop=false,live=true}={}){
+ if(!live||hullLoop||!surface)return 0;
+ return Math.max(0,vol)*Math.max(0,Math.min(1,moving))*.32;
+}
 /** Outer-space beds into the cue bus. Quieter than ship thrust (0.30) and grit. */
 export const SPACE_AUDIO_DIR='assets/audio/space/';
 export const SPACE_AUDIO_STEMS=['vacuum_bed','vacuum_radio','station_approach','station_dock'];
@@ -240,11 +250,13 @@ export class EngineAudio{
   if(!this.context)return;
   if(this.context.state==='suspended')this.context.resume?.().catch(()=>{});
   const gen=def.type==='loop'?(this.cueGen.set(canon,(this.cueGen.get(canon)||0)+1),this.cueGen.get(canon)):0;
+  if(def.type==='loop'){this.cueArm||(this.cueArm=new Set());this.cueArm.add(canon);}
   this.ensureCueBuffer(def.file).then(buffer=>{
+   if(def.type==='loop')this.cueArm?.delete(canon);
    if(!buffer||!this.context)return;
    if(def.type==='loop'&&(!this.loops.has(canon)||this.cueGen.get(canon)!==gen))return;
-   this.startCueSource(canon,def,buffer);
-  }).catch(()=>{});
+   this.startCueSource(canon,def,buffer,gen);
+  }).catch(()=>{if(def.type==='loop')this.cueArm?.delete(canon);});
  }
  ensureGritGain(){
   this.ensureCueGain();
@@ -321,9 +333,17 @@ export class EngineAudio{
    return copy;
   }catch{return buffer;}
  }
- startCueSource(canon,def,buffer){
+ startCueSource(canon,def,buffer,gen){
   this.ensureCueGain();
   if(!this.cueGain)return;
+  if(def.type==='loop'&&gen!=null&&(!this.loops.has(canon)||this.cueGen.get(canon)!==gen))return;
+  if(this.context.state==='suspended'){
+   this.context.resume?.().then(()=>{
+    if(!this.context||this.context.state==='suspended')return;
+    this.startCueSource(canon,def,buffer,gen);
+   }).catch(()=>{});
+   return;
+  }
   if(def.type==='loop'||def.solo)this.stopCueFile(canon);
   const grit=def.solo?this.gritKind(canon):null;
   const name=String(canon||'');
@@ -348,7 +368,7 @@ export class EngineAudio{
   src.buffer=this.copyCueBuffer(buffer);
   src.loop=def.type==='loop';
   src.connect(bus);
-  try{src.start(this.context.currentTime||0);}catch{return;}
+  try{src.start(this.context.currentTime||0);}catch{if(def.type==='loop')this.loops.delete(canon);return;}
   if(def.type==='loop'||def.solo)this.cueSources.set(canon,src);
  }
  stopCueFile(canon){
@@ -402,14 +422,11 @@ export class EngineAudio{
   try{if(this.musicFlightGain)this.musicFlightGain.gain.value=MUSIC_FLIGHT_LEVEL*(1-mix)*duck;}catch{}
   try{if(this.musicStationGain)this.musicStationGain.gain.value=MUSIC_STATION_LEVEL*mix*duck;}catch{}
  }
- syncHullThruster({hull,thrust=0,live=false}={}){
-  const want=live&&thrust>0.08?shipAudioCue('thruster',hull):null;
+ syncHullThruster({hull,thrust=0,moving=0,live=false}={}){
+  const want=hullThrusterWanted({hull,thrust,moving,live});
   this.hullThrusterOn=!!want;
-  if(want&&want===this.hullThrusterCue){
-   if(!this.isCueLooping(want))this.playCue(want);
-   return;
-  }
-  if(this.hullThrusterCue)this.stopCue(this.hullThrusterCue);
+  if(want&&want===this.hullThrusterCue&&this.isCueLooping(want)&&(this.cueSources.has(want)||this.cueArm?.has(want)))return;
+  if(this.hullThrusterCue&&this.hullThrusterCue!==want)this.stopCue(this.hullThrusterCue);
   this.hullThrusterCue=want;
   if(want)this.playCue(want);
  }
@@ -522,7 +539,8 @@ export class EngineAudio{
    const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;
    const c=new Audio();this.context=c;
    this.low=c.createOscillator();this.mid=c.createOscillator();this.gain=c.createGain();this.filter=c.createBiquadFilter();
-   this.low.type='sine';this.mid.type='triangle';this.gain.gain.value=0;this.filter.type='lowpass';this.filter.frequency.value=160;
+   this.low.type='sine';this.mid.type='triangle';this.gain.gain.value=0;this.filter.type='lowpass';this.filter.frequency.value=130;
+   this.low.frequency.value=42;this.mid.frequency.value=84;
    this.low.connect(this.filter);this.mid.connect(this.filter);this.filter.connect(this.gain);this.gain.connect(c.destination);
    this.low.start();this.mid.start();
   }
@@ -601,12 +619,11 @@ export class EngineAudio{
   this.ensureHum();
   this.ensureAmb();
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
-  this.syncHullThruster({hull,thrust,live:live&&!station&&!surface&&!planetFeet});
+  this.syncHullThruster({hull,thrust,moving:n,live:live&&!station&&!surface&&!planetFeet});
   this.syncNpcShips({ships,x:listenerX,y:listenerY,live:live&&!surface&&!planetFeet});
   this.syncSpaceAudio({live:live&&!surface&&!planetFeet&&!station,docked:!!docked||!!station,stationDist,now:t});
   this.syncMusic({live:live&&!surface&&!planetFeet,docked:!!docked||!!station,stationDist});
-  const hullTone=this.hullThrusterOn?0:1;
-  this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*hullTone*.32:0,t,.12);
+  this.gain.gain.setTargetAtTime(flightEngineTone(vol,n,{surface:!!surface,hullLoop:!!this.hullThrusterOn,live:live&&!station&&!planetFeet}),t,.12);
   // Pitch stays put. Speed used to glide the oscillators, and BRAKE's sudden slowdown whistled.
   this.low.frequency.setTargetAtTime(surface?46:42,t,.4);
   this.mid.frequency.setTargetAtTime(84,t,.4);
@@ -638,7 +655,9 @@ export class EngineAudio{
  }
  muteAll(){
   this.setCueVolume(0);
+  for(const canon of [...this.loops])this.stopCue(canon);
   for(const canon of [...this.cueSources.keys()])this.stopCueFile(canon);
+  this.cueArm?.clear();
   if(!this.context)return;
   const t=this.context.currentTime;
   for(const g of this.gains()){

@@ -22,7 +22,7 @@ import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft,prefetchShipPlates} from './ship-render.mjs';
 prefetchShipPlates();
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
-import {drawSpaceSky,prefetchSpacePlates,spaceSkyReady,nearestStation} from './space-sky.mjs';
+import {drawSpaceSky,prefetchSpacePlates,spaceSkyReady,nearestStation,stationPlateRole,stationOrthoReady} from './space-sky.mjs';
 prefetchSpacePlates();
 import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,createFpsMeter,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset,snapWorldCam,worldStroke,strokeBand,ringInView,starLayerIndex,starLayerOffset,blitWrapped,STAR_LAYER_DEPTHS,setRefreshKeepAlive,createFlightWakeLock,createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,bundledAssetHost} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -741,6 +741,13 @@ function drawStation(s=game.station){
  const scale=s.r/65,lite=liteFX(),px=worldPx()*scale,hair=worldStroke(2,px);
  const host=(game.stars||[game.star])[0]||game.star;
  const L=lightDir((host?.x??0)-s.x,(host?.y??0)-s.y);
+ const role=stationPlateRole(Math.hypot((s.x||0)-(game.player?.x||0),(s.y||0)-(game.player?.y||0)));
+ const spun=spaceSkyReady()&&stationOrthoReady()&&(role==='station_exterior'||role==='station_approach');
+ if(spun){
+  label(s.name,s.x,s.y-100*scale,'#94c7cd');
+  if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-78*scale,'#608592',12);
+  return;
+ }
  ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);
  ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=hair;
  if(!lite){ctx.fillStyle='#00081055';ctx.beginPath();ctx.ellipse(8,10,66,54,0,0,Math.PI*2);ctx.fill();}

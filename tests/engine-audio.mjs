@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP,musicStationMix,MUSIC_FLIGHT_LEVEL,MUSIC_STATION_LEVEL} from '../dist/engine-audio.mjs';
+import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP,musicStationMix,MUSIC_FLIGHT_LEVEL,MUSIC_STATION_LEVEL,hullThrusterWanted,flightEngineTone} from '../dist/engine-audio.mjs';
 
 const wrap=new Float32Array([0.9,0.4,-0.2,-0.8]);
 fadeLoopBuffer(wrap,2);
@@ -232,6 +232,19 @@ const audioSrc=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),
 assert.ok(!/38\+n\*24/.test(audioSrc),'engine pitch no longer tracks speed');
 assert.match(audioSrc,/this\.low\.frequency\.setTargetAtTime\(surface\?46:42/);
 assert.match(audioSrc,/this\.mid\.frequency\.setTargetAtTime\(84/);
+assert.equal(flightEngineTone(1,1,{surface:false,live:true}),0,'space cruise does not run the oscillator');
+assert.equal(flightEngineTone(1,1,{surface:true,hullLoop:true,live:true}),0);
+assert.ok(flightEngineTone(1,.5,{surface:true,live:true})>0);
+assert.equal(hullThrusterWanted({hull:'wren',thrust:0,moving:.4,live:true}),'thruster_wren');
+assert.equal(hullThrusterWanted({hull:'wren',thrust:1,moving:0,live:true}),'thruster_wren');
+assert.equal(hullThrusterWanted({hull:'wren',thrust:0,moving:0,live:true}),null);
+audio.syncHullThruster({hull:'wren',thrust:0,moving:.4,live:true});
+assert.equal(audio.hullThrusterCue,'thruster_wren','cruise keeps the plated loop without boost');
+audio.muteAll();
+assert.equal(audio.isCueLooping('thruster_wren'),false,'a mute clears the loop flag so the next thrust can restart');
+audio.syncHullThruster({hull:'wren',thrust:.6,moving:0,live:true});
+assert.equal(audio.hullThrusterOn,true);
+assert.equal(audio.isCueLooping('thruster_wren'),true);
 console.log('PASS Brake does not glide oscillator pitch');
 assert.equal(musicStationMix(5000,false),0);
 assert.equal(musicStationMix(0,true),1);

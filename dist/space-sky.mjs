@@ -4,9 +4,10 @@
  */
 export const SPACE_DIR='assets/space/';
 export const SPACE_PLATES=['starfield_far','starfield_mid','nebula_soft_a','nebula_soft_b','dust_parallax','station_approach','station_exterior','dock_bay','sun_disc','sun_bloom','lens_streak'];
-export const STATION_LIVE_DIR='assets/space/station_live/';
-export const STATION_ROT=['station_rot_00','station_rot_01','station_rot_02','station_rot_03','station_rot_04','station_rot_05','station_rot_06','station_rot_07'];
-export const STATION_LIGHTS=['lights_bay_idle','lights_bay_flash','lights_beacon_a','lights_beacon_b','lights_nav_pulse','window_glow'];
+export const STATION_SPIN_DIR='assets/space/station_spin/';
+export const STATION_ORTHO='station_ortho';
+/** Alt silhouette. Prefetched, not swapped in. */
+export const STATION_ORTHO_ALT='station_ortho_b';
 /** Relative drift from NOTES: far 0.1 → dust 1.0, scaled into world units. */
 export const SPACE_DRIFT={far:.1,nebula:.2,mid:.35,station:.62,dust:1};
 const DRIFT_SCALE=.08;
@@ -27,25 +28,32 @@ export function stationPlateRole(dist){
  return 'station_approach';
 }
 
-/** 45° steps. High spins about every 0.75s; performance holds longer. One frame at a time. */
-export function stationRotFrame(time,lite=false){
- const step=lite?1.6:.75;
- const f=Math.max(0,time||0)/step;
- const i=Math.floor(f)%STATION_ROT.length;
- const frac=f-Math.floor(f);
- const fade=frac>0.72?(frac-.72)/.28:0;
- return {index:i,next:(i+1)%STATION_ROT.length,fade};
+/** Continuous spin. Performance turns slower. One ortho sprite, no plate swap. */
+export function stationSpinAngle(time,lite=false){
+ const rate=lite?.12:.35;
+ return Math.max(0,time||0)*rate;
 }
-/** Additive blinks. Performance skips overlays. */
-export function stationLightPhase(time,lite=false){
- if(lite)return {bay:null,beacon:null,nav:false,window:false};
- const t=Math.max(0,time||0);
- return {
-  bay:Math.floor(t/1)%2?'lights_bay_flash':'lights_bay_idle',
-  beacon:Math.floor(t/.9)%2?'lights_beacon_b':'lights_beacon_a',
-  nav:(t%2.6)<.18,
-  window:true
- };
+/** Square screen size for the ortho hull. Exterior reads larger than approach. */
+export function stationOrthoSize(role,w,h){
+ const span=Math.min(w||1,h||1);
+ return span*(role==='station_exterior'?.62:.36);
+}
+/** Hangar fills the viewport. Exterior and approach stay world sprites. */
+export function stationPlateBox(role,w,h,iw=1920,ih=1080){
+ const aspect=(ih||1080)/(iw||1920);
+ if(role==='dock_bay'){
+  const bleed=1.18;
+  const s=Math.max((w||1)/(iw||1920),(h||1)/(ih||1080))*bleed;
+  return {dw:(iw||1920)*s,dh:(ih||1080)*s,cover:true};
+ }
+ const fit=role==='station_exterior'?Math.min(w*.96,h*1.15):Math.min(w,h)*.78;
+ return {dw:fit,dh:fit*aspect,cover:false};
+}
+/** Slide a cover plate with the station, but not so far that a side gutter opens. */
+export function coverAnchor(cx,cy,dw,dh,w,h){
+ const x=dw>=w?Math.min(dw/2,Math.max(w-dw/2,cx)):cx;
+ const y=dh>=h?Math.min(dh/2,Math.max(h-dh/2,cy)):cy;
+ return {x,y};
 }
 export function stationPlateAlpha(dist,role){
  if(role==='dock_bay')return .78;
@@ -99,22 +107,38 @@ function loadPlate(name,url){
  img.src=url;
  plates.set(name,img);
 }
+export function stationOrthoReady(){
+ return !!peekSpacePlate(STATION_ORTHO);
+}
 export function prefetchSpacePlates(){
  for(const name of SPACE_PLATES)loadPlate(name,spaceAssetUrl(name));
- for(const name of [...STATION_ROT,...STATION_LIGHTS])loadPlate(name,STATION_LIVE_DIR+name+'.png');
+ for(const name of [STATION_ORTHO,STATION_ORTHO_ALT])loadPlate(name,STATION_SPIN_DIR+name+'.png');
 }
 
 function blitCover(ctx,img,ox,oy,w,h,alpha,op){
  if(!img)return;
  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
  if(!iw||!ih)return;
- const scale=Math.max(w/iw,h/ih);
+ const bleed=1.04;
+ const scale=Math.max(w/iw,h/ih)*bleed;
  const dw=iw*scale,dh=ih*scale;
- const x=((ox%dw)+dw)%dw-dw,y=((oy%dh)+dh)%dh-dh;
+ const stepX=dw/bleed,stepY=dh/bleed;
+ const x=((ox%stepX)+stepX)%stepX-stepX,y=((oy%stepY)+stepY)%stepY-stepY;
  ctx.save();
  ctx.globalAlpha=alpha==null?1:alpha;
  ctx.globalCompositeOperation=op||'source-over';
- for(let iy=y;iy<h;iy+=dh)for(let ix=x;ix<w;ix+=dw)ctx.drawImage(img,ix,iy,dw,dh);
+ for(let iy=y;iy<h;iy+=stepY)for(let ix=x;ix<w;ix+=stepX)ctx.drawImage(img,ix,iy,dw,dh);
+ ctx.restore();
+}
+
+function blitSpin(ctx,img,x,y,size,angle,alpha){
+ if(!img||!(size>0))return;
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.rotate(angle||0);
+ ctx.globalAlpha=alpha==null?1:alpha;
+ ctx.globalCompositeOperation='source-over';
+ ctx.drawImage(img,-size/2,-size/2,size,size);
  ctx.restore();
 }
 
@@ -155,23 +179,17 @@ export function drawSpaceSky(ctx,opts={}){
   const zoom=opts.zoom||1;
   const sx=(near.station.x-(opts.camX||0))*zoom+w/2;
   const sy=(near.station.y-(opts.camY||0))*zoom+h/2;
-  const spin=role&&role!=='dock_bay'?stationRotFrame(opts.clock,lite):null;
-  const rot=spin&&peekSpacePlate(STATION_ROT[spin.index]);
-  const plate=rot||(role&&peekSpacePlate(role));
-  if(plate){
-   const iw=plate.naturalWidth||plate.width||1920,ih=plate.naturalHeight||plate.height||1080;
-   const fit=role==='dock_bay'?w*1.08:role==='station_exterior'?Math.min(w*.96,h*1.15):Math.min(w,h)*.78;
-   const dw=fit,dh=dw*(ih/iw);
-   const alpha=stationPlateAlpha(near.dist,role);
-   blitSprite(ctx,plate,sx,sy,dw,dh,alpha,'source-over');
-   if(rot){
-    const lights=stationLightPhase(opts.clock,lite);
-    const glow=(name,a)=>{const img=name&&peekSpacePlate(name);if(img)blitSprite(ctx,img,sx,sy,dw,dh,a,'lighter');};
-    glow(lights.bay,.8);
-    glow(lights.beacon,.72);
-    if(lights.nav)glow('lights_nav_pulse',.68);
-    if(lights.window)glow('window_glow',.32);
+  if(role==='dock_bay'){
+   const plate=peekSpacePlate(role);
+   if(plate){
+    const iw=plate.naturalWidth||plate.width||1920,ih=plate.naturalHeight||plate.height||1080;
+    const box=stationPlateBox(role,w,h,iw,ih);
+    const pin=coverAnchor(sx,sy,box.dw,box.dh,w,h);
+    blitSprite(ctx,plate,pin.x,pin.y,box.dw,box.dh,stationPlateAlpha(near.dist,role),'source-over');
    }
+  }else if(role){
+   const ortho=peekSpacePlate(STATION_ORTHO);
+   if(ortho)blitSpin(ctx,ortho,sx,sy,stationOrthoSize(role,w,h),stationSpinAngle(opts.clock,lite),stationPlateAlpha(near.dist,role));
   }
  }
  if(!lite)blitCover(ctx,peekSpacePlate('dust_parallax'),dust.x,dust.y,w,h,.4,'screen');
