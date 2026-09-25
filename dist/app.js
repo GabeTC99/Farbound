@@ -22,6 +22,8 @@ import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft,prefetchShipPlates} from './ship-render.mjs';
 prefetchShipPlates();
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
+import {drawSpaceSky,prefetchSpacePlates,spaceSkyReady} from './space-sky.mjs';
+prefetchSpacePlates();
 import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,createFpsMeter,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset,snapWorldCam,worldStroke,strokeBand,ringInView,starLayerIndex,starLayerOffset,blitWrapped,STAR_LAYER_DEPTHS,setRefreshKeepAlive,createFlightWakeLock,createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,bundledAssetHost} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icons={map:'<circle cx="7" cy="7" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="15" cy="18" r="2"/><path d="m9 7 7-1M8 9l6 7m3-8-2 8"/>',system:'<circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/>',missions:'<path d="M8 4H5v17h14V4h-3M9 2h6v5H9zM8 12h8m-8 4h6"/>',ship:'<path d="m12 2 8 19-8-4-8 4 8-19Zm0 4v9"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',fire:'<circle cx="12" cy="12" r="7"/><path d="M12 1v7m0 8v7M1 12h7m8 0h7"/>',close:'<path d="m6 6 12 12M18 6 6 18"/>',expand:'<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>'};
@@ -678,15 +680,15 @@ function localLight(x,y,a){
 function drawShip(x,y,a,color,size=19,enemy=false,thrust=0,boost=false){
  ctx.save();ctx.translate(x,y);ctx.rotate(a);
  const L=localLight(x,y,a);
- if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
- else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
+ if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
+ else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
  ctx.restore();
 }
 function drawSecurityShip(p,hostile=false){
  const f=FACTIONS.find(f=>f.id===p.faction),color=hostile?'#ee918b':(f?.color||'#9eb7bd');
  const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);
- drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
+ drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
  ctx.restore();
 }
 function drawPlayerShip(dt=1/60){
@@ -700,7 +702,7 @@ function drawPlayerShip(dt=1/60){
  else if(game.s.shield>0&&game.s.shield<st.shield&&game.time-game.lastDamage>4){ctx.globalAlpha=.14+.05*Math.sin(clock*2);circle(p.x,p.y,size+12,color,true);ctx.globalAlpha=1;}
  const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);ctx.transform(1,0,Math.tan(shipBank)*.35,1,0,0);
- drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
+ drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
  ctx.restore();
  if(boost){ctx.globalAlpha=.2;circle(p.x,p.y,size+28,hull.accent,true);ctx.globalAlpha=1;}
 }
@@ -709,7 +711,7 @@ function drawTrafficShip(tr){
  if(!lite){for(const t of tr.trail||[]){ctx.globalAlpha=Math.max(0,t.life*1.6);circle(t.x,t.y,1.6,color);}ctx.globalAlpha=1;}
  const L=localLight(tr.x,tr.y,tr.angle);
  ctx.save();ctx.translate(tr.x,tr.y);ctx.rotate(tr.angle);
- drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y,pixelScale:worldPx()});
+ drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
  ctx.restore();
  if(tr.status==='FUEL SCOOPING'){ctx.strokeStyle='#ffc68577';ctx.lineWidth=1.5;ctx.setLineDash([6,10]);ctx.beginPath();ctx.moveTo(game.star.x,game.star.y);ctx.lineTo(tr.x,tr.y);ctx.stroke();ctx.setLineDash([]);}
  if(tr.status==='MINING RUN'){const rock=game.asteroids[0];if(rock){ctx.strokeStyle='#9ad7c988';ctx.lineWidth=1.4;ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(tr.x,tr.y);ctx.lineTo(rock.x+Math.sin(tr.work)*12,rock.y+Math.cos(tr.work)*12);ctx.stroke();ctx.setLineDash([]);}}
@@ -742,8 +744,9 @@ function drawStation(s=game.station){
  ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);
  ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=hair;
  if(!lite){ctx.fillStyle='#00081055';ctx.beginPath();ctx.ellipse(8,10,66,54,0,0,Math.PI*2);ctx.fill();}
+ const warm=spaceSkyReady()&&!lite;
  const hub=ctx.createLinearGradient(-L.x*60,-L.y*60,L.x*60,L.y*60);
- hub.addColorStop(0,lite?'#3a5864':'#6a94a3');hub.addColorStop(.5,'#29434f');hub.addColorStop(1,'#101c24');
+ hub.addColorStop(0,lite?'#3a5864':warm?'#d9c4a4':'#6a94a3');hub.addColorStop(.5,'#29434f');hub.addColorStop(1,'#101c24');
  ctx.fillStyle=hub;ctx.beginPath();ctx.arc(0,0,51,0,Math.PI*2);ctx.fill();
  circle(0,0,64,'#527d8c',true);
  for(let i=0;i<(lite?3:6);i++){
@@ -756,7 +759,7 @@ function drawStation(s=game.station){
   ctx.restore();
  }
  const core=ctx.createRadialGradient(-L.x*8,-L.y*8,2,0,0,22);
- core.addColorStop(0,lite?'#2a4850':'#8fd4d0');core.addColorStop(1,'#132833');
+ core.addColorStop(0,lite?'#2a4850':warm?'#f0e2cc':'#8fd4d0');core.addColorStop(1,'#132833');
  ctx.fillStyle=core;ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
  circle(0,0,22,'#7db9bd',true);
  ctx.restore();
@@ -766,7 +769,7 @@ function drawStation(s=game.station){
 }
 function drawStar(p=game.star){
  const col=p.color||'#e9be82';
- drawStarBody(ctx,p,{lite:liteFX(),clock,pixelScale:cam.zoom*dpr});
+ drawStarBody(ctx,p,{lite:liteFX(),clock,pixelScale:cam.zoom*dpr,skipGlow:spaceSkyReady()&&p.primary!==false});
  label(p.name+(p.spectralLabel?' · '+p.spectralLabel:''),p.x,p.y+p.r+45,col);
  if(liteFX())return;
  const viewR=(Math.hypot(width,height)*.5)/cam.zoom+80;
@@ -913,6 +916,10 @@ function warmSkyCaches(){
 }
 function drawSkyBackdrop(){
  const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
+ const w0=Math.max(1,width|0),h0=Math.max(1,height|0);
+ const star=(game.stars||[game.star]).find(s=>s&&s.primary!==false)||game.star;
+ fillSpaceClear(ctx,dpr,w0,h0,'#05070c');
+ if(drawSpaceSky(ctx,{width:w0,height:h0,camX:cam.x,camY:cam.y,zoom:cam.zoom,skyKind:sky.kind,lite,soft,stations:game.stations,player:game.player,star}))return;
  const w=Math.max(1,width|0),h=Math.max(1,height|0);
  // Allocate / bake wash, galaxy, and dim-star layers first. A full-viewport
  // OffscreenCanvas can evict the main GPU buffer (Fold: uninitialized #fff).
