@@ -7,8 +7,6 @@ export const SPACE_PLATES=['starfield_far','starfield_mid','nebula_soft_a','nebu
 export const STATION_LIVE_DIR='assets/space/station_live/';
 export const STATION_ROT=['station_rot_00','station_rot_01','station_rot_02','station_rot_03','station_rot_04','station_rot_05','station_rot_06','station_rot_07'];
 export const STATION_LIGHTS=['lights_bay_idle','lights_bay_flash','lights_beacon_a','lights_beacon_b','lights_nav_pulse','window_glow'];
-/** Full-frame station renders, not light masks. Additive blit stacks a second silhouette and a white edge. */
-export const STATION_LIGHT_SKIP=['lights_bay_idle','lights_bay_flash','lights_beacon_b','window_glow'];
 /** Relative drift from NOTES: far 0.1 → dust 1.0, scaled into world units. */
 export const SPACE_DRIFT={far:.1,nebula:.2,mid:.35,station:.62,dust:1};
 const DRIFT_SCALE=.08;
@@ -29,7 +27,7 @@ export function stationPlateRole(dist){
  return 'station_approach';
 }
 
-/** 45° steps. High spins about every 0.75s with a short crossfade; performance holds longer. */
+/** 45° steps. High spins about every 0.75s; performance holds longer. One frame at a time. */
 export function stationRotFrame(time,lite=false){
  const step=lite?1.6:.75;
  const f=Math.max(0,time||0)/step;
@@ -38,13 +36,15 @@ export function stationRotFrame(time,lite=false){
  const fade=frac>0.72?(frac-.72)/.28:0;
  return {index:i,next:(i+1)%STATION_ROT.length,fade};
 }
-/** Additive blinks. Only sparse masks. Performance skips overlays. Bay/beacon-b/window plates are full stations, so they stay off. */
+/** Additive blinks. Performance skips overlays. */
 export function stationLightPhase(time,lite=false){
- if(lite)return {beacon:null,nav:false};
+ if(lite)return {bay:null,beacon:null,nav:false,window:false};
  const t=Math.max(0,time||0);
  return {
-  beacon:Math.floor(t/.9)%2?null:'lights_beacon_a',
-  nav:(t%2.6)<.18
+  bay:Math.floor(t/1)%2?'lights_bay_flash':'lights_bay_idle',
+  beacon:Math.floor(t/.9)%2?'lights_beacon_b':'lights_beacon_a',
+  nav:(t%2.6)<.18,
+  window:true
  };
 }
 export function stationPlateAlpha(dist,role){
@@ -166,13 +166,11 @@ export function drawSpaceSky(ctx,opts={}){
    blitSprite(ctx,plate,sx,sy,dw,dh,alpha,'source-over');
    if(rot){
     const lights=stationLightPhase(opts.clock,lite);
-    const glow=(name,a)=>{
-     if(!name||STATION_LIGHT_SKIP.includes(name))return;
-     const img=peekSpacePlate(name);
-     if(img)blitSprite(ctx,img,sx,sy,dw,dh,a,'lighter');
-    };
-    glow(lights.beacon,.75);
-    if(lights.nav)glow('lights_nav_pulse',.7);
+    const glow=(name,a)=>{const img=name&&peekSpacePlate(name);if(img)blitSprite(ctx,img,sx,sy,dw,dh,a,'lighter');};
+    glow(lights.bay,.8);
+    glow(lights.beacon,.72);
+    if(lights.nav)glow('lights_nav_pulse',.68);
+    if(lights.window)glow('window_glow',.32);
    }
   }
  }
