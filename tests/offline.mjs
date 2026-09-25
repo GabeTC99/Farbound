@@ -10,7 +10,7 @@ stores.set('farbound-v1.0.0',new Map());stores.set('unrelated-cache',new Map());
 const self={location:{origin:new URL(origin).origin},registration:{scope:origin},addEventListener:(name,fn)=>handlers[name]=fn,skipWaiting:async()=>{skip=true;},clients:{claim:async()=>{claimed=true;}}};
 vm.runInNewContext(await readFile(path.join(root,'sw.js'),'utf8'),{self,caches,Request,URL,fetch:request=>{calls.push(request);throw Error('Offline network unavailable');}});
 async function event(name,extra={}){let pending;handlers[name]({...extra,waitUntil:p=>pending=p,respondWith:p=>pending=p});return await pending;}
-await event('install');assert(skip);await event('activate');assert(claimed);assert(!stores.has('farbound-v1.0.0'));assert(stores.has('unrelated-cache'));const cache=stores.get('farbound-v3.0.0-space6');assert.equal(cache.size,208);
+await event('install');assert(skip);await event('activate');assert(claimed);assert(!stores.has('farbound-v1.0.0'));assert(stores.has('unrelated-cache'));const cache=stores.get('farbound-v3.0.0-space7');assert.equal(cache.size,208);
 for(const url of cache.keys()){const response=await event('fetch',{request:new Request(url+'?reload=2')});assert.equal(response.url,url);}
 assert.equal(calls.length,0);let status;await event('message',{data:{type:'CACHE_STATUS'},ports:[{postMessage:message=>status=message}]});assert(status.ready);assert.equal(status.release,'3.0.0');
 skip=false;await event('message',{data:{type:'SKIP_WAITING'}});assert(skip);

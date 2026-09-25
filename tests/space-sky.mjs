@@ -26,7 +26,7 @@ const near=nearestStation([{type:'station',x:10,y:0,id:'a'},{type:'station',x:40
 assert.equal(near.station.id,'a');
 assert.equal(near.dist,10);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
-assert.match(sw,/farbound-v3\.0\.0-space6/);
+assert.match(sw,/farbound-v3\.0\.0-space7/);
 assert.equal(STATION_ROT.length,8);
 const rot=stationRotFrame(0.8,false);
 assert.equal(rot.index,1);
