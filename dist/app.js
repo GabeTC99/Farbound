@@ -22,7 +22,7 @@ import {getHullDef,drawHullDef} from './hull-defs.mjs';
 import {drawCraft,drawSecurityCraft,drawTrafficCraft,drawEnemyCraft,prefetchShipPlates} from './ship-render.mjs';
 prefetchShipPlates();
 import {drawStarBody,warmStarTexture} from './star-render.mjs';
-import {drawSpaceSky,prefetchSpacePlates,spaceSkyReady} from './space-sky.mjs';
+import {drawSpaceSky,prefetchSpacePlates,spaceSkyReady,nearestStation} from './space-sky.mjs';
 prefetchSpacePlates();
 import {createFrameClock,resetFrameClock,beginFrame,followCam,lerpAngle,canvasScale,viewportSize,createPacer,createFpsMeter,FIXED_DT,starScreenPos,skyParallax,skyCacheKey,fillSpaceClear,SPACE_CLEAR,SPACE_CONTEXT,backingSize,backingNeedsReset,snapWorldCam,worldStroke,strokeBand,ringInView,starLayerIndex,starLayerOffset,blitWrapped,STAR_LAYER_DEPTHS,setRefreshKeepAlive,createFlightWakeLock,createGpuKeepAlive,readNativeRefreshLock,nativeAndroidBridge,bundledAssetHost} from './flight-loop.mjs';
 const $=id=>document.getElementById(id),fmt=n=>Math.round(n).toLocaleString(),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -916,16 +916,17 @@ function warmSkyCaches(){
 }
 function drawSkyBackdrop(){
  const sky=systemSky(game.sys),lite=liteFX(),soft=softFX();
- const w0=Math.max(1,width|0),h0=Math.max(1,height|0);
- const star=(game.stars||[game.star]).find(s=>s&&s.primary!==false)||game.star;
- fillSpaceClear(ctx,dpr,w0,h0,'#05070c');
- if(drawSpaceSky(ctx,{width:w0,height:h0,camX:cam.x,camY:cam.y,zoom:cam.zoom,skyKind:sky.kind,lite,soft,stations:game.stations,player:game.player,star}))return;
  const w=Math.max(1,width|0),h=Math.max(1,height|0);
  // Allocate / bake wash, galaxy, and dim-star layers first. A full-viewport
  // OffscreenCanvas can evict the main GPU buffer (Fold: uninitialized #fff).
  const layer=ensureSkyLayer(w,h,sky,lite,soft);
  const galaxy=ensureGalaxyLayer(w,h,sky,lite,soft);
  const layers=ensureStarLayers(w,h,sky,lite,soft);
+ const star=(game.stars||[game.star]).find(s=>s&&s.primary!==false)||game.star;
+ if(spaceSkyReady()){
+  fillSpaceClear(ctx,dpr,w,h,'#05070c');
+  if(drawSpaceSky(ctx,{width:w,height:h,camX:cam.x,camY:cam.y,zoom:cam.zoom,skyKind:sky.kind,lite,soft,stations:game.stations,player:game.player,star}))return;
+ }
  fillSpaceClear(ctx,dpr,width,height,sky.bg||SPACE_CLEAR);
  if(galaxy){
   const par=skyParallax(cam.x,cam.y);
@@ -1193,7 +1194,7 @@ function loop(now){
  if(panel==='system-map')drawSystemMap();
  const onDeck=!!(game.onfoot&&game.s.docked),planetFeet=!!(game.onfoot&&game.surface);
  const p=poseBody(),ambience=Number.isFinite(game.s.engineVolume)?game.s.engineVolume:.35,sky=systemSky(game.sys).kind;
- engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral',hull:game.s.ship,thrust:(!game.s.docked&&!game.surface&&!game.onfoot)?(game.player.thrust||0):0,ships:(!game.surface&&!game.onfoot)?[...(game.traffic||[]),...(game.patrols||[]),...(game.enemies||[])]:[],listenerX:p.x||0,listenerY:p.y||0});
+ engine.update({moving:Math.min(1,Math.hypot(p.vx||0,p.vy||0)/(game.surface&&!game.onfoot?140:onDeck||planetFeet?280:getStats(game.s).speed)),boost:game.boost||touch.boost||padBoost,volume:ambience,enabled:game.s.sound,paused:!started||(simPaused()&&!onDeck&&!planetFeet),surface:!!game.surface&&!game.onfoot,station:onDeck,planetFeet,sky,surfaceKind:game.surface?.kindId||'mineral',hull:game.s.ship,thrust:(!game.s.docked&&!game.surface&&!game.onfoot)?(game.player.thrust||0):0,ships:(!game.surface&&!game.onfoot)?[...(game.traffic||[]),...(game.patrols||[]),...(game.enemies||[])]:[],listenerX:p.x||0,listenerY:p.y||0,docked:!!game.s.docked,stationDist:(!game.surface&&!game.onfoot)?(nearestStation(game.stations,game.player)?.dist??null):null});
  try{engine.setFoldCharge(started&&game.jump&&!simPaused()?game.jump.progress/3:0,ambience,!!game.s.sound&&started&&!document.hidden);}catch{}
  drainAudioCues();
  if(now-lastHUD>120){updateHUD();drainEvents();lastHUD=now;}
