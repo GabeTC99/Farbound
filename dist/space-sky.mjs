@@ -47,6 +47,23 @@ export function stationLightPhase(time,lite=false){
   window:true
  };
 }
+/** Hangar fills the viewport. Exterior and approach stay world sprites. */
+export function stationPlateBox(role,w,h,iw=1920,ih=1080){
+ const aspect=(ih||1080)/(iw||1920);
+ if(role==='dock_bay'){
+  const bleed=1.18;
+  const s=Math.max((w||1)/(iw||1920),(h||1)/(ih||1080))*bleed;
+  return {dw:(iw||1920)*s,dh:(ih||1080)*s,cover:true};
+ }
+ const fit=role==='station_exterior'?Math.min(w*.96,h*1.15):Math.min(w,h)*.78;
+ return {dw:fit,dh:fit*aspect,cover:false};
+}
+/** Slide a cover plate with the station, but not so far that a side gutter opens. */
+export function coverAnchor(cx,cy,dw,dh,w,h){
+ const x=dw>=w?Math.min(dw/2,Math.max(w-dw/2,cx)):cx;
+ const y=dh>=h?Math.min(dh/2,Math.max(h-dh/2,cy)):cy;
+ return {x,y};
+}
 export function stationPlateAlpha(dist,role){
  if(role==='dock_bay')return .78;
  if(role==='station_exterior')return .72;
@@ -108,13 +125,15 @@ function blitCover(ctx,img,ox,oy,w,h,alpha,op){
  if(!img)return;
  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
  if(!iw||!ih)return;
- const scale=Math.max(w/iw,h/ih);
+ const bleed=1.04;
+ const scale=Math.max(w/iw,h/ih)*bleed;
  const dw=iw*scale,dh=ih*scale;
- const x=((ox%dw)+dw)%dw-dw,y=((oy%dh)+dh)%dh-dh;
+ const stepX=dw/bleed,stepY=dh/bleed;
+ const x=((ox%stepX)+stepX)%stepX-stepX,y=((oy%stepY)+stepY)%stepY-stepY;
  ctx.save();
  ctx.globalAlpha=alpha==null?1:alpha;
  ctx.globalCompositeOperation=op||'source-over';
- for(let iy=y;iy<h;iy+=dh)for(let ix=x;ix<w;ix+=dw)ctx.drawImage(img,ix,iy,dw,dh);
+ for(let iy=y;iy<h;iy+=stepY)for(let ix=x;ix<w;ix+=stepX)ctx.drawImage(img,ix,iy,dw,dh);
  ctx.restore();
 }
 
@@ -160,13 +179,14 @@ export function drawSpaceSky(ctx,opts={}){
   const plate=rot||(role&&peekSpacePlate(role));
   if(plate){
    const iw=plate.naturalWidth||plate.width||1920,ih=plate.naturalHeight||plate.height||1080;
-   const fit=role==='dock_bay'?w*1.08:role==='station_exterior'?Math.min(w*.96,h*1.15):Math.min(w,h)*.78;
-   const dw=fit,dh=dw*(ih/iw);
+   const box=stationPlateBox(role,w,h,iw,ih);
+   const dw=box.dw,dh=box.dh;
+   const pin=box.cover?coverAnchor(sx,sy,dw,dh,w,h):{x:sx,y:sy};
    const alpha=stationPlateAlpha(near.dist,role);
-   blitSprite(ctx,plate,sx,sy,dw,dh,alpha,'source-over');
+   blitSprite(ctx,plate,pin.x,pin.y,dw,dh,alpha,'source-over');
    if(rot){
     const lights=stationLightPhase(opts.clock,lite);
-    const glow=(name,a)=>{const img=name&&peekSpacePlate(name);if(img)blitSprite(ctx,img,sx,sy,dw,dh,a,'lighter');};
+    const glow=(name,a)=>{const img=name&&peekSpacePlate(name);if(img)blitSprite(ctx,img,pin.x,pin.y,dw,dh,a,'lighter');};
     glow(lights.bay,.8);
     glow(lights.beacon,.72);
     if(lights.nav)glow('lights_nav_pulse',.68);

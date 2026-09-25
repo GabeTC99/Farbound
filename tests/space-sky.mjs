@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {SPACE_PLATES,nebulaPlate,stationPlateRole,stationPlateAlpha,spaceParallax,sunScreen,sunInView,nearestStation,SPACE_DRIFT,stationRotFrame,stationLightPhase,STATION_ROT,STATION_LIGHTS} from '../dist/space-sky.mjs';
+import {SPACE_PLATES,nebulaPlate,stationPlateRole,stationPlateAlpha,spaceParallax,sunScreen,sunInView,nearestStation,SPACE_DRIFT,stationRotFrame,stationLightPhase,STATION_ROT,STATION_LIGHTS,stationPlateBox,coverAnchor} from '../dist/space-sky.mjs';
 
 assert.equal(SPACE_PLATES.length,11);
 assert.equal(nebulaPlate('nebula'),'nebula_soft_a');
@@ -26,7 +26,7 @@ const near=nearestStation([{type:'station',x:10,y:0,id:'a'},{type:'station',x:40
 assert.equal(near.station.id,'a');
 assert.equal(near.dist,10);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
-assert.match(sw,/farbound-v3\.0\.0-space8/);
+assert.match(sw,/farbound-v3\.0\.0-space9/);
 assert.equal(STATION_ROT.length,8);
 const rot=stationRotFrame(0.8,false);
 assert.equal(rot.index,1);
@@ -49,6 +49,14 @@ assert.equal(lite.window,false);
 for(const name of ['lights_bay_idle','lights_bay_flash','lights_beacon_a','lights_beacon_b','lights_nav_pulse','window_glow'])assert.ok(STATION_LIGHTS.includes(name));
 const skySrc=readFileSync(new URL('../dist/space-sky.mjs',import.meta.url),'utf8');
 assert.ok(!/spin\.fade/.test(skySrc),'rot frames are not crossfaded into a second silhouette');
+const phone=stationPlateBox('dock_bay',390,844);
+assert.ok(phone.cover&&phone.dw>=390&&phone.dh>=844,'hangar covers a tall phone');
+const wide=stationPlateBox('dock_bay',844,390);
+assert.ok(wide.dw>=844&&wide.dh>=390,'hangar covers a wide phone');
+const pinned=coverAnchor(40,20,phone.dw,phone.dh,390,844);
+assert.ok(pinned.x-phone.dw/2<=0&&pinned.x+phone.dw/2>=390,'cover plate cannot slide a side gutter into view');
+assert.ok(pinned.y-phone.dh/2<=0&&pinned.y+phone.dh/2>=844);
+assert.equal(stationPlateBox('station_exterior',390,844).cover,false);
 assert.match(sw,/space-sky\.mjs/);
 for(const name of SPACE_PLATES)assert.match(sw,new RegExp('assets/space/'+name+'\\.png'));
 console.log('PASS Space plates pick nebula, station role, and parallax order');
