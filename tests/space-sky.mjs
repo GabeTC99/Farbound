@@ -26,7 +26,7 @@ const near=nearestStation([{type:'station',x:10,y:0,id:'a'},{type:'station',x:40
 assert.equal(near.station.id,'a');
 assert.equal(near.dist,10);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
-assert.match(sw,/farbound-v3\.0\.0-space1/);
+assert.match(sw,/farbound-v3\.0\.0-space2/);
 assert.match(sw,/space-sky\.mjs/);
 for(const name of SPACE_PLATES)assert.match(sw,new RegExp('assets/space/'+name+'\\.png'));
 console.log('PASS Space plates pick nebula, station role, and parallax order');

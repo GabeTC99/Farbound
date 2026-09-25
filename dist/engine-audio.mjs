@@ -107,6 +107,22 @@ export function gritLevel(kindId){
 /** Ship MP3s into the cue bus. Thruster loops sit under the sky bed; flyby/land are a step hotter. */
 export const SHIP_THRUST_LEVEL=.30;
 export const SHIP_SHOT_LEVEL=.42;
+/** Outer-space beds into the cue bus. Quieter than ship thrust (0.30) and grit. */
+export const SPACE_AUDIO_DIR='assets/audio/space/';
+export const SPACE_AUDIO_STEMS=['vacuum_bed','vacuum_radio','station_approach','station_dock'];
+export const SPACE_BED_LEVEL=.16;
+export const SPACE_RADIO_LEVEL=.08;
+export const SPACE_APPROACH_LEVEL=.20;
+export const SPACE_DOCK_LEVEL=.26;
+export const SPACE_HEAR=2400;
+export const SPACE_RADIO_GAP=12;
+export function spaceAudioFile(stem){return SPACE_AUDIO_DIR+stem+'.mp3';}
+/** 0 when farther than the space1 approach band. Rises toward the station. */
+export function spaceApproachGain(dist){
+ if(!(dist>=0)||dist>SPACE_HEAR)return 0;
+ const t=1-dist/SPACE_HEAR;
+ return SPACE_APPROACH_LEVEL*(.28+.72*t);
+}
 export const NPC_THRUSTER_CAP=3;
 export const NPC_HEAR=780;
 export const NPC_FLYBY=280;
@@ -175,7 +191,11 @@ export const AUDIO_CUES={
   ['ambient_'+id,cueDef('loop','ambient_'+id)],
   ['grit_'+id,cueDef('oneshot','grit_'+id,{solo:true})]
  ])),
- ...Object.fromEntries(SHIP_AUDIO_STEMS.map(stem=>[stem,{type:stem.startsWith('thruster_')?'loop':'oneshot',file:shipAudioFile(stem)}]))
+ ...Object.fromEntries(SHIP_AUDIO_STEMS.map(stem=>[stem,{type:stem.startsWith('thruster_')?'loop':'oneshot',file:shipAudioFile(stem)}])),
+ vacuum_bed:{type:'loop',file:spaceAudioFile('vacuum_bed'),space:'bed'},
+ vacuum_radio:{type:'oneshot',file:spaceAudioFile('vacuum_radio'),solo:true,space:'radio'},
+ station_approach:{type:'loop',file:spaceAudioFile('station_approach'),space:'approach'},
+ station_dock:{type:'oneshot',file:spaceAudioFile('station_dock'),space:'dock'}
 };
 export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
@@ -236,6 +256,21 @@ export class EngineAudio{
    this.shipShotGain=g;
   }
  }
+ ensureSpaceGains(){
+  this.ensureCueGain();
+  if(!this.context||!this.cueGain)return;
+  const make=(key,level)=>{
+   if(this[key])return;
+   const g=this.context.createGain();
+   g.gain.value=level;
+   g.connect(this.cueGain);
+   this[key]=g;
+  };
+  make('spaceBedGain',SPACE_BED_LEVEL);
+  make('spaceRadioGain',SPACE_RADIO_LEVEL);
+  make('spaceApproachGain',0);
+  make('spaceDockGain',SPACE_DOCK_LEVEL);
+ }
  gritKind(canon){return String(canon||'').startsWith('grit_')?canon.slice(5):null;}
  ensureCueGain(){
   if(this.cueGain||!this.context)return;
@@ -288,6 +323,10 @@ export class EngineAudio{
    this.ensureShipGains();
    bus=shipKind==='thrust'?this.shipThrustGain:this.shipShotGain;
    if(!bus)return;
+  }else if(def.space){
+   this.ensureSpaceGains();
+   bus={bed:this.spaceBedGain,radio:this.spaceRadioGain,approach:this.spaceApproachGain,dock:this.spaceDockGain}[def.space];
+   if(!bus)return;
   }
   const src=this.context.createBufferSource();
   src.buffer=this.copyCueBuffer(buffer);
@@ -307,6 +346,27 @@ export class EngineAudio{
   this.cuePreloaded=true;
   for(const stem of PLANETARY_AUDIO_STEMS)this.ensureCueBuffer(planetaryAudioFile(stem)).catch(()=>{});
   for(const stem of SHIP_AUDIO_STEMS)this.ensureCueBuffer(shipAudioFile(stem)).catch(()=>{});
+  for(const stem of SPACE_AUDIO_STEMS)this.ensureCueBuffer(spaceAudioFile(stem)).catch(()=>{});
+ }
+ syncSpaceAudio({live=false,docked=false,stationDist=null,now=0}={}){
+  const flight=!!live&&!docked;
+  if(flight){
+   if(!this.isCueLooping('vacuum_bed'))this.playCue('vacuum_bed');
+  }else if(this.isCueLooping('vacuum_bed'))this.stopCue('vacuum_bed');
+  if(!flight)this.spaceRadioAt=null;
+  else{
+   const t=now||0;
+   if(this.spaceRadioAt==null)this.spaceRadioAt=t+SPACE_RADIO_GAP*.6;
+   else if(t>=this.spaceRadioAt){this.playCue('vacuum_radio');this.spaceRadioAt=t+SPACE_RADIO_GAP;}
+  }
+  const approach=flight?spaceApproachGain(stationDist):0;
+  if(approach>0.02){
+   if(!this.isCueLooping('station_approach'))this.playCue('station_approach');
+   try{if(this.spaceApproachGain)this.spaceApproachGain.gain.value=approach;}catch{}
+  }else if(this.isCueLooping('station_approach'))this.stopCue('station_approach');
+  if(this.spaceWasDocked==null)this.spaceWasDocked=!!docked;
+  else if(docked&&!this.spaceWasDocked&&live)this.playCue('station_dock');
+  this.spaceWasDocked=!!docked;
  }
  syncHullThruster({hull,thrust=0,live=false}={}){
   const want=live&&thrust>0.08?shipAudioCue('thruster',hull):null;
@@ -499,7 +559,7 @@ export class EngineAudio{
   this.amb.start();
   this.ambReady=true;
  }
- update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0,ships=null,listenerX=0,listenerY=0}={}){
+ update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0,ships=null,listenerX=0,listenerY=0,docked=false,stationDist=null}={}){
   const vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
   const live=enabled&&!paused;
   this.setCueVolume(live?vol:0);
@@ -509,6 +569,7 @@ export class EngineAudio{
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
   this.syncHullThruster({hull,thrust,live:live&&!station&&!surface&&!planetFeet});
   this.syncNpcShips({ships,x:listenerX,y:listenerY,live:live&&!surface&&!planetFeet});
+  this.syncSpaceAudio({live:live&&!surface&&!planetFeet&&!station,docked:!!docked||!!station,stationDist,now:t});
   const hullTone=this.hullThrusterOn?0:1;
   this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*hullTone*.32:0,t,.12);
   this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
