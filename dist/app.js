@@ -680,15 +680,15 @@ function localLight(x,y,a){
 function drawShip(x,y,a,color,size=19,enemy=false,thrust=0,boost=false){
  ctx.save();ctx.translate(x,y);ctx.rotate(a);
  const L=localLight(x,y,a);
- if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
- else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
+ if(enemy)drawEnemyCraft(ctx,{size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
+ else drawCraft(ctx,{kind:'wren',size,color,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
 }
 function drawSecurityShip(p,hostile=false){
  const f=FACTIONS.find(f=>f.id===p.faction),color=hostile?'#ee918b':(f?.color||'#9eb7bd');
  const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);
- drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
+ drawSecurityCraft(ctx,{size:18,color,thrust:p.thrust||0,hostile,alert:p.status==='RESPONDING'||p.status==='ENGAGING',clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
 }
 function drawPlayerShip(dt=1/60){
@@ -702,7 +702,7 @@ function drawPlayerShip(dt=1/60){
  else if(game.s.shield>0&&game.s.shield<st.shield&&game.time-game.lastDamage>4){ctx.globalAlpha=.14+.05*Math.sin(clock*2);circle(p.x,p.y,size+12,color,true);ctx.globalAlpha=1;}
  const L=localLight(p.x,p.y,p.angle);
  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.angle);ctx.transform(1,0,Math.tan(shipBank)*.35,1,0,0);
- drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
+ drawCraft(ctx,{kind:hull.id,size,color,accent:hull.accent,thrust,boost,clock,lite:liteFX(),lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
  if(boost){ctx.globalAlpha=.2;circle(p.x,p.y,size+28,hull.accent,true);ctx.globalAlpha=1;}
 }
@@ -711,7 +711,7 @@ function drawTrafficShip(tr){
  if(!lite){for(const t of tr.trail||[]){ctx.globalAlpha=Math.max(0,t.life*1.6);circle(t.x,t.y,1.6,color);}ctx.globalAlpha=1;}
  const L=localLight(tr.x,tr.y,tr.angle);
  ctx.save();ctx.translate(tr.x,tr.y);ctx.rotate(tr.angle);
- drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y,pixelScale:worldPx(),rimWarm:spaceSkyReady()});
+ drawTrafficCraft(ctx,tr,{clock,lite,thrust:tr.thrust,lightX:L.x,lightY:L.y,pixelScale:worldPx()});
  ctx.restore();
  if(tr.status==='FUEL SCOOPING'){ctx.strokeStyle='#ffc68577';ctx.lineWidth=1.5;ctx.setLineDash([6,10]);ctx.beginPath();ctx.moveTo(game.star.x,game.star.y);ctx.lineTo(tr.x,tr.y);ctx.stroke();ctx.setLineDash([]);}
  if(tr.status==='MINING RUN'){const rock=game.asteroids[0];if(rock){ctx.strokeStyle='#9ad7c988';ctx.lineWidth=1.4;ctx.setLineDash([4,8]);ctx.beginPath();ctx.moveTo(tr.x,tr.y);ctx.lineTo(rock.x+Math.sin(tr.work)*12,rock.y+Math.cos(tr.work)*12);ctx.stroke();ctx.setLineDash([]);}}

@@ -572,9 +572,10 @@ export class EngineAudio{
   this.syncSpaceAudio({live:live&&!surface&&!planetFeet&&!station,docked:!!docked||!!station,stationDist,now:t});
   const hullTone=this.hullThrusterOn?0:1;
   this.gain.gain.setTargetAtTime(live&&!station&&!planetFeet?vol*n*hullTone*.32:0,t,.12);
-  this.low.frequency.setTargetAtTime(38+n*24+(boost?14:0)+(surface?5:0),t,.18);
-  this.mid.frequency.setTargetAtTime(77+n*45+(boost?19:0),t,.18);
-  this.filter.frequency.setTargetAtTime(100+n*150+(boost?75:0),t,.2);
+  // Pitch stays put. Speed used to glide the oscillators, and BRAKE's sudden slowdown whistled.
+  this.low.frequency.setTargetAtTime(surface?46:42,t,.4);
+  this.mid.frequency.setTargetAtTime(84,t,.4);
+  this.filter.frequency.setTargetAtTime(surface?160:130,t,.4);
   const stationHum=live&&station&&!planetFeet;
   const bed=Math.max(vol,.25);
   if(this.humGain)this.humGain.gain.setTargetAtTime(stationHum?bed*.26:0,t,.4);

@@ -554,12 +554,6 @@ export function drawCraft(ctx,opts={}){
   ctx.imageSmoothingEnabled=true;
   ctx.drawImage(plate,-w/2,-h/2,w,h);
   ctx.imageSmoothingEnabled=smooth;
-  if(opts.rimWarm&&!lite){
-   const len=Math.hypot(lx,ly)||1,ux=lx/len,uy=ly/len;
-   const rim=ctx.createLinearGradient(-ux*w*.5,-uy*h*.5,ux*w*.5,uy*h*.5);
-   rim.addColorStop(0,'#0000');rim.addColorStop(.62,'#0000');rim.addColorStop(1,'#ffe6c466');
-   ctx.save();ctx.globalCompositeOperation='source-atop';ctx.fillStyle=rim;ctx.fillRect(-w/2,-h/2,w,h);ctx.restore();
-  }
   return;
  }
  drawVolume(ctx,def,size,art,lx,ly,art.sheen,lite,!!opts.hostile);

@@ -385,7 +385,10 @@ assert.match(manifest,/"fullscreen"/);
 
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
 assert.match(sw,/flight-loop\.mjs/);
-assert.match(sw,/farbound-v3\.0\.0-space2/);
+assert.match(sw,/farbound-v3\.0\.0-space3/);
+const hullSrc=readFileSync(new URL('../dist/ship-render.mjs',import.meta.url),'utf8');
+assert.ok(!/ffe6c466/.test(hullSrc),'plated hulls do not get a warm nose rim');
+assert.ok(!/rimWarm/.test(app),'flight draw does not paint a rim over hull plates');
 const flightHead=app.slice(app.indexOf('cam.zoom=started?'),app.indexOf('drawSkyBackdrop();'));
 assert.ok(!flightHead.includes('fillSpaceClear('),'flight must not fill before the sky bake-then-fill');
 assert.match(app,/worldInView\(p\.x,p\.y,\(p\.r\|\|0\)\+90\)/);
