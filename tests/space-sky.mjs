@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {SPACE_PLATES,nebulaPlate,stationPlateRole,stationPlateAlpha,spaceParallax,sunScreen,sunInView,nearestStation,SPACE_DRIFT,stationRotFrame,stationLightPhase,STATION_ROT} from '../dist/space-sky.mjs';
+import {SPACE_PLATES,nebulaPlate,stationPlateRole,stationPlateAlpha,spaceParallax,sunScreen,sunInView,nearestStation,SPACE_DRIFT,stationRotFrame,stationLightPhase,STATION_ROT,STATION_LIGHT_SKIP} from '../dist/space-sky.mjs';
 
 assert.equal(SPACE_PLATES.length,11);
 assert.equal(nebulaPlate('nebula'),'nebula_soft_a');
@@ -26,7 +26,7 @@ const near=nearestStation([{type:'station',x:10,y:0,id:'a'},{type:'station',x:40
 assert.equal(near.station.id,'a');
 assert.equal(near.dist,10);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
-assert.match(sw,/farbound-v3\.0\.0-space5/);
+assert.match(sw,/farbound-v3\.0\.0-space6/);
 assert.equal(STATION_ROT.length,8);
 const rot=stationRotFrame(0.8,false);
 assert.equal(rot.index,1);
@@ -34,9 +34,12 @@ assert.equal(rot.next,2);
 assert.equal(stationRotFrame(0,false).index,0);
 assert.ok(stationRotFrame(2,true).index<stationRotFrame(2,false).index,'performance spin is slower');
 const lights=stationLightPhase(0,false);
-assert.equal(lights.bay,'lights_bay_idle');
-assert.equal(stationLightPhase(1,false).bay,'lights_bay_flash');
-assert.equal(stationLightPhase(0,true).bay,null);
+assert.equal(lights.beacon,'lights_beacon_a');
+assert.equal(stationLightPhase(.9,false).beacon,null);
+assert.equal(stationLightPhase(0,true).beacon,null);
+for(const name of STATION_LIGHT_SKIP)assert.ok(name!==lights.beacon,'dense station plates are not light masks');
+const skySrc=readFileSync(new URL('../dist/space-sky.mjs',import.meta.url),'utf8');
+assert.ok(!/spin\.fade/.test(skySrc),'rot frames are not crossfaded into a second silhouette');
 assert.match(sw,/space-sky\.mjs/);
 for(const name of SPACE_PLATES)assert.match(sw,new RegExp('assets/space/'+name+'\\.png'));
 console.log('PASS Space plates pick nebula, station role, and parallax order');
