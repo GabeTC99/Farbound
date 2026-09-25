@@ -109,7 +109,7 @@ assert.match(release, /export const RELEASE='3\.0\.0'/);
 
 const sw = await readFile(path.join(root, 'sw.js'), 'utf8');
 assert.match(sw, /gamepad\.mjs/);
-assert.match(sw, /farbound-v3\.0\.0-space3'/);
+assert.match(sw, /farbound-v3\.0\.0-space4'/);
 
 assert.match(app, /function scrollPanelBy/);
 assert.match(app, /function revealInPanel/);
