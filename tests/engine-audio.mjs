@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP} from '../dist/engine-audio.mjs';
 
 const wrap=new Float32Array([0.9,0.4,-0.2,-0.8]);
@@ -227,3 +228,8 @@ assert.equal(audio.cueLog.filter(n=>n==='station_dock').length,dockPlays,'dock c
 assert.ok(Math.abs(audio.gritGain.gain.value-gritLevel('mineral'))<1e-6);
 assert.ok(Math.abs(audio.shipThrustGain.gain.value-SHIP_THRUST_LEVEL)<1e-6);
 console.log('PASS Space bed, sparse radio, approach hum, and one dock confirm');
+const audioSrc=readFileSync(new URL('../dist/engine-audio.mjs',import.meta.url),'utf8');
+assert.ok(!/38\+n\*24/.test(audioSrc),'engine pitch no longer tracks speed');
+assert.match(audioSrc,/this\.low\.frequency\.setTargetAtTime\(surface\?46:42/);
+assert.match(audioSrc,/this\.mid\.frequency\.setTargetAtTime\(84/);
+console.log('PASS Brake does not glide oscillator pitch');
