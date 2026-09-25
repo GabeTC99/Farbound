@@ -232,7 +232,7 @@ export function drawStarBody(ctx,p,opts={}){
  const lite=!!opts.lite;
  const spectral=p.spectral||'G';
  const art=artOfStar(spectral);
- if(!lite){
+ if(!lite&&!opts.skipGlow){
   drawFlares(ctx,p,art,lite);
   drawCorona(ctx,p,art,lite);
  }
