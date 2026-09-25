@@ -4,6 +4,9 @@
  */
 export const SPACE_DIR='assets/space/';
 export const SPACE_PLATES=['starfield_far','starfield_mid','nebula_soft_a','nebula_soft_b','dust_parallax','station_approach','station_exterior','dock_bay','sun_disc','sun_bloom','lens_streak'];
+export const STATION_LIVE_DIR='assets/space/station_live/';
+export const STATION_ROT=['station_rot_00','station_rot_01','station_rot_02','station_rot_03','station_rot_04','station_rot_05','station_rot_06','station_rot_07'];
+export const STATION_LIGHTS=['lights_bay_idle','lights_bay_flash','lights_beacon_a','lights_beacon_b','lights_nav_pulse','window_glow'];
 /** Relative drift from NOTES: far 0.1 → dust 1.0, scaled into world units. */
 export const SPACE_DRIFT={far:.1,nebula:.2,mid:.35,station:.62,dust:1};
 const DRIFT_SCALE=.08;
@@ -24,6 +27,26 @@ export function stationPlateRole(dist){
  return 'station_approach';
 }
 
+/** 45° steps. High spins about every 0.75s with a short crossfade; performance holds longer. */
+export function stationRotFrame(time,lite=false){
+ const step=lite?1.6:.75;
+ const f=Math.max(0,time||0)/step;
+ const i=Math.floor(f)%STATION_ROT.length;
+ const frac=f-Math.floor(f);
+ const fade=frac>0.72?(frac-.72)/.28:0;
+ return {index:i,next:(i+1)%STATION_ROT.length,fade};
+}
+/** Additive blinks. Performance skips overlays. */
+export function stationLightPhase(time,lite=false){
+ if(lite)return {bay:null,beacon:null,nav:false,window:false};
+ const t=Math.max(0,time||0);
+ return {
+  bay:Math.floor(t/1)%2?'lights_bay_flash':'lights_bay_idle',
+  beacon:Math.floor(t/.9)%2?'lights_beacon_b':'lights_beacon_a',
+  nav:(t%2.6)<.18,
+  window:true
+ };
+}
 export function stationPlateAlpha(dist,role){
  if(role==='dock_bay')return .78;
  if(role==='station_exterior')return .72;
@@ -69,15 +92,16 @@ export function peekSpacePlate(name){
  return img&&(img.naturalWidth||img.width)?img:null;
 }
 
+function loadPlate(name,url){
+ if(plates.has(name)||typeof Image==='undefined')return;
+ const img=new Image();
+ img.decoding='async';
+ img.src=url;
+ plates.set(name,img);
+}
 export function prefetchSpacePlates(){
- if(typeof Image==='undefined')return;
- for(const name of SPACE_PLATES){
-  if(plates.has(name))continue;
-  const img=new Image();
-  img.decoding='async';
-  img.src=spaceAssetUrl(name);
-  plates.set(name,img);
- }
+ for(const name of SPACE_PLATES)loadPlate(name,spaceAssetUrl(name));
+ for(const name of [...STATION_ROT,...STATION_LIGHTS])loadPlate(name,STATION_LIVE_DIR+name+'.png');
 }
 
 function blitCover(ctx,img,ox,oy,w,h,alpha,op){
@@ -128,15 +152,28 @@ export function drawSpaceSky(ctx,opts={}){
  const near=nearestStation(opts.stations,opts.player);
  if(near){
   const role=stationPlateRole(near.dist);
-  const plate=role&&peekSpacePlate(role);
+  const zoom=opts.zoom||1;
+  const sx=(near.station.x-(opts.camX||0))*zoom+w/2;
+  const sy=(near.station.y-(opts.camY||0))*zoom+h/2;
+  const spin=role&&role!=='dock_bay'?stationRotFrame(opts.clock,lite):null;
+  const rot=spin&&peekSpacePlate(STATION_ROT[spin.index]);
+  const plate=rot||(role&&peekSpacePlate(role));
   if(plate){
-   const zoom=opts.zoom||1;
-   const sx=(near.station.x-(opts.camX||0))*zoom+w/2;
-   const sy=(near.station.y-(opts.camY||0))*zoom+h/2;
    const iw=plate.naturalWidth||plate.width||1920,ih=plate.naturalHeight||plate.height||1080;
    const fit=role==='dock_bay'?w*1.08:role==='station_exterior'?Math.min(w*.96,h*1.15):Math.min(w,h)*.78;
    const dw=fit,dh=dw*(ih/iw);
-   blitSprite(ctx,plate,sx,sy,dw,dh,stationPlateAlpha(near.dist,role),'source-over');
+   const alpha=stationPlateAlpha(near.dist,role);
+   blitSprite(ctx,plate,sx,sy,dw,dh,alpha*(rot&&spin.fade?1-spin.fade*.45:1),'source-over');
+   const nxt=rot&&spin.fade?peekSpacePlate(STATION_ROT[spin.next]):null;
+   if(nxt)blitSprite(ctx,nxt,sx,sy,dw,dh,alpha*spin.fade,'source-over');
+   if(rot){
+    const lights=stationLightPhase(opts.clock,lite);
+    const glow=(name,a)=>{const img=name&&peekSpacePlate(name);if(img)blitSprite(ctx,img,sx,sy,dw,dh,a,'lighter');};
+    glow(lights.bay,.8);
+    glow(lights.beacon,.7);
+    if(lights.nav)glow('lights_nav_pulse',.65);
+    if(lights.window)glow('window_glow',.32);
+   }
   }
  }
  if(!lite)blitCover(ctx,peekSpacePlate('dust_parallax'),dust.x,dust.y,w,h,.4,'screen');
