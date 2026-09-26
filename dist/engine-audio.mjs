@@ -123,6 +123,23 @@ export function gritLevel(kindId){
 /** Ship MP3s into the cue bus. Thruster loops sit under the sky bed; flyby/land are a step hotter. */
 export const SHIP_THRUST_LEVEL=.25;
 export const SHIP_SHOT_LEVEL=.42;
+/** Player engine voice: the hull loop is shaped live by thrust, speed and boost instead of snapping on and off. */
+export const THRUST_IDLE_LEVEL=.35;
+export const THRUST_FILTER_IDLE=520;
+export const THRUST_FILTER_SPAN=1600;
+export const THRUST_FILTER_BOOST=1400;
+export function thrustVoiceShape({thrust=0,moving=0,boost=false}={}){
+ const drive=Math.max(0,Math.min(1,Math.max(thrust,moving*.55)));
+ return{
+  level:Math.min(1,THRUST_IDLE_LEVEL+(1-THRUST_IDLE_LEVEL)*drive+(boost?.15:0)),
+  cutoff:THRUST_FILTER_IDLE+THRUST_FILTER_SPAN*drive+(boost?THRUST_FILTER_BOOST:0),
+  rate:.94+.08*Math.max(0,Math.min(1,moving))+(boost?.05:0)
+ };
+}
+function glide(param,value,t,tc){
+ if(!param)return;
+ try{if(param.setTargetAtTime)param.setTargetAtTime(value,t,tc);else param.value=value;}catch{try{param.value=value;}catch{}}
+}
 /** Thrust input, or cruise/assist speed, keeps the plated loop running. Boost still fires flyby separately. */
 export function hullThrusterWanted({hull,thrust=0,moving=0,live=false}={}){
  if(!live||!(thrust>0.08||moving>0.05))return null;
@@ -386,6 +403,7 @@ export class EngineAudio{
   src.buffer=this.copyCueBuffer(buffer);
   src.loop=def.type==='loop';
   const offset=src.loop?setLoopBounds(src,src.buffer):0;
+  if(shipKind==='thrust'){this.startThrustVoice(canon,src,bus,offset);return;}
   src.connect(bus);
   try{src.start(this.context.currentTime||0,offset);}catch{if(def.type==='loop')this.loops.delete(canon);return;}
   if(def.type==='loop'||def.solo)this.cueSources.set(canon,src);
@@ -394,7 +412,43 @@ export class EngineAudio{
   const src=this.cueSources.get(canon);
   if(!src)return;
   this.cueSources.delete(canon);
+  if(this.thrustVoice?.src===src){this.releaseThrustVoice();return;}
   try{src.stop();}catch{}
+ }
+ /** src -> lowpass -> gain -> ship thrust bus. Starts silent and glides up; never a hard edge. */
+ startThrustVoice(canon,src,bus,offset){
+  const c=this.context,t=c.currentTime||0;
+  if(this.thrustVoice)this.releaseThrustVoice();
+  const gain=c.createGain();
+  try{gain.gain.value=0;}catch{}
+  const filter=typeof c.createBiquadFilter==='function'?c.createBiquadFilter():null;
+  if(filter){
+   try{filter.type='lowpass';filter.Q.value=.5;filter.frequency.value=THRUST_FILTER_IDLE;}catch{}
+   src.connect(filter);filter.connect(gain);
+  }else src.connect(gain);
+  gain.connect(bus);
+  try{src.start(t,offset);}catch{this.loops.delete(canon);return;}
+  this.cueSources.set(canon,src);
+  this.thrustVoice={canon,src,gain,filter};
+  this.shapeThrustVoice(this.thrustInput||{});
+ }
+ shapeThrustVoice(input={}){
+  this.thrustInput=input;
+  const v=this.thrustVoice;
+  if(!v||!this.context)return;
+  const t=this.context.currentTime||0,shape=thrustVoiceShape(input);
+  const rising=shape.level>(Number(v.gain.gain.value)||0);
+  glide(v.gain.gain,shape.level,t,rising?.12:.35);
+  if(v.filter)glide(v.filter.frequency,shape.cutoff,t,.2);
+  if(v.src.playbackRate)glide(v.src.playbackRate,shape.rate,t,.4);
+ }
+ releaseThrustVoice(){
+  const v=this.thrustVoice;
+  if(!v)return;
+  this.thrustVoice=null;
+  const t=this.context?.currentTime||0;
+  glide(v.gain.gain,0,t,.12);
+  try{v.src.stop(t+.6);}catch{try{v.src.stop();}catch{}}
  }
  preloadPlanetaryCues(){
   if(!this.context||this.cuePreloaded)return;
@@ -441,9 +495,10 @@ export class EngineAudio{
   try{if(this.musicFlightGain)this.musicFlightGain.gain.value=MUSIC_FLIGHT_LEVEL*(1-mix)*duck;}catch{}
   try{if(this.musicStationGain)this.musicStationGain.gain.value=MUSIC_STATION_LEVEL*mix*duck;}catch{}
  }
- syncHullThruster({hull,thrust=0,moving=0,live=false}={}){
+ syncHullThruster({hull,thrust=0,moving=0,live=false,boost=false}={}){
   const want=hullThrusterWanted({hull,thrust,moving,live});
   this.hullThrusterOn=!!want;
+  this.shapeThrustVoice({thrust,moving,boost});
   if(want&&want===this.hullThrusterCue&&this.isCueLooping(want)&&(this.cueSources.has(want)||this.cueArm?.has(want)))return;
   if(this.hullThrusterCue&&this.hullThrusterCue!==want)this.stopCue(this.hullThrusterCue);
   this.hullThrusterCue=want;
@@ -453,7 +508,9 @@ export class EngineAudio{
   const slot=this.npcLoops?.get(id);
   if(!slot)return;
   this.npcLoops.delete(id);
-  try{slot.src?.stop();}catch{}
+  const t=this.context?.currentTime||0;
+  glide(slot.gain?.gain,0,t,.15);
+  try{slot.src?.stop(t+.7);}catch{try{slot.src?.stop();}catch{}}
  }
  stopAllNpc(){
   if(!this.npcLoops)return;
@@ -467,9 +524,9 @@ export class EngineAudio{
   this.npcLoops||(this.npcLoops=new Map());
   const gen=(this.npcGen=(this.npcGen||0)+1);
   const g=this.context.createGain();
-  try{g.gain.value=level;}catch{}
+  try{g.gain.value=0;}catch{}
   g.connect(this.shipThrustGain);
-  const slot={stem,src:null,gain:g,gen};
+  const slot={stem,src:null,gain:g,gen,level};
   this.npcLoops.set(id,slot);
   this.ensureCueBuffer(def.file).then(buffer=>{
    const cur=this.npcLoops.get(id);
@@ -479,8 +536,10 @@ export class EngineAudio{
    src.loop=true;
    const offset=setLoopBounds(src,src.buffer);
    src.connect(g);
-   try{src.start(this.context.currentTime||0,offset);}catch{return;}
+   const t=this.context.currentTime||0;
+   try{src.start(t,offset);}catch{return;}
    cur.src=src;
+   glide(g.gain,cur.level,t,.25);
   }).catch(()=>{});
  }
  playNpcShot(stem,level){
@@ -539,7 +598,7 @@ export class EngineAudio{
    const stem=shipAudioCue('thruster',p.hull);
    if(!stem)continue;
    const prev=this.npcLoops.get(p.id);
-   if(prev&&prev.stem===stem){try{prev.gain.gain.value=p.gain;}catch{}continue;}
+   if(prev&&prev.stem===stem){prev.level=p.gain;glide(prev.gain.gain,p.gain,this.context?.currentTime||0,.3);continue;}
    if(prev)this.stopNpcLoop(p.id);
    this.startNpcLoop(p.id,stem,p.gain);
   }
@@ -639,7 +698,7 @@ export class EngineAudio{
   this.ensureHum();
   this.ensureAmb();
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
-  this.syncHullThruster({hull,thrust,moving:n,live:live&&!station&&!surface&&!planetFeet});
+  this.syncHullThruster({hull,thrust,moving:n,boost:!!boost,live:live&&!station&&!surface&&!planetFeet});
   this.syncNpcShips({ships,x:listenerX,y:listenerY,live:live&&!surface&&!planetFeet});
   this.syncSpaceAudio({live:live&&!surface&&!planetFeet&&!station,docked:!!docked||!!station,stationDist,now:t});
   this.syncMusic({live:live&&!surface&&!planetFeet,docked:!!docked||!!station,stationDist});
