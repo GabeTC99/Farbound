@@ -161,7 +161,9 @@ export function spaceApproachGain(dist){
  const t=1-dist/SPACE_HEAR;
  return SPACE_APPROACH_LEVEL*(.28+.72*t);
 }
-export const NPC_THRUSTER_CAP=3;
+export const NPC_THRUSTER_CAP=2;
+/** Traffic sits well under the player's own thruster so a busy station is not a wall of engine noise. */
+export const NPC_THRUSTER_MIX=.35;
 export const NPC_HEAR=780;
 export const NPC_FLYBY=280;
 /** Traffic roles are not plated hull ids. Map them onto READY stems for cues only. */
@@ -190,7 +192,7 @@ export function pickNpcThrusters(ships,listener,{cap=NPC_THRUSTER_CAP,hear=NPC_H
   if(!hull)continue;
   const d=Math.hypot((ship.x||0)-ox,(ship.y||0)-oy);
   if(d>hear)continue;
-  ranked.push({id:ship.id,ship,hull,d,gain:Math.max(.18,1-d/hear)});
+  ranked.push({id:ship.id,ship,hull,d,gain:Math.max(.18,1-d/hear)*NPC_THRUSTER_MIX});
  }
  ranked.sort((a,b)=>a.d-b.d);
  return ranked.slice(0,cap);

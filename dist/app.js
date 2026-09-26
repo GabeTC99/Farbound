@@ -744,8 +744,8 @@ function drawStation(s=game.station){
  const role=stationPlateRole(Math.hypot((s.x||0)-(game.player?.x||0),(s.y||0)-(game.player?.y||0)));
  const spun=spaceSkyReady()&&stationOrthoReady()&&(role==='station_exterior'||role==='station_approach');
  if(spun){
-  label(s.name,s.x,s.y-100*scale,'#94c7cd');
-  if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-78*scale,'#608592',12);
+  label(s.name,s.x,s.y-172*scale,'#94c7cd');
+  if(!lite)label(s.roleLabel||'ORBITAL STATION',s.x,s.y-156*scale,'#608592',12);
   return;
  }
  ctx.save();ctx.translate(s.x,s.y);if(!lite)ctx.rotate(clock*.06);ctx.scale(scale,scale);

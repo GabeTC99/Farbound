@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP,musicStationMix,MUSIC_FLIGHT_LEVEL,MUSIC_STATION_LEVEL,hullThrusterWanted,flightEngineTone} from '../dist/engine-audio.mjs';
+import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,NPC_THRUSTER_CAP,NPC_THRUSTER_MIX,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP,musicStationMix,MUSIC_FLIGHT_LEVEL,MUSIC_STATION_LEVEL,hullThrusterWanted,flightEngineTone} from '../dist/engine-audio.mjs';
 
 const wrap=new Float32Array([0.9,0.4,-0.2,-0.8]);
 fadeLoopBuffer(wrap,2);
@@ -155,14 +155,15 @@ const fleet=[
  {id:'idle',hull:'courier',thrust:0,x:5,y:0}
 ];
 const picked=pickNpcThrusters(fleet,{x:0,y:0});
-assert.equal(picked.length,3);
-assert.deepEqual(picked.map(p=>p.id),['a','b','c']);
+assert.equal(picked.length,NPC_THRUSTER_CAP);
+assert.deepEqual(picked.map(p=>p.id),['a','b','c'].slice(0,NPC_THRUSTER_CAP));
+assert.ok(picked.every(p=>p.gain<=NPC_THRUSTER_MIX+1e-9),'traffic sits under the player thruster');
 assert.equal(picked[0].hull,'tern');
 assert.equal(audio.hullThrusterCue,'thruster_eagle');
 const playerSrc=audio.cueSources.get('thruster_eagle');
 audio.syncNpcShips({ships:fleet,x:0,y:0,live:true});
 await new Promise(r=>setTimeout(r,30));
-assert.equal(audio.npcLoops.size,3);
+assert.equal(audio.npcLoops.size,NPC_THRUSTER_CAP);
 assert.equal(audio.cueSources.get('thruster_eagle'),playerSrc,'npc loops do not stop the player thruster');
 assert.ok([...audio.npcLoops.values()].every(s=>s.src&&s.src.loop));
 const npcStops=stops.length;

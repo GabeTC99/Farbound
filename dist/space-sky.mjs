@@ -20,10 +20,9 @@ export function nebulaPlate(kind){
  return 'nebula_soft_b';
 }
 
-/** Dock range is 200. Hangar mouth, hero exterior, then approach silhouette. */
+/** Dock range is 200. The hull stays a world sprite all the way in; no hangar plate swap in flight. */
 export function stationPlateRole(dist){
  if(!(dist>=0)||dist>2400)return null;
- if(dist<=260)return 'dock_bay';
  if(dist<=900)return 'station_exterior';
  return 'station_approach';
 }
@@ -32,6 +31,11 @@ export function stationPlateRole(dist){
 export function stationSpinAngle(time,lite=false){
  const rate=lite?.12:.35;
  return Math.max(0,time||0)*rate;
+}
+/** World span of the ortho hull (65 = standard station radius). Scales with camera zoom like ships do. */
+export const STATION_WORLD_SPAN=300;
+export function stationWorldSize(r,zoom){
+ return STATION_WORLD_SPAN*((r||65)/65)*(zoom||1);
 }
 /** Square screen size for the ortho hull. Exterior reads larger than approach. */
 export function stationOrthoSize(role,w,h){
@@ -62,10 +66,10 @@ export function stationPlateAlpha(dist,role){
  return .28+t*.72;
 }
 
-export function spaceParallax(camX,camY,name,span){
+/** Raw drift offset. blitCover wraps it against the real tile size, so there is no jump when the camera crosses a span. */
+export function spaceParallax(camX,camY,name,_span){
  const k=(SPACE_DRIFT[name]||0)*DRIFT_SCALE;
- const s=span||1;
- return {x:-((camX||0)*k)%s,y:-((camY||0)*k)%s};
+ return {x:-(camX||0)*k,y:-(camY||0)*k};
 }
 
 export function sunScreen(star,camX,camY,width,height,zoom){
@@ -115,19 +119,40 @@ export function prefetchSpacePlates(){
  for(const name of [STATION_ORTHO,STATION_ORTHO_ALT])loadPlate(name,STATION_SPIN_DIR+name+'.png');
 }
 
+/** Cover-tile a plate. Tiles butt edge to edge (no overlap, so translucent layers never double into a stripe) and alternate tiles are mirrored so their edges always match. */
 function blitCover(ctx,img,ox,oy,w,h,alpha,op){
  if(!img)return;
  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
  if(!iw||!ih)return;
- const bleed=1.04;
- const scale=Math.max(w/iw,h/ih)*bleed;
+ const scale=Math.max(w/iw,h/ih)*1.04;
+ const dw=Math.ceil(iw*scale),dh=Math.ceil(ih*scale);
+ const kx=Math.floor(-(ox||0)/dw),ky=Math.floor(-(oy||0)/dh);
+ const x0=Math.round((ox||0)+kx*dw),y0=Math.round((oy||0)+ky*dh);
+ for(let j=0;y0+j*dh<h;j++)for(let i=0;x0+i*dw<w;i++){
+  const fx=((kx+i)&1)?-1:1,fy=((ky+j)&1)?-1:1;
+  ctx.save();
+  ctx.globalAlpha=alpha==null?1:alpha;
+  ctx.globalCompositeOperation=op||'source-over';
+  ctx.translate(x0+i*dw+(fx<0?dw:0),y0+j*dh+(fy<0?dh:0));
+  ctx.scale(fx,fy);
+  ctx.drawImage(img,0,0,dw,dh);
+  ctx.restore();
+ }
+}
+
+/** One oversized draw for vignetted plates (nebula, mid stars, dust). Their soft edges would tile into dark bands, so the drift eases toward the margin instead of ever exposing an edge. */
+function blitWide(ctx,img,ox,oy,w,h,alpha,op,over=1.5){
+ if(!img)return;
+ const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+ if(!iw||!ih)return;
+ const scale=Math.max(w/iw,h/ih)*over;
  const dw=iw*scale,dh=ih*scale;
- const stepX=dw/bleed,stepY=dh/bleed;
- const x=((ox%stepX)+stepX)%stepX-stepX,y=((oy%stepY)+stepY)%stepY-stepY;
+ const mx=Math.max(0,(dw-w)/2-2),my=Math.max(0,(dh-h)/2-2);
+ const x=(w-dw)/2+(mx?mx*Math.tanh((ox||0)/mx):0),y=(h-dh)/2+(my?my*Math.tanh((oy||0)/my):0);
  ctx.save();
  ctx.globalAlpha=alpha==null?1:alpha;
  ctx.globalCompositeOperation=op||'source-over';
- for(let iy=y;iy<h;iy+=stepY)for(let ix=x;ix<w;ix+=stepX)ctx.drawImage(img,ix,iy,dw,dh);
+ ctx.drawImage(img,x,y,dw,dh);
  ctx.restore();
 }
 
@@ -170,29 +195,22 @@ export function drawSpaceSky(ctx,opts={}){
  blitCover(ctx,peekSpacePlate('starfield_far'),far.x,far.y,w,h,1,'source-over');
  if(!lite){
   const nebula=peekSpacePlate(nebulaPlate(opts.skyKind));
-  blitCover(ctx,nebula,neb.x,neb.y,w,h,.55,'screen');
+  blitWide(ctx,nebula,neb.x,neb.y,w,h,.55,'screen',1.6);
  }
- blitCover(ctx,peekSpacePlate('starfield_mid'),mid.x,mid.y,w,h,.92,'source-over');
- const near=nearestStation(opts.stations,opts.player);
- if(near){
-  const role=stationPlateRole(near.dist);
-  const zoom=opts.zoom||1;
-  const sx=(near.station.x-(opts.camX||0))*zoom+w/2;
-  const sy=(near.station.y-(opts.camY||0))*zoom+h/2;
-  if(role==='dock_bay'){
-   const plate=peekSpacePlate(role);
-   if(plate){
-    const iw=plate.naturalWidth||plate.width||1920,ih=plate.naturalHeight||plate.height||1080;
-    const box=stationPlateBox(role,w,h,iw,ih);
-    const pin=coverAnchor(sx,sy,box.dw,box.dh,w,h);
-    blitSprite(ctx,plate,pin.x,pin.y,box.dw,box.dh,stationPlateAlpha(near.dist,role),'source-over');
-   }
-  }else if(role){
-   const ortho=peekSpacePlate(STATION_ORTHO);
-   if(ortho)blitSpin(ctx,ortho,sx,sy,stationOrthoSize(role,w,h),stationSpinAngle(opts.clock,lite),stationPlateAlpha(near.dist,role));
-  }
+ blitWide(ctx,peekSpacePlate('starfield_mid'),mid.x,mid.y,w,h,.92,'source-over',1.5);
+ if(!lite)blitWide(ctx,peekSpacePlate('dust_parallax'),dust.x,dust.y,w,h,.4,'screen',1.4);
+ // Station hulls sit above the dust so nothing washes through them.
+ const ortho=peekSpacePlate(STATION_ORTHO),zoom=opts.zoom||1;
+ if(ortho)for(const st of opts.stations||[]){
+  if(!st||st.type==='beacon')continue;
+  const d=Math.hypot((st.x||0)-(opts.player?.x||0),(st.y||0)-(opts.player?.y||0));
+  const role=stationPlateRole(d);
+  if(!role)continue;
+  const size=stationWorldSize(st.r,zoom);
+  const sx=(st.x-(opts.camX||0))*zoom+w/2,sy=(st.y-(opts.camY||0))*zoom+h/2;
+  if(sx<-size||sx>w+size||sy<-size||sy>h+size)continue;
+  blitSpin(ctx,ortho,sx,sy,size,stationSpinAngle(opts.clock,lite),stationPlateAlpha(d,role));
  }
- if(!lite)blitCover(ctx,peekSpacePlate('dust_parallax'),dust.x,dust.y,w,h,.4,'screen');
  const sun=sunScreen(opts.star,opts.camX,opts.camY,w,h,opts.zoom);
  if(sunInView(sun,w,h)){
   const disc=Math.min(w,h)*.46;

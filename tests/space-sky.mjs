@@ -1,18 +1,17 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {SPACE_PLATES,nebulaPlate,stationPlateRole,stationPlateAlpha,spaceParallax,sunScreen,sunInView,nearestStation,SPACE_DRIFT,stationSpinAngle,stationOrthoSize,STATION_ORTHO,stationPlateBox,coverAnchor} from '../dist/space-sky.mjs';
+import {SPACE_PLATES,nebulaPlate,stationPlateRole,stationPlateAlpha,spaceParallax,sunScreen,sunInView,nearestStation,SPACE_DRIFT,stationSpinAngle,stationOrthoSize,STATION_ORTHO,stationPlateBox,coverAnchor,stationWorldSize} from '../dist/space-sky.mjs';
 
 assert.equal(SPACE_PLATES.length,11);
 assert.equal(nebulaPlate('nebula'),'nebula_soft_a');
 assert.equal(nebulaPlate('dust'),'nebula_soft_a');
 assert.equal(nebulaPlate('clear'),'nebula_soft_b');
 assert.equal(nebulaPlate('deep'),'nebula_soft_b');
-assert.equal(stationPlateRole(120),'dock_bay');
-assert.equal(stationPlateRole(200),'dock_bay');
+assert.equal(stationPlateRole(120),'station_exterior','no hangar plate swap in flight');
+assert.equal(stationPlateRole(200),'station_exterior');
 assert.equal(stationPlateRole(500),'station_exterior');
 assert.equal(stationPlateRole(1600),'station_approach');
 assert.equal(stationPlateRole(4000),null);
-assert.equal(stationPlateAlpha(100,'dock_bay'),1,'hangar plate is opaque');
 assert.equal(stationPlateAlpha(600,'station_exterior'),1,'station hull is opaque');
 assert.equal(stationPlateAlpha(1600,'station_approach'),1,'approach hull is opaque once in range');
 assert.ok(stationPlateAlpha(2390,'station_approach')>=.28&&stationPlateAlpha(2390,'station_approach')<1,'far edge fades in');
@@ -28,13 +27,15 @@ const near=nearestStation([{type:'station',x:10,y:0,id:'a'},{type:'station',x:40
 assert.equal(near.station.id,'a');
 assert.equal(near.dist,10);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
-assert.match(sw,/farbound-v3\.0\.0-space10/);
+assert.match(sw,/farbound-v3\.0\.0-space11/);
 assert.equal(STATION_ORTHO,'station_ortho');
 assert.equal(stationSpinAngle(0,false),0);
 assert.ok(stationSpinAngle(2,false)>stationSpinAngle(2,true),'performance spin is slower');
 assert.ok(stationSpinAngle(3,false)>stationSpinAngle(1,false));
 assert.ok(stationOrthoSize('station_exterior',800,400)>stationOrthoSize('station_approach',800,400));
 assert.equal(stationOrthoSize('station_exterior',390,844),stationOrthoSize('station_exterior',844,390));
+assert.ok(Math.abs(stationWorldSize(65,.75)-stationWorldSize(65,1)*.75)<1e-9,'station scales with zoom like ships');
+assert.ok(stationWorldSize(48,1)<stationWorldSize(65,1));
 const skySrc=readFileSync(new URL('../dist/space-sky.mjs',import.meta.url),'utf8');
 assert.match(skySrc,/ctx\.rotate\(/);
 assert.match(skySrc,/station_ortho/);
