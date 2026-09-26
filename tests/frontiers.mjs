@@ -574,4 +574,16 @@ test('Company careers unlock exclusive jobs, hangar discounts, and Partner liais
  assert.match(app,/Liaison|Partner|Preferred hangar|hangar rate|career/i);
 });
 
+test('Station deck plays steps while walking, a chime at desks, and the hangar door at the launch pad',()=>{
+ const g=new Game();g.s.docked=true;g.s.stationPos=null;g.enterStationDeck();const f=g.onfoot;
+ const hangar=f.zones.find(z=>z.launch),desk=f.zones.find(z=>!z.launch);
+ g.audioCues=[];f.x=hangar.x;f.y=hangar.y;f.vx=0;f.vy=0;g.updateDeckAudio(.05);
+ assert(g.audioCues.includes('door_hiss'),'launch pad opens with the hangar door');assert(g.deckHangarMix>.9);
+ g.audioCues=[];for(let i=0;i<20;i++){f.vx=60;g.updateDeckAudio(.1);}
+ const steps=g.audioCues.filter(c=>c.startsWith('deck_step_'));assert(steps.length>=3&&steps.length<=6,'steps follow walking cadence');
+ g.audioCues=[];f.vx=0;for(let i=0;i<10;i++)g.updateDeckAudio(.1);assert.equal(g.audioCues.filter(c=>c.startsWith('deck_step_')).length,0,'standing still is silent');
+ f.x=desk.x;f.y=desk.y;g.audioCues=[];g.updateDeckAudio(.05);g.updateDeckAudio(.05);
+ assert.equal(g.audioCues.filter(c=>c==='desk_chime').length,1,'one chime per desk visit');assert(g.deckHangarMix<1);
+});
+
 let failed=0;for(const [name,fn]of tests){try{fn();console.log('PASS '+name);}catch(e){failed++;console.error('FAIL '+name);console.error(e);}}console.log(`\n${tests.length-failed} / ${tests.length} Frontiers checks passed.`);if(failed)process.exitCode=1;

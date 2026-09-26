@@ -1,4 +1,5 @@
 import {nearestZone,STATION_ISO} from './onfoot.mjs';
+import {drawSpaceSky,prefetchSpacePlates} from './space-sky.mjs';
 import {SURFACE_PALETTES,drawFrontierSkiff} from './surface-render.mjs';
 import {
  surfaceSun,mixHex,fadeHex,shadeHex,
@@ -439,8 +440,8 @@ function topLit(ctx,pts,base){
  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
  for(const p of pts){if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y;}
  const g=ctx.createLinearGradient(minX,minY,maxX+.01,maxY+.01);
- g.addColorStop(0,mix(base,'#e8fff8',.4));
- g.addColorStop(.34,mix(base,'#c5e8e0',.12));
+ g.addColorStop(0,mix(base,'#eef2f5',.34));
+ g.addColorStop(.34,mix(base,'#cfd8dd',.1));
  g.addColorStop(.68,base);
  g.addColorStop(1,mix(base,'#04080c',.44));
  return g;
@@ -448,7 +449,7 @@ function topLit(ctx,pts,base){
 
 function sideLit(ctx,pts,isLeft,base){
  const g=ctx.createLinearGradient(pts[3].x,pts[3].y,pts[0].x,pts[0].y);
- g.addColorStop(0,mix(base,'#d8f4ee',isLeft?.08:.3));
+ g.addColorStop(0,mix(base,'#dde4e8',isLeft?.06:.16));
  g.addColorStop(.38,base);
  g.addColorStop(1,mix(base,'#020508',isLeft?.52:.24));
  return g;
@@ -469,7 +470,7 @@ function drawIsoDisc(ctx,proj,cx,cy,r,h,colors,z0=0){
  ctx.fillStyle='rgba(0,0,0,.38)';
  ctx.beginPath();ctx.ellipse(bot.x+6,bot.y+11,rx*1.04,ry*1.1,0,0,Math.PI*2);ctx.fill();
  const side=ctx.createLinearGradient(bot.x-rx,bot.y,bot.x+rx,bot.y);
- side.addColorStop(0,mix(colors.left,'#020508',.18));side.addColorStop(.42,colors.left);side.addColorStop(.7,mix(colors.right,'#b7e4dc',.16));side.addColorStop(1,colors.right);
+ side.addColorStop(0,mix(colors.left,'#020508',.18));side.addColorStop(.42,colors.left);side.addColorStop(.7,mix(colors.right,'#c9d3d8',.16));side.addColorStop(1,colors.right);
  ctx.fillStyle=side;ctx.strokeStyle=mix(colors.edge,'#0a1218',.25);ctx.lineWidth=1.2;
  ctx.beginPath();
  ctx.moveTo(top.x-rx,top.y);
@@ -479,7 +480,7 @@ function drawIsoDisc(ctx,proj,cx,cy,r,h,colors,z0=0){
  ctx.closePath();ctx.fill();ctx.stroke();
  ctx.beginPath();ctx.ellipse(top.x,top.y,rx,ry,0,0,Math.PI*2);
  const roof=ctx.createRadialGradient(top.x-rx*.28,top.y-ry*.5,rx*.06,top.x,top.y,rx);
- roof.addColorStop(0,mix(colors.top,'#e8fff8',.36));
+ roof.addColorStop(0,mix(colors.top,'#eef2f5',.36));
  roof.addColorStop(.42,colors.top);
  roof.addColorStop(1,mix(colors.top,'#05090c',.4));
  ctx.fillStyle=roof;ctx.fill();
@@ -541,16 +542,41 @@ function stationColors(s){
  return{
   floor,accent,
   hubTop:mix(floor,'#5a8894',.24),
-  hubLeft:mix(floor,'#1a2c34',.22),
-  hubRight:mix(floor,'#7aadb8',.28),
-  armTop:mix(floor,'#243844',.12),
-  armLeft:mix(floor,'#152028',.28),
-  armRight:mix(floor,'#5a8894',.2),
-  edge:mix(accent,'#c5efe8',.28),
+  hubLeft:mix(floor,'#1a2228',.4),
+  hubRight:mix(floor,'#6b7a84',.45),
+  armTop:mix(floor,'#3a4652',.4),
+  armLeft:mix(floor,'#161c21',.45),
+  armRight:mix(floor,'#58646d',.45),
+  edge:mix(accent,'#9aa8b0',.55),
   core:mix('#1a3844',accent,.12)
  };
 }
 
+/** Generated steel deck plate, projected onto the 2:1 iso deck. Falls back to the flat panels until it decodes. */
+export const DECK_TEXTURE='assets/station/deck_plate.webp';
+const DECK_TEXTURE_WORLD=168;
+let deckImg=null;
+function deckTexture(){
+ if(typeof Image==='undefined')return null;
+ if(!deckImg){deckImg=new Image();deckImg.decoding='async';deckImg.src=DECK_TEXTURE;}
+ return deckImg.complete&&deckImg.naturalWidth?deckImg:null;
+}
+function fillDeckTexture(ctx,proj,clip,h,bounds,alpha=.86){
+ const img=deckTexture();
+ if(!img)return false;
+ const pat=ctx.createPattern(img,'repeat');
+ if(!pat)return false;
+ const o=proj.p(0,0,h),k=DECK_TEXTURE_WORLD/(img.naturalWidth||512);
+ ctx.save();
+ clip();ctx.clip();
+ ctx.translate(o.x,o.y);
+ ctx.transform(proj.ix,proj.iy,-proj.ix,proj.iy,0,0);
+ ctx.scale(k,k);
+ ctx.globalAlpha=alpha;ctx.fillStyle=pat;
+ ctx.fillRect(bounds.x0/k,bounds.y0/k,(bounds.x1-bounds.x0)/k,(bounds.y1-bounds.y0)/k);
+ ctx.restore();
+ return true;
+}
 function fillHubTop(ctx,proj,hull,h,colors){
  const top=proj.p(hull.cx,hull.cy,h),{rx,ry}=proj.radii(hull.hubR);
  ctx.beginPath();ctx.ellipse(top.x,top.y,rx,ry,0,0,Math.PI*2);
@@ -559,8 +585,12 @@ function fillHubTop(ctx,proj,hull,h,colors){
  wash.addColorStop(.48,colors.hubTop);
  wash.addColorStop(1,mix(colors.hubTop,'#05090c',.4));
  ctx.fillStyle=wash;ctx.fill();
+ const ring=()=>{ctx.beginPath();ctx.ellipse(top.x,top.y,rx,ry,0,0,Math.PI*2);};
+ const textured=fillDeckTexture(ctx,proj,ring,h,{x0:hull.cx-hull.hubR,y0:hull.cy-hull.hubR,x1:hull.cx+hull.hubR,y1:hull.cy+hull.hubR});
+ if(textured){ctx.save();ring();ctx.globalAlpha=.3;ctx.fillStyle=wash;ctx.fill();ctx.restore();}
+ ring();
  ctx.strokeStyle=mix(colors.edge,'#e4fff8',.48);ctx.lineWidth=2;ctx.stroke();
- drawFloorPanels(ctx,proj,hull,h,colors);
+ if(!textured)drawFloorPanels(ctx,proj,hull,h,colors);
 }
 
 function drawFloorPanels(ctx,proj,hull,h,colors){
@@ -660,14 +690,14 @@ function drawDoorFrame(ctx,proj,hull,i,colors,accent){
   top:mix('#0c2428',accent,.42),left:mix('#082018',accent,.3),right:mix('#145048',accent,.38),edge:accent
  });
  const posts=[-1,1].map(s=>rotatedRect(hull.cx+c*along+px*half*s,hull.cy+sn*along+py*half*s,post,7.2,a));
- for(const p of posts)drawIsoVolume(ctx,proj,p,DECK_H,tall,{top:mix('#5a8490',accent,.22),left:'#15232c',right:'#3a5a66',edge:accent});
+ for(const p of posts)drawIsoVolume(ctx,proj,p,DECK_H,tall,{top:mix('#56626b',accent,.16),left:'#171d22',right:'#3a444c',edge:accent});
  const lintel=[
   [hull.cx+c*along+px*half-c*3,hull.cy+sn*along+py*half-sn*3],
   [hull.cx+c*(along+10)+px*half,hull.cy+sn*(along+10)+py*half],
   [hull.cx+c*(along+10)-px*half,hull.cy+sn*(along+10)-py*half],
   [hull.cx+c*along-px*half-c*3,hull.cy+sn*along-py*half-sn*3]
  ];
- drawIsoVolume(ctx,proj,lintel,tall-8,tall,{top:mix('#6a98a4',accent,.26),left:'#15232c',right:'#3a5a66',edge:accent});
+ drawIsoVolume(ctx,proj,lintel,tall-8,tall,{top:mix('#66727b',accent,.18),left:'#171d22',right:'#3a444c',edge:accent});
 }
 
 function railStroke(ctx,proj,posts,z){
@@ -709,13 +739,15 @@ function drawArmDeck(ctx,proj,hull,i,colors,accent){
   top:hangar?mix(colors.armTop,'#c9a46a',.14):colors.armTop,
   left:colors.armLeft,right:colors.armRight,edge:colors.edge
  });
+ const armCorners=spokeCorners(hull,i);
+ fillDeckTexture(ctx,proj,()=>poly(ctx,armCorners.map(([x,y])=>proj.p(x,y,DECK_H))),DECK_H,{x0:Math.min(...armCorners.map(p=>p[0])),y0:Math.min(...armCorners.map(p=>p[1])),x1:Math.max(...armCorners.map(p=>p[0])),y1:Math.max(...armCorners.map(p=>p[1]))},hangar?.7:.82);
  const wallStart=hull.hubR+16,wallEnd=hull.spokeEnd-(hangar?28:14);
  const mid=(wallStart+wallEnd)*.5,len=(wallEnd-wallStart)*.48,inset=11,wall=6.2;
  for(const side of [-1,1]){
   const x=hull.cx+c*mid+px*(hull.spokeHalf-inset)*side;
   const y=hull.cy+sn*mid+py*(hull.spokeHalf-inset)*side;
   drawIsoVolume(ctx,proj,rotatedRect(x,y,len,wall,a),DECK_H,DECK_H+24,{
-   top:mix('#6a98a4',accent,.2),left:'#1a3038',right:'#3a5a66',edge:colors.edge
+   top:mix('#5f6b75',accent,.12),left:'#1b2126',right:'#3c464e',edge:colors.edge
   });
   drawIsoVolume(ctx,proj,rotatedRect(x,y,len,wall+.8,a),DECK_H+22.5,DECK_H+26.5,{
    top:mix('#9fd8d0',accent,.28),left:'#243844',right:'#4a7080',edge:accent
@@ -724,7 +756,7 @@ function drawArmDeck(ctx,proj,hull,i,colors,accent){
    const bx=hull.cx+c*(wallStart+(wallEnd-wallStart)*t)+px*(hull.spokeHalf-inset)*side;
    const by=hull.cy+sn*(wallStart+(wallEnd-wallStart)*t)+py*(hull.spokeHalf-inset)*side;
    drawIsoVolume(ctx,proj,rotatedRect(bx,by,2.4,wall+1.2,a),DECK_H,DECK_H+28,{
-    top:mix('#8ec8c0',accent,.22),left:'#1a3038',right:'#3a5a66',edge:accent
+    top:mix('#77838c',accent,.15),left:'#1b2126',right:'#3c464e',edge:accent
    });
   }
  }
@@ -1088,7 +1120,8 @@ function renderStationConcourse(ctx,width,height,s,clock){
  const accent=s.accent||'#7ec8c0';
  const zone=nearestZone(s);
  const spriteScale=proj.zoom*1.08;
- drawSpaceBackdrop(ctx,width,height,clock,accent);
+ prefetchSpacePlates();deckTexture();
+ if(!drawSpaceSky(ctx,{width,height,camX:(s.x||0)*3,camY:(s.y||0)*3,zoom:1,skyKind:'nebula',stations:[],player:null,clock}))drawSpaceBackdrop(ctx,width,height,clock,accent);
  ctx.save();
  drawIsoDeck(ctx,proj,s,clock);
  drawSigns(ctx,proj,s);

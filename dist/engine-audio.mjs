@@ -171,6 +171,18 @@ export function musicStationMix(dist,docked=false){
  if(!(dist>=0)||dist>SPACE_HEAR)return 0;
  return 1-dist/SPACE_HEAR;
 }
+/** Station interior: a synthesized concourse bed, a hangar bed near the launch arm, metal deck steps, desk and door cues, and console blips. */
+export const STATION_AUDIO_DIR='assets/audio/station/';
+export const DECK_STEP_STEMS=['deck_step_1','deck_step_2','deck_step_3','deck_step_4'];
+export const STATION_AUDIO_STEMS=['station_ambience','station_hangar',...DECK_STEP_STEMS,'desk_chime','door_hiss','ui_click','ui_confirm'];
+export const STATION_BED_LEVEL=.3;
+export const STATION_HANGAR_LEVEL=.32;
+export const STATION_STEP_LEVEL=.28;
+export const STATION_FX_LEVEL=.24;
+export const UI_LEVEL=.28;
+export function stationAudioFile(stem){return STATION_AUDIO_DIR+stem+'.mp3';}
+/** Walk cadence in seconds. */
+export function deckStepInterval(speed,sprint=false){return sprint||speed>64?.3:.42;}
 export function spaceAudioFile(stem){return SPACE_AUDIO_DIR+stem+'.mp3';}
 /** 0 when farther than the space1 approach band. Rises toward the station. */
 export function spaceApproachGain(dist){
@@ -254,7 +266,14 @@ export const AUDIO_CUES={
  station_approach:{type:'loop',file:spaceAudioFile('station_approach'),space:'approach'},
  station_dock:{type:'oneshot',file:spaceAudioFile('station_dock'),space:'dock'},
  music_flight:{type:'loop',file:musicAudioFile('music_flight'),space:'musicFlight'},
- music_station:{type:'loop',file:musicAudioFile('music_station'),space:'musicStation'}
+ music_station:{type:'loop',file:musicAudioFile('music_station'),space:'musicStation'},
+ station_ambience:{type:'loop',file:stationAudioFile('station_ambience'),space:'stationBed'},
+ station_hangar:{type:'loop',file:stationAudioFile('station_hangar'),space:'stationHangar'},
+ ...Object.fromEntries(DECK_STEP_STEMS.map(stem=>[stem,{type:'oneshot',file:stationAudioFile(stem),space:'stationStep'}])),
+ desk_chime:{type:'oneshot',file:stationAudioFile('desk_chime'),solo:true,space:'stationFx'},
+ door_hiss:{type:'oneshot',file:stationAudioFile('door_hiss'),solo:true,space:'stationFx'},
+ ui_click:{type:'oneshot',file:stationAudioFile('ui_click'),space:'ui'},
+ ui_confirm:{type:'oneshot',file:stationAudioFile('ui_confirm'),space:'ui'}
 };
 export function resolveAudioCue(name){return CUE_CANON[name]||name;}
 
@@ -333,6 +352,11 @@ export class EngineAudio{
   make('spaceDockGain',SPACE_DOCK_LEVEL);
   make('musicFlightGain',0);
   make('musicStationGain',0);
+  make('stationBedGain',STATION_BED_LEVEL);
+  make('stationHangarGain',0);
+  make('stationStepGain',STATION_STEP_LEVEL);
+  make('stationFxGain',STATION_FX_LEVEL);
+  make('uiGain',UI_LEVEL);
  }
  gritKind(canon){return String(canon||'').startsWith('grit_')?canon.slice(5):null;}
  ensureCueGain(){
@@ -396,7 +420,7 @@ export class EngineAudio{
    if(!bus)return;
   }else if(def.space){
    this.ensureSpaceGains();
-   bus={bed:this.spaceBedGain,radio:this.spaceRadioGain,approach:this.spaceApproachGain,dock:this.spaceDockGain,musicFlight:this.musicFlightGain,musicStation:this.musicStationGain}[def.space];
+   bus={bed:this.spaceBedGain,radio:this.spaceRadioGain,approach:this.spaceApproachGain,dock:this.spaceDockGain,musicFlight:this.musicFlightGain,musicStation:this.musicStationGain,stationBed:this.stationBedGain,stationHangar:this.stationHangarGain,stationStep:this.stationStepGain,stationFx:this.stationFxGain,ui:this.uiGain}[def.space];
    if(!bus)return;
   }
   const src=this.context.createBufferSource();
@@ -494,6 +518,19 @@ export class EngineAudio{
   if(!this.isCueLooping('music_station'))this.playCue('music_station');
   try{if(this.musicFlightGain)this.musicFlightGain.gain.value=MUSIC_FLIGHT_LEVEL*(1-mix)*duck;}catch{}
   try{if(this.musicStationGain)this.musicStationGain.gain.value=MUSIC_STATION_LEVEL*mix*duck;}catch{}
+ }
+ /** Concourse bed while on the deck; hangar bed swells toward the launch arm (hangarMix 0..1). */
+ syncStationAudio({live=false,hangarMix=0}={}){
+  const want=!!live;
+  if(want){if(!this.isCueLooping('station_ambience'))this.playCue('station_ambience');}
+  else if(this.isCueLooping('station_ambience'))this.stopCue('station_ambience');
+  const h=want?Math.max(0,Math.min(1,hangarMix||0)):0;
+  if(h>.02){if(!this.isCueLooping('station_hangar'))this.playCue('station_hangar');}
+  else if(this.isCueLooping('station_hangar'))this.stopCue('station_hangar');
+  this.ensureSpaceGains();
+  const t=this.context?.currentTime||0;
+  glide(this.stationHangarGain?.gain,STATION_HANGAR_LEVEL*h,t,.4);
+  glide(this.stationBedGain?.gain,STATION_BED_LEVEL*(1-.45*h),t,.4);
  }
  syncHullThruster({hull,thrust=0,moving=0,live=false,boost=false}={}){
   const want=hullThrusterWanted({hull,thrust,moving,live});
@@ -690,7 +727,7 @@ export class EngineAudio{
   this.amb.start();
   this.ambReady=true;
  }
- update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0,ships=null,listenerX=0,listenerY=0,docked=false,stationDist=null}={}){
+ update({moving=0,boost=false,volume=.35,enabled=true,paused=false,surface=false,station=false,sky='clear',surfaceKind='mineral',planetFeet=false,hull=null,thrust=0,ships=null,listenerX=0,listenerY=0,docked=false,stationDist=null,hangarMix=0}={}){
   const vol=Math.pow(Math.max(0,Math.min(1,volume)),1.15);
   const live=enabled&&!paused;
   this.setCueVolume(live?vol:0);
@@ -699,7 +736,8 @@ export class EngineAudio{
   this.ensureAmb();
   const t=this.context.currentTime,n=Math.max(0,Math.min(1,moving));
   this.syncHullThruster({hull,thrust,moving:n,boost:!!boost,live:live&&!station&&!surface&&!planetFeet});
-  this.syncNpcShips({ships,x:listenerX,y:listenerY,live:live&&!surface&&!planetFeet});
+  this.syncNpcShips({ships,x:listenerX,y:listenerY,live:live&&!surface&&!planetFeet&&!station&&!docked});
+  this.syncStationAudio({live:live&&station&&!planetFeet,hangarMix});
   this.syncSpaceAudio({live:live&&!surface&&!planetFeet&&!station,docked:!!docked||!!station,stationDist,now:t});
   this.syncMusic({live:live&&!surface&&!planetFeet,docked:!!docked||!!station,stationDist});
   this.gain.gain.setTargetAtTime(flightEngineTone(vol,n,{surface:!!surface,hullLoop:!!this.hullThrusterOn,live:live&&!station&&!planetFeet}),t,.12);
@@ -709,8 +747,9 @@ export class EngineAudio{
   this.filter.frequency.setTargetAtTime(surface?160:130,t,.4);
   const stationHum=live&&station&&!planetFeet;
   const bed=Math.max(vol,.25);
-  if(this.humGain)this.humGain.gain.setTargetAtTime(stationHum?bed*.26:0,t,.4);
-  if(this.noiseGain)this.noiseGain.gain.setTargetAtTime(stationHum?bed*.055:0,t,.45);
+  // The old 88/132 Hz oscillator hum is retired; the concourse bed carries the room now.
+  if(this.humGain)this.humGain.gain.setTargetAtTime(0,t,.4);
+  if(this.noiseGain)this.noiseGain.gain.setTargetAtTime(0,t,.45);
 
   // Ambient: space sky bed, or surface/planet wind. Filter cutoff locked per mode (no drift).
   let ambGain=0,ambCut=180;

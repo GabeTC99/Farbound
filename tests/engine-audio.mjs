@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,thrustVoiceShape,NPC_THRUSTER_CAP,NPC_THRUSTER_MIX,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP,musicStationMix,MUSIC_FLIGHT_LEVEL,MUSIC_STATION_LEVEL,hullThrusterWanted,flightEngineTone} from '../dist/engine-audio.mjs';
+import {fadeLoopBuffer,removeDc,prepareLoopSamples,rampGain,EngineAudio,thrustVoiceShape,STATION_AUDIO_STEMS,DECK_STEP_STEMS,deckStepInterval,NPC_THRUSTER_CAP,NPC_THRUSTER_MIX,SURFACE_AUDIO_CUES,cueAssetUrl,SHIP_AUDIO_STEMS,AUDIO_CUES,shipAudioCue,resolveShipCue,gritInterval,gritLevel,SHIP_THRUST_LEVEL,SHIP_SHOT_LEVEL,pickNpcThrusters,cueHullId,SPACE_AUDIO_STEMS,SPACE_BED_LEVEL,SPACE_RADIO_LEVEL,SPACE_DOCK_LEVEL,spaceApproachGain,SPACE_RADIO_GAP,musicStationMix,MUSIC_FLIGHT_LEVEL,MUSIC_STATION_LEVEL,hullThrusterWanted,flightEngineTone} from '../dist/engine-audio.mjs';
 
 const wrap=new Float32Array([0.9,0.4,-0.2,-0.8]);
 fadeLoopBuffer(wrap,2);
@@ -128,6 +128,10 @@ const idle=thrustVoiceShape({thrust:0,moving:0}),full=thrustVoiceShape({thrust:1
 assert.ok(idle.level>0&&idle.level<full.level,'coasting engine is quieter than full thrust');
 assert.ok(idle.cutoff<full.cutoff&&full.cutoff<burn.cutoff,'thrust and boost open the engine filter');
 assert.ok(burn.level<=1&&burn.rate<1.1&&idle.rate>.9,'pitch only drifts a little');
+for(const stem of STATION_AUDIO_STEMS)assert.ok(AUDIO_CUES[stem]?.file?.includes('assets/audio/station/'+stem+'.mp3'),stem);
+assert.equal(AUDIO_CUES.station_ambience.type,'loop');
+assert.ok(DECK_STEP_STEMS.every(s=>AUDIO_CUES[s].type==='oneshot'));
+assert.ok(deckStepInterval(100)<deckStepInterval(30),'sprint steps come faster');
 console.log('PASS Ship thruster loops and flyby/land oneshots resolve by hull');
 assert.ok(gritInterval('ice',false)>gritInterval('earthlike',false));
 assert.ok(gritInterval('ice',true)<gritInterval('ice',false));

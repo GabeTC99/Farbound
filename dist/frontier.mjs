@@ -5,7 +5,7 @@ import {createOnFoot,nearestZone,interactZone,updateOnFoot,onFootSave} from './o
 import {createStationLayout} from './station-layout.mjs';
 import {createPlanetLayout} from './planet-layout.mjs';
 import {createSiteTransition,siteTransitionDone} from './new-frontier.mjs';
-import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue,resolveShipCue,gritInterval} from './engine-audio.mjs';
+import {SURFACE_AUDIO_CUES,surfaceAmbientCue,surfaceGritCue,resolveShipCue,gritInterval,DECK_STEP_STEMS,deckStepInterval} from './engine-audio.mjs';
 import {systemSky,wantedTier,pickTradeDestination} from './atmosphere.mjs';
 import {DynamicEventManager,EVENT_IDS,EVENT_DEFS,EVENT_CONFIG,scanDynamicTarget,eventArrowTargets,tickDynScan,eventObjective,salvageDerelict,createWreckLayout} from './dynamic-events.mjs';
 import {speakRobot,ensureRobotState,STATION_ROBOT} from './station-robot.mjs';
@@ -614,6 +614,28 @@ export class Game extends FlightGame{
   this.fireAudioStop(this.siteAmbient);
   this.siteAmbient=null;
  }
+ /** Station deck: metal steps while walking, a chime when a desk comes into reach, the hangar door hiss at the launch pad, and how close the hangar bed should be. */
+ updateDeckAudio(dt){
+  const f=this.onfoot;
+  if(!f||f.kind==='planet'||f.kind==='wreck'){this.deckHangarMix=0;return;}
+  const spd=Math.hypot(f.vx||0,f.vy||0);
+  if(spd<=14)this.deckStepCool=Math.min(this.deckStepCool||0,.12);
+  else{
+   this.deckStepCool=(this.deckStepCool||0)-dt;
+   if(this.deckStepCool<=0){
+    this.deckStepCool=deckStepInterval(spd);
+    this.deckStep=((this.deckStep||0)+1)%DECK_STEP_STEMS.length;
+    this.fireAudioCue(DECK_STEP_STEMS[this.deckStep]);
+   }
+  }
+  const z=nearestZone(f);
+  if(z){
+   this.deckZoneAway=0;
+   if(z.id!==this.deckZoneChimed){this.deckZoneChimed=z.id;this.fireAudioCue(z.launch?'door_hiss':'desk_chime');}
+  }else if((this.deckZoneAway=(this.deckZoneAway||0)+dt)>.8)this.deckZoneChimed=null;
+  const hangar=f.zones?.find(q=>q.launch);
+  this.deckHangarMix=hangar?Math.max(0,Math.min(1,1-(Math.hypot(hangar.x-f.x,hangar.y-f.y)-60)/260)):0;
+ }
  updatePlanetFootGrit(dt){
   const kind=this.onfoot?.kindId||this.surface?.kindId;
   const cue=surfaceGritCue(kind);
@@ -856,7 +878,7 @@ export class Game extends FlightGame{
   if(this.s.docked){
    this.s.heat=25;this.discoveryScan=null;this.scooping=false;this.scoopRate=0;this.s.playtime+=dt;
    if(!this.onfoot)this.enterStationDeck();
-   if(this.onfoot){updateOnFoot(this.onfoot,dt,input);this.s.stationPos=onFootSave(this.onfoot);}
+   if(this.onfoot){updateOnFoot(this.onfoot,dt,input);this.s.stationPos=onFootSave(this.onfoot);this.updateDeckAudio(dt);}
    // Station services leave local space running: traffic, patrols, and nearby drama continue.
    for(const b of this.shots){b.previousX=b.x;b.previousY=b.y;b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;}
    this.resolveTrafficShots();
