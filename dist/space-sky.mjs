@@ -55,11 +55,11 @@ export function coverAnchor(cx,cy,dw,dh,w,h){
  const y=dh>=h?Math.min(dh/2,Math.max(h-dh/2,cy)):cy;
  return {x,y};
 }
+/** Solid hull. Only the far edge of the approach band fades in so the sprite does not pop. */
 export function stationPlateAlpha(dist,role){
- if(role==='dock_bay')return .78;
- if(role==='station_exterior')return .72;
- const t=Math.min(1,Math.max(0,(2400-dist)/1500));
- return .28+t*.36;
+ if(role==='dock_bay'||role==='station_exterior')return 1;
+ const t=Math.min(1,Math.max(0,(2400-dist)/350));
+ return .28+t*.72;
 }
 
 export function spaceParallax(camX,camY,name,span){

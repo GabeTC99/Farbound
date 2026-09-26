@@ -23,6 +23,22 @@ export function prepareLoopSamples(data, sampleRate=48000){
  fadeLoopBuffer(data, Math.max(64, Math.round((sampleRate||48000)*0.016)));
  return data;
 }
+/** Loop only the audible span so MP3 encoder padding does not open a gap at the wrap. */
+export function loopBounds(buffer,threshold=1e-4){
+ const d=buffer?.getChannelData?.(0),rate=buffer?.sampleRate||44100;
+ if(!d||!d.length)return null;
+ let a=0,b=d.length-1;
+ while(a<b&&Math.abs(d[a])<threshold)a++;
+ while(b>a&&Math.abs(d[b])<threshold)b--;
+ if(b-a<rate*.05)return null;
+ return {start:a/rate,end:(b+1)/rate};
+}
+function setLoopBounds(src,buffer){
+ const span=loopBounds(buffer);
+ if(!span)return 0;
+ try{src.loopStart=span.start;src.loopEnd=span.end;}catch{return 0;}
+ return span.start;
+}
 function paramNow(param){
  const v=Number(param?.value);
  return Number.isFinite(v)?v:0;
@@ -105,7 +121,7 @@ export function gritLevel(kindId){
  return GRIT_HARSH_KINDS.includes(kindId)?.22:.42;
 }
 /** Ship MP3s into the cue bus. Thruster loops sit under the sky bed; flyby/land are a step hotter. */
-export const SHIP_THRUST_LEVEL=.30;
+export const SHIP_THRUST_LEVEL=.25;
 export const SHIP_SHOT_LEVEL=.42;
 /** Thrust input, or cruise/assist speed, keeps the plated loop running. Boost still fires flyby separately. */
 export function hullThrusterWanted({hull,thrust=0,moving=0,live=false}={}){
@@ -367,8 +383,9 @@ export class EngineAudio{
   const src=this.context.createBufferSource();
   src.buffer=this.copyCueBuffer(buffer);
   src.loop=def.type==='loop';
+  const offset=src.loop?setLoopBounds(src,src.buffer):0;
   src.connect(bus);
-  try{src.start(this.context.currentTime||0);}catch{if(def.type==='loop')this.loops.delete(canon);return;}
+  try{src.start(this.context.currentTime||0,offset);}catch{if(def.type==='loop')this.loops.delete(canon);return;}
   if(def.type==='loop'||def.solo)this.cueSources.set(canon,src);
  }
  stopCueFile(canon){
@@ -458,8 +475,9 @@ export class EngineAudio{
    const src=this.context.createBufferSource();
    src.buffer=this.copyCueBuffer(buffer);
    src.loop=true;
+   const offset=setLoopBounds(src,src.buffer);
    src.connect(g);
-   try{src.start(this.context.currentTime||0);}catch{return;}
+   try{src.start(this.context.currentTime||0,offset);}catch{return;}
    cur.src=src;
   }).catch(()=>{});
  }
