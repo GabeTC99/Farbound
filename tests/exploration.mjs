@@ -95,13 +95,13 @@ test('Station close launches and version comes from release.mjs',()=>{
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  const release=readFileSync(new URL('../dist/release.mjs',import.meta.url),'utf8');
  const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
- assert.match(release,/export const RELEASE='2\.2\.0'/);
+ assert.match(release,/export const RELEASE='2\.2\.1'/);
  assert.match(app,/import \{RELEASE,RELEASE_NAME\} from '\.\/release\.mjs'/);
  assert.match(app,/const simPaused=\(\)=>!!panel&&panel!=='station'/);
  assert.match(app,/const leaveStation=\(\)=>\{if\(game\.s\.docked\)\{if\(!game\.launch\(\)\)/);
  assert.match(app,/case 'close':if\(panel==='station'&&game\.s\.docked\)leaveStation\(\)/);
- assert.match(sw,/farbound-v2\.2\.0/);
- assert.match(sw,/release:'2\.2\.0'/);
+ assert.match(sw,/farbound-v2\.2\.1/);
+ assert.match(sw,/release:'2\.2\.1'/);
  assert.match(sw,/dynamic-events\.mjs/);
  assert.match(sw,/station-robot\.mjs/);
  assert.match(sw,/system-layout\.mjs/);

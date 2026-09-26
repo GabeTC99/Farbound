@@ -37,3 +37,5 @@ Use the stable FB identifiers when adding detail, choosing priorities, or updati
 - September 8, 2026: Candidate 2.1.4 requires player participation for bounty rewards and limits security response to patrols near an active attack against the player or civilian traffic.
 
 - September 9, 2026: Candidate 2.2.0 ships seeded system uniqueness (FB-003/FB-007): 1–3 stars, 1–5 planet kinds including non-landable gas giants, variable belts, and multi-dock stations sharing one market.
+
+- September 26, 2026: Candidate 2.2.1 replaces the see-through station outline with a solid generated station sprite and swaps the grinding engine synth for generated spacey engine, boost, laser, jump and interface sounds.

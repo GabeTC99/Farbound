@@ -1,0 +1,15 @@
+{
+  "release": "2.2.1",
+  "name": "Frontiers",
+  "date": "2026-09-26",
+  "notes": [
+    "Orbital stations use a new solid, fully opaque hull sprite (generated with Scenario) instead of the see-through outline rings; a filled vector fallback draws until the image loads.",
+    "Ship audio replaced: Scenario/ElevenLabs-generated engine and afterburner loops layered with a live airy whoosh and chorused pad that follow speed and boost, instead of the low triangle-wave grind.",
+    "Laser, interface blip, confirmation chime and hyperspace jump now use generated sci-fi samples, with soft sine fallbacks while they load.",
+    "New sprite and audio files are cached for offline play (service worker farbound-v2.2.1)."
+  ],
+  "save_key": "farbound-save-v2",
+  "checkpoint_key": "farbound-save-v2-checkpoint",
+  "original_save_key": "farbound-save-v1",
+  "fallback_path": "/classic/index.html"
+}
