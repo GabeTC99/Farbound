@@ -92,7 +92,7 @@
 .pad-chip{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;margin-right:6px;border:1px solid #3d8f7a;border-radius:999px;background:#12352f;color:#9eebd8;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .pad-chip[hidden]{display:none!important}
 
-.fps-meter{position:absolute;top:max(76px,calc(env(safe-area-inset-top) + 58px));right:max(18px,env(safe-area-inset-right));z-index:25;pointer-events:none;min-width:84px;padding:6px 10px;border:1px solid #2a5a52;border-radius:6px;background:#0b1a18d8;color:#9eebd8;font-variant-numeric:tabular-nums;text-align:right;box-shadow:0 8px 24px #0006}
+.fps-meter{position:absolute;top:auto;bottom:calc(env(safe-area-inset-bottom) + 74px);left:50%;right:auto;transform:translateX(-50%);z-index:25;pointer-events:none;min-width:84px;padding:6px 10px;border:1px solid #2a5a52;border-radius:6px;background:#0b1a18d8;color:#9eebd8;font-variant-numeric:tabular-nums;text-align:right;box-shadow:0 8px 24px #0006}
 .fps-meter[hidden]{display:none!important}
 .fps-meter small{display:block;font-size:.65rem;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:#6db6ad}
 .fps-meter b{display:block;font-size:1.2rem;font-weight:600;color:#a7f0df;line-height:1.15;margin:2px 0}
@@ -100,7 +100,7 @@
 .fps-meter.fps-idle{border-color:#6a5340;color:#e8c9a6}
 .fps-meter.fps-idle small{color:#c4a07a}
 .fps-meter.fps-idle b{color:#f0d2ad}
-@media(max-width:650px){.fps-meter{top:max(64px,calc(env(safe-area-inset-top) + 48px));right:max(10px,env(safe-area-inset-right));min-width:76px;padding:5px 8px}.fps-meter b{font-size:1.1rem}}
+@media(max-width:650px){.fps-meter{top:auto;bottom:calc(env(safe-area-inset-bottom) + 88px);left:132px;right:auto;transform:none;min-width:0;width:62px;padding:3px 6px;text-align:left}.fps-meter small{display:none}.fps-meter span{font-size:.56rem;line-height:1.15}.fps-meter b{font-size:1.1rem}}
 
 /* Compositor keep-alive: Chrome Android / Samsung VRR drop RAF to 60 Hz ~2s after
    the last touch. A 1px transform on its own layer is the strongest web hint.

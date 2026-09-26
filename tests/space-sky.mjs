@@ -27,7 +27,7 @@ const near=nearestStation([{type:'station',x:10,y:0,id:'a'},{type:'station',x:40
 assert.equal(near.station.id,'a');
 assert.equal(near.dist,10);
 const sw=readFileSync(new URL('../dist/sw.js',import.meta.url),'utf8');
-assert.match(sw,/farbound-v3\.0\.0-space13/);
+assert.match(sw,/farbound-v3\.0\.0-space14/);
 assert.equal(STATION_ORTHO,'station_ortho');
 assert.equal(stationSpinAngle(0,false),0);
 assert.ok(stationSpinAngle(2,false)>stationSpinAngle(2,true),'performance spin is slower');

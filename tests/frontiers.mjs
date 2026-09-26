@@ -402,6 +402,11 @@ test('Living concourse: standing crew, props, speech, and isometric station rend
  assert.match(render,/makeStationProjector/);
  assert.match(render,/drawFloorPanels/);
  assert.match(render,/drawDoorFrame/);
+ assert.match(render,/function drawDeckTiles/,'static deck floor is cached in tiles');
+ const floorFn=render.slice(render.indexOf('function drawDeckFloor'),render.indexOf('function drawDeckLive'));
+ assert(floorFn.indexOf('drawDeckRim(')>0&&floorFn.indexOf('drawDeckRim(')<floorFn.indexOf('for(const arm of near)drawArmFloor'),'hub rim sits under the near arms');
+ assert.match(render,/Math\.cos\(a\)\+Math\.sin\(a\)<\.12/,'only viewer-facing rim windows are drawn');
+ assert.match(render,/g\.kind==='door'\?drawDoorFrame/,'gates are depth-sorted with the crew');
  assert.match(render,/drawRailing/);
  assert.match(render,/drawContactShadow/);
  assert.match(render,/drawHubCurb/);

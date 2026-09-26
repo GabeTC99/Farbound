@@ -1,5 +1,5 @@
 import {nearestZone,STATION_ISO} from './onfoot.mjs';
-import {drawSpaceSky,prefetchSpacePlates} from './space-sky.mjs';
+import {drawSpaceSky,prefetchSpacePlates,spacePlatesReady} from './space-sky.mjs';
 import {SURFACE_PALETTES,drawFrontierSkiff} from './surface-render.mjs';
 import {
  surfaceSun,mixHex,fadeHex,shadeHex,
@@ -633,18 +633,27 @@ function spokeNear(hull,a,tol=.32){
  return false;
 }
 
-function drawHubCurb(ctx,proj,hull,colors,accent){
+/** Tile culling: does this footprint (world corners, z range) touch the view rect? No view means draw everything. */
+function inView(proj,view,corners,z0,z1,pad=8){
+ if(!view)return true;
+ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+ for(const [x,y] of corners)for(const z of [z0,z1]){const q=proj.p(x,y,z);if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}
+ return x1+pad>view.x0&&x0-pad<view.x1&&y1+pad>view.y0&&y0-pad<view.y1;
+}
+function drawHubCurb(ctx,proj,hull,colors,accent,view=null){
  const n=28;
  for(let i=0;i<n;i++){
   const a0=i*(Math.PI*2/n),a1=(i+1)*(Math.PI*2/n),am=(a0+a1)*.5;
   if(spokeNear(hull,am,.3))continue;
   const r0=hull.hubR-7,r1=hull.hubR+.8;
-  drawIsoVolume(ctx,proj,[
+  const seg=[
    [hull.cx+Math.cos(a0)*r0,hull.cy+Math.sin(a0)*r0],
    [hull.cx+Math.cos(a1)*r0,hull.cy+Math.sin(a1)*r0],
    [hull.cx+Math.cos(a1)*r1,hull.cy+Math.sin(a1)*r1],
    [hull.cx+Math.cos(a0)*r1,hull.cy+Math.sin(a0)*r1]
-  ],DECK_H,DECK_H+5.6,{
+  ];
+  if(!inView(proj,view,seg,DECK_H,DECK_H+5.6))continue;
+  drawIsoVolume(ctx,proj,seg,DECK_H,DECK_H+5.6,{
    top:mix('#5a8490',accent,.22),left:'#15232c',right:'#3a5a66',edge:mix('#d8f4ee',accent,.3)
   });
  }
@@ -661,7 +670,7 @@ function drawDeckRim(ctx,proj,hull,accent){
 function drawRimWindows(ctx,proj,hull,accent,clock){
  for(let i=0;i<8;i++){
   const a=i*(Math.PI*2/8)+.2;
-  if(spokeNear(hull,a,.28))continue;
+  if(spokeNear(hull,a,.28)||Math.cos(a)+Math.sin(a)<.12)continue;
   const x=hull.cx+Math.cos(a)*hull.hubR,y=hull.cy+Math.sin(a)*hull.hubR;
   const px=-Math.sin(a)*5.8,py=Math.cos(a)*5.8;
   const bl=proj.p(x+px,y+py,9),br=proj.p(x-px,y-py,9);
@@ -673,31 +682,50 @@ function drawRimWindows(ctx,proj,hull,accent,clock){
  }
 }
 
-function drawDoorFrame(ctx,proj,hull,i,colors,accent){
+function doorFrame(hull,i){
  const a=hull.baseAngle+i*(Math.PI*2/hull.spokes);
- const c=Math.cos(a),sn=Math.sin(a),px=-sn,py=c;
+ const c=Math.cos(a),sn=Math.sin(a);
  const along=hull.hubR,half=hull.spokeHalf-1.2,post=9.5,tall=DECK_H+44;
- drawIsoVolume(ctx,proj,rotatedRect(hull.cx+c*along,hull.cy+sn*along,4.2,half-4,a),DECK_H,DECK_H+2,{
+ return{a,c,sn,px:-sn,py:c,along,half,post,tall};
+}
+function drawDoorThreshold(ctx,proj,hull,i,colors,accent,view=null){
+ const {a,c,sn,along,half}=doorFrame(hull,i);
+ const sill=rotatedRect(hull.cx+c*along,hull.cy+sn*along,4.2,half-4,a);
+ if(!inView(proj,view,sill,DECK_H,DECK_H+2))return;
+ drawIsoVolume(ctx,proj,sill,DECK_H,DECK_H+2,{
   top:mix('#1a2c34',accent,.14),left:'#101820',right:'#1a2c34',edge:accent
  });
+}
+/** The gate (glass portal, posts, lintel) sorts by its center so people pass behind or in front of it correctly. */
+function doorVolumes(hull,i,colors,accent){
+ const {a,c,sn,px,py,along,half,post,tall}=doorFrame(hull,i);
  const portal=[
   [hull.cx+c*along+px*(half-post),hull.cy+sn*along+py*(half-post)],
   [hull.cx+c*(along+3)+px*(half-post),hull.cy+sn*(along+3)+py*(half-post)],
   [hull.cx+c*(along+3)-px*(half-post),hull.cy+sn*(along+3)-py*(half-post)],
   [hull.cx+c*along-px*(half-post),hull.cy+sn*along-py*(half-post)]
  ];
- drawIsoVolume(ctx,proj,portal,DECK_H+2,tall-7,{
-  top:mix('#0c2428',accent,.42),left:mix('#082018',accent,.3),right:mix('#145048',accent,.38),edge:accent
- });
- const posts=[-1,1].map(s=>rotatedRect(hull.cx+c*along+px*half*s,hull.cy+sn*along+py*half*s,post,7.2,a));
- for(const p of posts)drawIsoVolume(ctx,proj,p,DECK_H,tall,{top:mix('#56626b',accent,.16),left:'#171d22',right:'#3a444c',edge:accent});
+ const parts=[{corners:portal,z0:DECK_H+2,z1:tall-7,glass:true,colors:{top:mix('#0c2428',accent,.42),left:mix('#082018',accent,.3),right:mix('#145048',accent,.38),edge:accent}}];
+ for(const s of [-1,1])parts.push({corners:rotatedRect(hull.cx+c*along+px*half*s,hull.cy+sn*along+py*half*s,post,7.2,a),z0:DECK_H,z1:tall,colors:{top:mix('#56626b',accent,.16),left:'#171d22',right:'#3a444c',edge:accent}});
  const lintel=[
   [hull.cx+c*along+px*half-c*3,hull.cy+sn*along+py*half-sn*3],
   [hull.cx+c*(along+10)+px*half,hull.cy+sn*(along+10)+py*half],
   [hull.cx+c*(along+10)-px*half,hull.cy+sn*(along+10)-py*half],
   [hull.cx+c*along-px*half-c*3,hull.cy+sn*along-py*half-sn*3]
  ];
- drawIsoVolume(ctx,proj,lintel,tall-8,tall,{top:mix('#66727b',accent,.18),left:'#171d22',right:'#3a444c',edge:accent});
+ parts.push({corners:lintel,z0:tall-8,z1:tall,colors:{top:mix('#66727b',accent,.18),left:'#171d22',right:'#3a444c',edge:accent}});
+ return{kind:'door',parts,key:hull.cx+c*along+hull.cy+sn*along,bounds:groupBounds(parts)};
+}
+/** Gate in the sprite pass. The portal is glass, so crew behind it stay visible as they walk through. */
+function drawDoorFrame(ctx,proj,door){
+ for(const part of door.parts){
+  if(part.glass)ctx.globalAlpha=.5;
+  drawIsoVolume(ctx,proj,part.corners,part.z0,part.z1,part.colors);
+  ctx.globalAlpha=1;
+ }
+}
+function drawVolumeGroup(ctx,proj,g){
+ for(const part of g.parts)drawIsoVolume(ctx,proj,part.corners,part.z0,part.z1,part.colors);
 }
 
 function railStroke(ctx,proj,posts,z){
@@ -713,14 +741,16 @@ function railStroke(ctx,proj,posts,z){
  ctx.stroke();
 }
 
-function drawRailing(ctx,proj,hull,colors,accent){
+function drawRailing(ctx,proj,hull,colors,accent,view=null){
  const posts=[];
  for(let i=0;i<36;i++){
   const a=i*(Math.PI*2/36);
   if(spokeNear(hull,a,.26))continue;
   const x=hull.cx+Math.cos(a)*hull.hubR,y=hull.cy+Math.sin(a)*hull.hubR;
   posts.push({a,x,y});
-  drawIsoVolume(ctx,proj,rotatedRect(x,y,1.35,1.35,a),DECK_H,DECK_H+RAIL_H,{
+  const post=rotatedRect(x,y,1.35,1.35,a);
+  if(!inView(proj,view,post,DECK_H,DECK_H+RAIL_H))continue;
+  drawIsoVolume(ctx,proj,post,DECK_H,DECK_H+RAIL_H,{
    top:mix('#5a7a84',accent,.2),left:'#0c141a',right:'#2a4450',edge:fade(accent,.7)
   });
  }
@@ -731,38 +761,24 @@ function drawRailing(ctx,proj,hull,colors,accent){
  railStroke(ctx,proj,posts,DECK_H+RAIL_H*.48);
 }
 
-function drawArmDeck(ctx,proj,hull,i,colors,accent){
+function armFrame(hull,i){
  const a=hull.baseAngle+i*(Math.PI*2/hull.spokes);
- const c=Math.cos(a),sn=Math.sin(a),px=-sn,py=c;
- const hangar=i===0;
- drawIsoPrism(ctx,proj,spokeCorners(hull,i),DECK_H,{
+ const c=Math.cos(a),sn=Math.sin(a);
+ return{a,c,sn,px:-sn,py:c,hangar:i===0};
+}
+/** Static arm floor: slab, deck plating, floor stripes, hangar lane and pad plate. Baked into deck tiles. */
+function drawArmFloor(ctx,proj,hull,i,colors,accent,view=null){
+ const {a,c,sn,px,py,hangar}=armFrame(hull,i);
+ const armCorners=spokeCorners(hull,i);
+ if(!inView(proj,view,armCorners,0,DECK_H+2,24))return;
+ drawIsoPrism(ctx,proj,armCorners,DECK_H,{
   top:hangar?mix(colors.armTop,'#c9a46a',.14):colors.armTop,
   left:colors.armLeft,right:colors.armRight,edge:colors.edge
  });
- const armCorners=spokeCorners(hull,i);
  fillDeckTexture(ctx,proj,()=>poly(ctx,armCorners.map(([x,y])=>proj.p(x,y,DECK_H))),DECK_H,{x0:Math.min(...armCorners.map(p=>p[0])),y0:Math.min(...armCorners.map(p=>p[1])),x1:Math.max(...armCorners.map(p=>p[0])),y1:Math.max(...armCorners.map(p=>p[1]))},hangar?.7:.82);
- const wallStart=hull.hubR+16,wallEnd=hull.spokeEnd-(hangar?28:14);
- const mid=(wallStart+wallEnd)*.5,len=(wallEnd-wallStart)*.48,inset=11,wall=6.2;
- for(const side of [-1,1]){
-  const x=hull.cx+c*mid+px*(hull.spokeHalf-inset)*side;
-  const y=hull.cy+sn*mid+py*(hull.spokeHalf-inset)*side;
-  drawIsoVolume(ctx,proj,rotatedRect(x,y,len,wall,a),DECK_H,DECK_H+24,{
-   top:mix('#5f6b75',accent,.12),left:'#1b2126',right:'#3c464e',edge:colors.edge
-  });
-  drawIsoVolume(ctx,proj,rotatedRect(x,y,len,wall+.8,a),DECK_H+22.5,DECK_H+26.5,{
-   top:mix('#9fd8d0',accent,.28),left:'#243844',right:'#4a7080',edge:accent
-  });
-  for(const t of [.22,.5,.78]){
-   const bx=hull.cx+c*(wallStart+(wallEnd-wallStart)*t)+px*(hull.spokeHalf-inset)*side;
-   const by=hull.cy+sn*(wallStart+(wallEnd-wallStart)*t)+py*(hull.spokeHalf-inset)*side;
-   drawIsoVolume(ctx,proj,rotatedRect(bx,by,2.4,wall+1.2,a),DECK_H,DECK_H+28,{
-    top:mix('#77838c',accent,.15),left:'#1b2126',right:'#3c464e',edge:accent
-   });
-  }
- }
  const start=hull.hubR+6,end=hull.spokeEnd-8;
  ctx.save();
- const clip=spokeCorners(hull,i).map(([x,y])=>proj.p(x,y,DECK_H+.3));
+ const clip=armCorners.map(([x,y])=>proj.p(x,y,DECK_H+.3));
  poly(ctx,clip);ctx.clip();
  ctx.strokeStyle=fade('#9fd8d0',hangar?.32:.2);ctx.lineWidth=1.05;
  for(let t=0;t<8;t++){
@@ -783,53 +799,214 @@ function drawArmDeck(ctx,proj,hull,i,colors,accent){
   drawIsoVolume(ctx,proj,rotatedRect(hull.cx+c*(tip-12),hull.cy+sn*(tip-12),10,half-2,a),DECK_H+.2,DECK_H+1.8,{
    top:'#1a2a30',left:'#152028',right:'#243844',edge:'#c9a46a'
   });
-  for(const s of [-1,1]){
-   drawIsoVolume(ctx,proj,rotatedRect(hull.cx+c*tip+px*half*s,hull.cy+sn*tip+py*half*s,10,7.4,a),DECK_H,DECK_H+40,{
-    top:mix('#5a7a84',accent,.16),left:'#15232c',right:'#3a5560',edge:'#c9a46a'
-   });
-  }
-  drawIsoVolume(ctx,proj,rotatedRect(hull.cx+c*tip,hull.cy+sn*tip,9,half,a),DECK_H+34,DECK_H+42,{
-   top:mix('#6a98a4',accent,.2),left:'#1a3038',right:'#3a5a66',edge:'#c9a46a'
-  });
  }
 }
+/** Painter's key for a group of wall parts. Front walls (facing the viewer) sort by their nearest corner so people inside the arm stay behind them; back walls by their farthest. */
+function groupKey(parts,front){
+ let lo=Infinity,hi=-Infinity;
+ for(const part of parts)for(const [x,y] of part.corners){const d=x+y;if(d<lo)lo=d;if(d>hi)hi=d;}
+ return front?hi:lo;
+}
+function groupBounds(parts){
+ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity,z1=0;
+ for(const part of parts){z1=Math.max(z1,part.z1);for(const [x,y] of part.corners){if(x<x0)x0=x;if(y<y0)y0=y;if(x>x1)x1=x;if(y>y1)y1=y;}}
+ return{x0,y0,x1,y1,z1};
+}
+/** Standing arm geometry (walls, caps, posts, hangar frame) as depth-sorted groups. */
+function armVolumes(hull,i,colors,accent){
+ const {a,c,sn,px,py,hangar}=armFrame(hull,i);
+ const groups=[];
+ const wallStart=hull.hubR+16,wallEnd=hull.spokeEnd-(hangar?28:14);
+ const mid=(wallStart+wallEnd)*.5,len=(wallEnd-wallStart)*.48,inset=11,wall=6.2;
+ for(const side of [-1,1]){
+  const x=hull.cx+c*mid+px*(hull.spokeHalf-inset)*side;
+  const y=hull.cy+sn*mid+py*(hull.spokeHalf-inset)*side;
+  // Cutaway: the wall on the viewer's side of an arm is knee-high so the people and desks inside stay visible.
+  const facing=(px+py)*side,cut=facing>.3,wallH=cut?9:24,postH=cut?12:28;
+  const parts=[
+   {corners:rotatedRect(x,y,len,wall,a),z0:DECK_H,z1:DECK_H+wallH,colors:{top:mix('#5f6b75',accent,.12),left:'#1b2126',right:'#3c464e',edge:colors.edge}},
+   {corners:rotatedRect(x,y,len,wall+.8,a),z0:DECK_H+wallH-1.5,z1:DECK_H+wallH+2.5,colors:{top:mix('#7a8a93',accent,.3),left:'#1e252b',right:'#46525b',edge:accent}}
+  ];
+  for(const t of [.22,.5,.78]){
+   const bx=hull.cx+c*(wallStart+(wallEnd-wallStart)*t)+px*(hull.spokeHalf-inset)*side;
+   const by=hull.cy+sn*(wallStart+(wallEnd-wallStart)*t)+py*(hull.spokeHalf-inset)*side;
+   parts.push({corners:rotatedRect(bx,by,2.4,wall+1.2,a),z0:DECK_H,z1:DECK_H+postH,colors:{top:mix('#77838c',accent,.15),left:'#1b2126',right:'#3c464e',edge:accent}});
+  }
+  groups.push({parts,key:groupKey(parts,facing>0),bounds:groupBounds(parts)});
+ }
+ if(hangar){
+  const tip=hull.spokeEnd-6,half=hull.spokeHalf-1.2;
+  const parts=[-1,1].map(s=>({corners:rotatedRect(hull.cx+c*tip+px*half*s,hull.cy+sn*tip+py*half*s,10,7.4,a),z0:DECK_H,z1:DECK_H+40,colors:{top:mix('#5a7a84',accent,.16),left:'#15232c',right:'#3a5560',edge:'#c9a46a'}}));
+  parts.push({corners:rotatedRect(hull.cx+c*tip,hull.cy+sn*tip,9,half,a),z0:DECK_H+34,z1:DECK_H+42,colors:{top:mix('#6a98a4',accent,.2),left:'#1a3038',right:'#3a5a66',edge:'#c9a46a'}});
+  // The hangar exit frame stays behind the pad crowd: an accurate sort would hide the skiff and crew under its beam.
+  groups.push({parts,key:groupKey(parts,false),bounds:groupBounds(parts)});
+ }
+ return groups;
+}
 
-function drawIsoDeck(ctx,proj,s,clock){
- const hull=s.hull;if(!hull||hull.kind!=='wheel')return;
- const colors=stationColors(s),h=DECK_H,accent=s.accent||'#7ec8c0';
+function armOrder(hull){
  const arms=[...Array(hull.spokes)].map((_,i)=>({i,depth:hull.cx+hull.cy+Math.cos(hull.baseAngle+i*(Math.PI*2/hull.spokes))*hull.spokeEnd+Math.sin(hull.baseAngle+i*(Math.PI*2/hull.spokes))*hull.spokeEnd}));
  arms.sort((a,b)=>a.depth-b.depth);
- const far=arms.slice(0,Math.ceil(arms.length/2));
- const near=arms.slice(Math.ceil(arms.length/2));
- for(const arm of far)drawArmDeck(ctx,proj,hull,arm.i,colors,accent);
- drawIsoDisc(ctx,proj,hull.cx,hull.cy,hull.hubR,h,{
-  top:colors.hubTop,left:colors.hubLeft,right:colors.hubRight,edge:colors.edge
- });
- fillHubTop(ctx,proj,hull,h,colors);
- drawHubCurb(ctx,proj,hull,colors,accent);
- for(const arm of near)drawArmDeck(ctx,proj,hull,arm.i,colors,accent);
+ const cut=Math.ceil(arms.length/2);
+ return{far:arms.slice(0,cut),near:arms.slice(cut)};
+}
+/** Everything on the deck that never moves. Rendered once into cached tiles (see drawDeckTiles). The rim goes down before the near arms so the arms cover it. */
+function drawDeckFloor(ctx,proj,s,view=null){
+ const hull=s.hull;if(!hull||hull.kind!=='wheel')return;
+ const colors=stationColors(s),h=DECK_H,accent=s.accent||'#7ec8c0',faction=s.factionColor||accent;
+ const {far,near}=armOrder(hull);
+ for(const arm of far)drawArmFloor(ctx,proj,hull,arm.i,colors,accent,view);
+ const R=hull.hubR*1.2,hubBox=[[hull.cx-R,hull.cy-R],[hull.cx+R,hull.cy-R],[hull.cx+R,hull.cy+R],[hull.cx-R,hull.cy+R]];
+ if(inView(proj,view,hubBox,0,DECK_H+CORE_H,24)){
+  drawIsoDisc(ctx,proj,hull.cx,hull.cy,hull.hubR,h,{
+   top:colors.hubTop,left:colors.hubLeft,right:colors.hubRight,edge:colors.edge
+  });
+  fillHubTop(ctx,proj,hull,h,colors);
+  drawHubCurb(ctx,proj,hull,colors,accent,view);
+  drawDeckRim(ctx,proj,hull,accent);
+  const C=hull.coreR*1.2,coreBox=[[hull.cx-C,hull.cy-C],[hull.cx+C,hull.cy-C],[hull.cx+C,hull.cy+C],[hull.cx-C,hull.cy+C]];
+  if(inView(proj,view,coreBox,0,DECK_H+CORE_H,24))drawIsoDisc(ctx,proj,hull.cx,hull.cy,hull.coreR,h+CORE_H,{
+   top:mix(colors.core,faction,.14),left:mix('#0b171e',faction,.12),right:mix('#16303a',faction,.1),edge:mix('#7db9bd',faction,.3)
+  },h);
+ }
+ for(const arm of near)drawArmFloor(ctx,proj,hull,arm.i,colors,accent,view);
+ for(let i=0;i<hull.spokes;i++)drawDoorThreshold(ctx,proj,hull,i,colors,accent,view);
+ drawRailing(ctx,proj,hull,colors,accent,view);
+ drawSigns(ctx,proj,s);
+}
+/** Per-frame deck bits: the core glow and the flickering rim windows. */
+function drawDeckLive(ctx,proj,s,clock){
+ const hull=s.hull;if(!hull||hull.kind!=='wheel')return;
+ const accent=s.accent||'#7ec8c0',faction=s.factionColor||accent;
  const pulse=.5+.5*Math.sin((clock||0)*1.6);
- const faction=s.factionColor||accent;
- const doors=[...Array(hull.spokes)].map((_,i)=>{
-  const ang=hull.baseAngle+i*(Math.PI*2/hull.spokes);
-  return{i,depth:hull.cx+Math.cos(ang)*hull.hubR+hull.cy+Math.sin(ang)*hull.hubR};
- }).sort((a,b)=>a.depth-b.depth);
- const doorMid=(doors[0].depth+doors[doors.length-1].depth)*.5;
- for(const d of doors)if(d.depth<doorMid)drawDoorFrame(ctx,proj,hull,d.i,colors,accent);
- drawIsoDisc(ctx,proj,hull.cx,hull.cy,hull.coreR,h+CORE_H,{
-  top:mix(colors.core,faction,.14),left:mix('#0b171e',faction,.12),right:mix('#16303a',faction,.1),edge:mix('#7db9bd',faction,.3)
- },h);
- const coreTop=proj.p(hull.cx,hull.cy,h+CORE_H);
+ const coreTop=proj.p(hull.cx,hull.cy,DECK_H+CORE_H);
  const cr=proj.radii(hull.coreR);
  ctx.strokeStyle=faction;ctx.globalAlpha=.34+.2*pulse;ctx.lineWidth=2.2;
  ctx.beginPath();ctx.ellipse(coreTop.x,coreTop.y,cr.rx*.6,cr.ry*.6,0,0,Math.PI*2);ctx.stroke();
  ctx.globalAlpha=.14;ctx.fillStyle=faction;
  ctx.beginPath();ctx.ellipse(coreTop.x,coreTop.y,cr.rx*.38,cr.ry*.38,0,0,Math.PI*2);ctx.fill();
  ctx.globalAlpha=1;
- drawRailing(ctx,proj,hull,colors,accent);
- for(const d of doors)if(d.depth>=doorMid)drawDoorFrame(ctx,proj,hull,d.i,colors,accent);
  drawRimWindows(ctx,proj,hull,accent,clock);
- drawDeckRim(ctx,proj,hull,accent);
+}
+const volumeCache={key:'',groups:[]};
+/** Gates, arm walls and hangar frames, keyed for the sprite sort. World geometry only, so it is cached per station. */
+function deckVolumes(s){
+ const hull=s.hull;if(!hull||hull.kind!=='wheel')return[];
+ const key=stationKey(s);
+ if(volumeCache.key===key)return volumeCache.groups;
+ const colors=stationColors(s),accent=s.accent||'#7ec8c0',groups=[];
+ for(let i=0;i<hull.spokes;i++){groups.push(...armVolumes(hull,i,colors,accent));groups.push(doorVolumes(hull,i,colors,accent));}
+ volumeCache.key=key;volumeCache.groups=groups;
+ return groups;
+}
+function groupOnScreen(proj,b,width,height){
+ const pts=[proj.p(b.x0,b.y0,DECK_H),proj.p(b.x1,b.y0,DECK_H),proj.p(b.x0,b.y1,DECK_H),proj.p(b.x1,b.y1,DECK_H)];
+ let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+ for(const q of pts){if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}
+ y0-=(b.z1-DECK_H)*proj.iz;
+ return x1>-24&&x0<width+24&&y1>-24&&y0<height+24;
+}
+/** Direct draw of the whole deck (no canvas cache available, e.g. a test context). */
+function drawIsoDeck(ctx,proj,s,clock){
+ drawDeckFloor(ctx,proj,s);
+ drawDeckLive(ctx,proj,s,clock);
+}
+function stationKey(s){
+ const h=s.hull||{};
+ return [s.title,s.seed,s.floor,s.accent,s.factionColor,h.cx,h.cy,h.hubR,h.coreR,h.spokes,h.baseAngle,h.spokeStart,h.spokeEnd,h.spokeHalf,(s.signs||[]).length].join('|');
+}
+
+/* ---- Deck tile cache: the static floor is rasterized once per station/zoom/DPR into 512px device tiles and blitted 1:1. ---- */
+const DECK_TILE=512,DECK_TILE_CAP=32;
+const deckTiles={key:'',map:new Map(),bounds:null};
+const CAN_CACHE=typeof document!=='undefined'&&!!document.createElement||typeof OffscreenCanvas!=='undefined';
+/** Offscreen canvases can be dropped while the app is in the background; rebuild the caches on return. */
+export function resetStationCaches(){deckTiles.key='';deckTiles.map.clear();skyCache.key='';skyCache.canvas=null;}
+let hiddenAt=0;
+if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')hiddenAt=Date.now();else if(hiddenAt&&Date.now()-hiddenAt>10000)resetStationCaches();});
+function makeCanvas(w,h){
+ if(typeof document!=='undefined'&&document.createElement){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+ if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);
+ return null;
+}
+function ctxScale(ctx){
+ const m=typeof ctx.getTransform==='function'?ctx.getTransform():null;
+ if(!m)return 0;
+ const k=Math.hypot(m.a,m.b);
+ return k>0&&Math.abs(m.e)<1e-6&&Math.abs(m.f)<1e-6?k:0;
+}
+/** Same projection as the screen projector, without the camera: floor space. */
+function floorProjector(proj){
+ return{zoom:proj.zoom,ix:proj.ix,iy:proj.iy,iz:proj.iz,depth:proj.depth,radii:proj.radii,
+  p(wx,wy,wz=0){return{x:(wx-wy)*proj.ix,y:(wx+wy)*proj.iy-wz*proj.iz};}};
+}
+/** Screen projector whose floor origin sits on a whole device pixel, so cached tiles and live sprites line up exactly. */
+function snapProjector(proj,dpr){
+ const o=proj.p(0,0,0);
+ const offX=Math.round(o.x*dpr)/dpr,offY=Math.round(o.y*dpr)/dpr;
+ return{...proj,offX,offY,p(wx,wy,wz=0){return{x:(wx-wy)*proj.ix+offX,y:(wx+wy)*proj.iy-wz*proj.iz+offY};}};
+}
+function deckFloorBounds(fp,s){
+ const hull=s.hull,pts=[];
+ const {rx,ry}=fp.radii(hull.hubR);
+ const c0=fp.p(hull.cx,hull.cy,0),c1=fp.p(hull.cx,hull.cy,DECK_H+CORE_H);
+ pts.push({x:c0.x-rx*1.2,y:c1.y-ry},{x:c0.x+rx*1.2+14,y:c0.y+ry*1.35+20});
+ for(let i=0;i<hull.spokes;i++)for(const [x,y] of spokeCorners(hull,i))for(const z of [0,DECK_H+RAIL_H])pts.push(fp.p(x,y,z));
+ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+ for(const q of pts){if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;}
+ const m=48;
+ return{x0:x0-m,y0:y0-m,x1:x1+m,y1:y1+m};
+}
+function renderDeckTile(fp,s,dpr,i,j){
+ const ts=DECK_TILE/dpr,b=deckTiles.bounds;
+ if(b&&((i+1)*ts<b.x0||i*ts>b.x1||(j+1)*ts<b.y0||j*ts>b.y1))return null;
+ const cv=makeCanvas(DECK_TILE,DECK_TILE);
+ const c=cv?.getContext('2d');
+ if(!c)return null;
+ c.setTransform(dpr,0,0,dpr,-i*DECK_TILE,-j*DECK_TILE);
+ c.beginPath();c.rect(i*ts,j*ts,ts,ts);c.clip();
+ drawDeckFloor(c,fp,s,{x0:i*ts,y0:j*ts,x1:(i+1)*ts,y1:(j+1)*ts});
+ return cv;
+}
+function touchTile(id){
+ const map=deckTiles.map;
+ if(!map.has(id))return false;
+ const t=map.get(id);map.delete(id);map.set(id,t);
+ return true;
+}
+function deckTile(fp,s,dpr,i,j,cap){
+ const id=i+','+j,map=deckTiles.map;
+ if(touchTile(id))return map.get(id);
+ const t=renderDeckTile(fp,s,dpr,i,j);
+ map.set(id,t);
+ while(map.size>cap)map.delete(map.keys().next().value);
+ return t;
+}
+/** Blit the cached floor. Returns false when no cache is possible, so the caller draws directly. */
+function drawDeckTiles(ctx,proj,s,dpr,width,height){
+ if(!s.hull||s.hull.kind!=='wheel'||!dpr||!CAN_CACHE)return false;
+ const fp=floorProjector(proj);
+ const key=stationKey(s)+'|'+proj.ix+'|'+proj.iy+'|'+proj.iz+'|'+dpr+'|'+(deckTexture()?1:0);
+ if(deckTiles.key!==key){deckTiles.key=key;deckTiles.map.clear();deckTiles.bounds=deckFloorBounds(fp,s);}
+ const ox=Math.round(proj.offX*dpr),oy=Math.round(proj.offY*dpr);
+ const W=Math.ceil(width*dpr),H=Math.ceil(height*dpr);
+ const i0=Math.floor(-ox/DECK_TILE),i1=Math.floor((W-1-ox)/DECK_TILE);
+ const j0=Math.floor(-oy/DECK_TILE),j1=Math.floor((H-1-oy)/DECK_TILE);
+ // Room for every visible tile plus a warm ring, so visible tiles are never evicted.
+ const cap=Math.max(DECK_TILE_CAP,(i1-i0+3)*(j1-j0+3)+4);
+ for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)touchTile(i+','+j);
+ ctx.save();ctx.setTransform(1,0,0,1,0,0);
+ for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+  const t=deckTile(fp,s,dpr,i,j,cap);
+  if(t)ctx.drawImage(t,i*DECK_TILE+ox,j*DECK_TILE+oy);
+ }
+ ctx.restore();
+ // Warm one neighbouring tile per frame so walking never waits on a fresh tile.
+ for(let j=j0-1;j<=j1+1;j++)for(let i=i0-1;i<=i1+1;i++){
+  if(i>=i0&&i<=i1&&j>=j0&&j<=j1)continue;
+  if(!deckTiles.map.has(i+','+j)){deckTile(fp,s,dpr,i,j,cap);return true;}
+ }
+ return true;
 }
 
 function drawIsoEllipse(ctx,proj,wx,wy,wz,r,stroke,dash,fill){
@@ -1115,16 +1292,30 @@ function drawWheelDeck(ctx,sx,sy,scale,s,clock){
  return true;
 }
 
+const CONCOURSE_SKY=['starfield_far','starfield_mid','nebula_soft_a','dust_parallax'];
+const skyCache={key:'',canvas:null};
+/** Space behind the concourse. Static (it is far away), so it is rendered once per viewport and blitted. */
+function drawConcourseSky(ctx,width,height,dpr,clock,accent){
+ prefetchSpacePlates();
+ const key=width+'|'+height+'|'+dpr;
+ if(skyCache.key!==key&&dpr&&spacePlatesReady(CONCOURSE_SKY)){
+  const cv=makeCanvas(Math.ceil(width*dpr),Math.ceil(height*dpr)),c=cv?.getContext('2d');
+  if(c){c.setTransform(dpr,0,0,dpr,0,0);drawSpaceSky(c,{width,height,camX:0,camY:0,zoom:1,skyKind:'nebula',stations:[],player:null,clock:0});skyCache.key=key;skyCache.canvas=cv;}
+ }
+ if(skyCache.key===key&&skyCache.canvas){ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(skyCache.canvas,0,0);ctx.restore();return;}
+ if(!drawSpaceSky(ctx,{width,height,camX:0,camY:0,zoom:1,skyKind:'nebula',stations:[],player:null,clock,lite:true}))drawSpaceBackdrop(ctx,width,height,clock,accent);
+}
 function renderStationConcourse(ctx,width,height,s,clock){
- const proj=makeStationProjector(s,width,height);
+ const dpr=ctxScale(ctx);
+ const proj=dpr?snapProjector(makeStationProjector(s,width,height),dpr):makeStationProjector(s,width,height);
  const accent=s.accent||'#7ec8c0';
  const zone=nearestZone(s);
  const spriteScale=proj.zoom*1.08;
- prefetchSpacePlates();deckTexture();
- if(!drawSpaceSky(ctx,{width,height,camX:(s.x||0)*3,camY:(s.y||0)*3,zoom:1,skyKind:'nebula',stations:[],player:null,clock}))drawSpaceBackdrop(ctx,width,height,clock,accent);
+ deckTexture();
+ drawConcourseSky(ctx,width,height,dpr,clock,accent);
  ctx.save();
- drawIsoDeck(ctx,proj,s,clock);
- drawSigns(ctx,proj,s);
+ if(drawDeckTiles(ctx,proj,s,dpr,width,height))drawDeckLive(ctx,proj,s,clock);
+ else drawIsoDeck(ctx,proj,s,clock);
  for(const z of s.zones){
   const near=zone&&zone.id===z.id;
   if(!near)continue;
@@ -1153,6 +1344,10 @@ function renderStationConcourse(ctx,width,height,s,clock){
   const p=proj.p(s.x,s.y,DECK_H);
   drawStandingCrew(ctx,p.x,p.y,spriteScale*1.14,s.facing,s.walk||0,accent,'#1d3844',{player:true});
  }});
+ for(const g of deckVolumes(s)){
+  if(!groupOnScreen(proj,g.bounds,width,height))continue;
+  sprites.push({depth:g.key,draw:()=>g.kind==='door'?drawDoorFrame(ctx,proj,g):drawVolumeGroup(ctx,proj,g)});
+ }
  sprites.sort((a,b)=>a.depth-b.depth);
  for(const spr of sprites)spr.draw();
  for(const fn of overlays)fn();

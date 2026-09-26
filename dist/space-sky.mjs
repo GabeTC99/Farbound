@@ -111,6 +111,11 @@ function loadPlate(name,url){
  img.src=url;
  plates.set(name,img);
 }
+/** True once every named plate has decoded. */
+/** True once every named plate has fully loaded (naturalWidth alone arrives with the header, before the pixels). */
+export function spacePlatesReady(names){
+ return (names||[]).every(n=>{const img=plates.get(n);return !!(img&&img.complete&&(img.naturalWidth||img.width));});
+}
 export function stationOrthoReady(){
  return !!peekSpacePlate(STATION_ORTHO);
 }
